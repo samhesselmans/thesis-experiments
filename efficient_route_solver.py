@@ -13,7 +13,7 @@ Ro = 1.18
 Cr = 0.01
 g= 9.81
 
-bike_mass = 350
+bike_mass = 850
 
 def calcFD(v):
     return Cd * A * Ro * pow(v,2) /2
@@ -127,6 +127,11 @@ def branchAndBound(customer_distances,customer_timewindows,speed_options,power_o
     #     if(total_dist/(speed_options[speed]*60) + current_time <= customer_timewindows[len(customer_timewindows)-1][1]):
     #         minimum_average_speed=speed
     #         break
+    while(minimum_average_speed <= len(speed_options) and total_dist/(speed_options[minimum_average_speed]*60) + current_time >= customer_timewindows[len(customer_timewindows)-1][1]):
+        minimum_average_speed += 1
+
+    # if(minimum_average_speed != 0):
+    #     print("In branch",timesBranched," min average was",minimum_average_speed)
     min_remaining_cost = total_dist/(speed_options[minimum_average_speed] * 60) * power_options[minimum_average_speed]
     if(current_value + min_remaining_cost >= best_solution_value):
         #print("stopped because not better on depth",len(current_solution))
