@@ -1,10 +1,10 @@
 import numpy as np
 import time
 from numpy.core.numeric import Infinity
-from numpy.lib.financial import _fv_dispatcher;
+# from numpy.lib.financial import _fv_dispatcher;
 from scipy.optimize import fsolve
 
-power_settings = [0,50,100,150,200,250]
+power_settings = [50,100,150,200,250]
 cyclist_power = 150
 
 Cd = 1.18
@@ -13,7 +13,7 @@ Ro = 1.18
 Cr = 0.01
 g= 9.81
 
-bike_mass = 250
+bike_mass = 350
 
 def calcFD(v):
     return Cd * A * Ro * pow(v,2) /2
@@ -72,11 +72,18 @@ timesDiscardedForWorse = 0
 averageDepthDiscardedWorse = 0
 timesDiscardedForNotPossible =0
 averageDepthDiscardedNotPossible = 0
+timesCutPreviousSubBranchBetter =0
 timesEndedBranching = 0
 timesEndedBranchingImprovement = 0
 timesEndedExec = 0
 start_time = time.time()
 
+# #If sub solution is optimal, other branches from that node do not need to be explored
+# def ShouldBranch(sol, branch):
+#     for number in sol:
+#         if(int(number) > 0):
+#             return True
+#     return False
 
 def branchAndBound(customer_distances,customer_timewindows,speed_options,power_options,best_solution,best_solution_value,current_time,current_value,current_solution):
     max_speed = speed_options[len(speed_options)-1]
@@ -88,16 +95,17 @@ def branchAndBound(customer_distances,customer_timewindows,speed_options,power_o
     global timesEndedBranchingImprovement
     global timesEndedExec
     global averageDepthDiscardedNotPossible
+    global timesCutPreviousSubBranchBetter
     global averageDepthDiscardedWorse
     global handling_time
     if(len(customer_timewindows) == 0):
         
         if (current_value<best_solution_value):
             timesEndedBranchingImprovement += 1
-            return current_solution,current_value
+            return current_solution,current_value, True
         else:
             timesEndedBranching += 1
-            return best_solution,best_solution_value
+            return best_solution,best_solution_value, False
 
     #Check if there still is a solution possible
     for i in range(len(customer_distances)):
@@ -106,20 +114,26 @@ def branchAndBound(customer_distances,customer_timewindows,speed_options,power_o
             #print("stopped because not viable on depth",len(current_solution))
             averageDepthDiscardedNotPossible = (averageDepthDiscardedNotPossible * timesDiscardedForNotPossible + len(current_solution))/(timesDiscardedForNotPossible + 1)
             timesDiscardedForNotPossible += 1
-            return best_solution,best_solution_value
+            return best_solution,best_solution_value, False
+
+    #Check is best solution is optimal
+    # if(len(best_solution) > 0 and best_solution.count('0') == len(best_solution) ):
+    #     timesCutSolutionAlreadyOptimal += 1
+    #     return best_solution,best_solution_value
+
     #Check if the solution can be better than the current best
     minimum_average_speed = 0
-    for speed in range(len(speed_options)):
-        if(total_dist/(speed_options[speed]*60) + current_time <= customer_timewindows[len(customer_timewindows)-1][1]):
-            minimum_average_speed=speed
-            break
+    # for speed in range(len(speed_options)):
+    #     if(total_dist/(speed_options[speed]*60) + current_time <= customer_timewindows[len(customer_timewindows)-1][1]):
+    #         minimum_average_speed=speed
+    #         break
     min_remaining_cost = total_dist/(speed_options[minimum_average_speed] * 60) * power_options[minimum_average_speed]
     if(current_value + min_remaining_cost >= best_solution_value):
         #print("stopped because not better on depth",len(current_solution))
         averageDepthDiscardedWorse = (averageDepthDiscardedWorse * timesDiscardedForWorse + len(current_solution))/(timesDiscardedForWorse + 1)
 
         timesDiscardedForWorse += 1
-        return best_solution,best_solution_value
+        return best_solution,best_solution_value, False
     
     
 
@@ -132,17 +146,24 @@ def branchAndBound(customer_distances,customer_timewindows,speed_options,power_o
 
     # if(current_time + customer_distances[0]/speed_options[2]*60 < customer_timewindows[0][1]):
     #     best_solution, best_solution_value = branchAndBound(customer_distances[1:],customer_timewindows[1:],speed_options,power_options,best_solution,best_solution_value,max( current_time + customer_distances[0]/speed_options[2]*60,customer_timewindows[0][0]),current_value + customer_distances[0]/speed_options[2]*60 * power_options[2],current_solution.append(2))
-
+    best_found_in_branch = False
     for i in range(len(speed_options)):
-        if(current_time + customer_distances[0]/(speed_options[i]*60) < customer_timewindows[0][1]):           
+        #Only branch if we are able to serve the next customer with that speed
+        if(current_time + customer_distances[0]/(speed_options[i]*60) < customer_timewindows[0][1]):
+            #Do not branch if we found the best solution in a sub branch and all speeds found are better than this potential branch
+            # if not best_found_in_branch  or ShouldBranch(best_solution[len(current_solution):],i):           
             timesBranched += 1
-            best_solution, best_solution_value = branchAndBound(customer_distances[1:],customer_timewindows[1:],speed_options,power_options,best_solution,best_solution_value, max( current_time + customer_distances[0]/(speed_options[i]*60),customer_timewindows[0][0]),current_value + customer_distances[0]/(speed_options[i]*60) * power_options[i],current_solution + str(i))
+            best_solution, best_solution_value,best_found_new = branchAndBound(customer_distances[1:],customer_timewindows[1:],speed_options,power_options,best_solution,best_solution_value, max( current_time + customer_distances[0]/(speed_options[i]*60),customer_timewindows[0][0]),current_value + customer_distances[0]/(speed_options[i]*60) * power_options[i],current_solution + str(i))
+            best_found_in_branch = best_found_in_branch or best_found_new
+            # else:
+            #     timesCutPreviousSubBranchBetter += 1
     timesEndedExec += 1
-    return best_solution,best_solution_value
+    return best_solution,best_solution_value, best_found_in_branch
 
 print (branchAndBound(customer_distances,customer_timewindows,maxSpeedPowerSetting,power_settings,[],Infinity,0,0,""))
 print(timesBranched,"Time taken: ", time.time()-start_time)
-print(timesDiscardedForWorse,timesDiscardedForNotPossible,timesEndedBranching,timesEndedBranchingImprovement,timesEndedExec, timesDiscardedForWorse +timesDiscardedForNotPossible+timesEndedBranching+timesEndedBranchingImprovement+timesEndedExec)
+print("\nWorse",timesDiscardedForWorse,"\nNot possible",timesDiscardedForNotPossible,"\nFinished branch without improvement",timesEndedBranching,"\nEnded with improvement",timesEndedBranchingImprovement, "\nTimes reached end of all branchings in node",timesEndedExec, "\nTotal", timesDiscardedForWorse +timesDiscardedForNotPossible+timesEndedBranching+timesEndedBranchingImprovement+timesEndedExec)
+print("Times ended because Previous subrbanch better",timesCutPreviousSubBranchBetter)
 print(averageDepthDiscardedWorse,averageDepthDiscardedNotPossible)
 print("Total distance",sum(customer_distances))
 print(customer_timewindows)
