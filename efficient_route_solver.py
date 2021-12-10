@@ -1,64 +1,66 @@
 import numpy as np
 import time
+import instance_generator as ig
 from numpy.core.numeric import Infinity
 # from numpy.lib.financial import _fv_dispatcher;
 from scipy.optimize import fsolve
 
-power_settings = [50,100,150,200,250]
-cyclist_power = 150
+# power_settings = [50,100,150,200,250]
+# cyclist_power = 150
 
-Cd = 1.18
-A = 0.83
-Ro = 1.18
-Cr = 0.01
-g= 9.81
+# Cd = 1.18
+# A = 0.83
+# Ro = 1.18
+# Cr = 0.01
+# g= 9.81
 
-bike_mass = 850
+# bike_mass = 550
 
-def calcFD(v):
-    return Cd * A * Ro * pow(v,2) /2
-
-
-power_setting = 0
-
-func = lambda v: (calcFD(v) + Cr * bike_mass * g) * v/0.95 - (power_setting + cyclist_power)
-maxSpeedPowerSetting = []
-
-for power in power_settings:
-    power_setting = power
-    sol = fsolve(func,5)
-    maxSpeedPowerSetting.append(min(sol[0],6.944))
+# def calcFD(v):
+#     return Cd * A * Ro * pow(v,2) /2
 
 
+# power_setting = 0
 
-#Electric power for the different bike settings
+# func = lambda v: (calcFD(v) + Cr * bike_mass * g) * v/0.95 - (power_setting + cyclist_power)
+# maxSpeedPowerSetting = []
 
-def generateCustomers(num_customers, max_speed):
-    customer_distances = np.random.randint(200,2000,num_customers)
-    customer_timewindows=[]
-    #Time in minutes
-    prev_min = 0
-
-    max_time_window_start_variation = 30
-    min_window_size = 15
-    max_window_size = 45
-    for customer in customer_distances:
-        travel_time = customer/(max_speed * 60)
-        print(travel_time)
-        timeWindowMin = np.random.randint(max(prev_min-max_window_size/3,0) ,max(prev_min-max_window_size/3,0)+ max_time_window_start_variation)
-        timeWindowMax = np.random.randint(max(timeWindowMin + min_window_size,prev_min+ travel_time) ,max(timeWindowMin + max_window_size,prev_min+ travel_time) )
-
-        prev_min = max(timeWindowMin,prev_min+ travel_time)
-        customer_timewindows.append((timeWindowMin,timeWindowMax))
-    return customer_distances,customer_timewindows
+# for power in power_settings:
+#     power_setting = power
+#     sol = fsolve(func,5)
+#     maxSpeedPowerSetting.append(min(sol[0],6.944))
 
 
 
-max_speed = maxSpeedPowerSetting[len(maxSpeedPowerSetting)-1]
+# #Electric power for the different bike settings
+
+# def generateCustomers(num_customers, max_speed):
+#     customer_distances = np.random.randint(200,2000,num_customers)
+#     customer_timewindows=[]
+#     #Time in minutes
+#     prev_min = 0
+
+#     max_time_window_start_variation = 30
+#     min_window_size = 15
+#     max_window_size = 45
+#     for customer in customer_distances:
+#         travel_time = customer/(max_speed * 60)
+#         print(travel_time)
+#         timeWindowMin = np.random.randint(max(prev_min-max_window_size/3,0) ,max(prev_min-max_window_size/3,0)+ max_time_window_start_variation)
+#         timeWindowMax = np.random.randint(max(timeWindowMin + min_window_size,prev_min+ travel_time) ,max(timeWindowMin + max_window_size,prev_min+ travel_time) )
+
+#         prev_min = max(timeWindowMin,prev_min+ travel_time)
+#         customer_timewindows.append((timeWindowMin,timeWindowMax))
+#     return customer_distances,customer_timewindows
+
+
+
+# max_speed = maxSpeedPowerSetting[len(maxSpeedPowerSetting)-1]
 num_customers = 25
 #Dinstances in meters
 
-customer_distances,customer_timewindows = generateCustomers(num_customers,max_speed)
+#maxSpeedPowerSetting, power_settings,customer_distances,customer_timewindows = ig.GenerateInstance(25,bike_mass=350,save_instance=True)#generateCustomers(num_customers,max_speed)
+maxSpeedPowerSetting, power_settings,customer_distances,customer_timewindows = ig.OpenInstance("12-10-2021-17-40-29.txt")
 # print(customer_distances)
 # print(customer_timewindows)
 #customer_distances = [19797, 11849, 24479, 17410, 23484, 16410 ,22480, 27691, 12591,  5551]
@@ -102,6 +104,7 @@ def branchAndBound(customer_distances,customer_timewindows,speed_options,power_o
         
         if (current_value<best_solution_value):
             timesEndedBranchingImprovement += 1
+            print("Best solution found:",current_solution,current_value,"At time:",time.time()-start_time, "In Branch:",timesBranched)
             return current_solution,current_value, True
         else:
             timesEndedBranching += 1
@@ -127,7 +130,7 @@ def branchAndBound(customer_distances,customer_timewindows,speed_options,power_o
     #     if(total_dist/(speed_options[speed]*60) + current_time <= customer_timewindows[len(customer_timewindows)-1][1]):
     #         minimum_average_speed=speed
     #         break
-    while(minimum_average_speed <= len(speed_options) and total_dist/(speed_options[minimum_average_speed]*60) + current_time >= customer_timewindows[len(customer_timewindows)-1][1]):
+    while(minimum_average_speed < len(speed_options)-1 and total_dist/(speed_options[minimum_average_speed + 1]*60) + current_time >= customer_timewindows[len(customer_timewindows)-1][1]):
         minimum_average_speed += 1
 
     # if(minimum_average_speed != 0):
