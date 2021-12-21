@@ -41,11 +41,13 @@ g= 9.81
 def calcFD(v):
         return Cd * A * Ro * pow(v,2) /2
 
+def CalcTotalForce(v,bike_mass,slope=0):
+    return (calcFD(v) + Cr * bike_mass * g * np.cos(np.arctan(slope)) + bike_mass * g *np.sin(np.arctan(slope))) * v/0.95
 
 def GenerateInstance(num_customers,power_settings = [50,100,150,200,250],cyclist_power = 150,bike_mass = 150,save_instance=False):
     power_setting = 0
 
-    func = lambda v: (calcFD(v) + Cr * bike_mass * g) * v/0.95 - (power_setting + cyclist_power)
+    func = lambda v: CalcTotalForce(v,bike_mass) - (power_setting + cyclist_power)
     maxSpeedPowerSetting = []
 
     for power in power_settings:

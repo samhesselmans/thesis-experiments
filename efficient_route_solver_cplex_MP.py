@@ -4,7 +4,7 @@ from docplex.mp.model import Model
 from docplex.util.environment import get_environment
 import instance_generator as ig
 
-maxSpeedPowerSetting,power_settings,customer_distances,customer_timewindows = ig.GenerateInstance(100,bike_mass=850,save_instance=False)#ig.OpenInstance("12-10-2021-15-20-51.txt")
+maxSpeedPowerSetting,power_settings,customer_distances,customer_timewindows = ig.GenerateInstance(250,bike_mass=850,save_instance=False)#ig.OpenInstance("12-10-2021-15-20-51.txt")
 
 travel_time_matrix = []
 for customer in customer_distances:
