@@ -28,19 +28,18 @@ def GenerateRandomCustomers(n=20):
     
 
 
-def CalcEdgeWeights(G,bike_mass,power_setting=250,cyclist_power=150):
-    slopes = nx.get_edge_attributes(G,"slope")
-    distances = nx.get_edge_attributes(G,"distance")
+def CalcEdgeWeights(G,slopes,distances,bike_mass,power_setting=250,cyclist_power=150):
+    
     travel_times = dict.fromkeys(slopes.keys(),[])
     for slope in slopes:
         func = lambda v: ig.CalcTotalForce(v,bike_mass,slopes[slope]) - (power_setting + cyclist_power)
-        sol = fsolve(func,5)
+        sol = fsolve(func,5,xtol=0.01)
         speed = min(sol[0],6.944)
         travel_times[slope] = distances[slope]/speed
-    nx.set_edge_attributes(G,"traveltime",travel_times.values())
+    nx.set_edge_attributes(G,travel_times,"traveltime")
 
 
-cust = GenerateRandomCustomers(4)
+cust = GenerateRandomCustomers(50)
 G = nx.DiGraph()
 #G.add_nodes_from(cust)
 for i,c in enumerate(cust):
@@ -82,16 +81,18 @@ for i,ic in enumerate(cust):
                 G.add_edge(i,j,distance=dist,slope=slope,color=color)
 start_time = time.time()
 travel_times = []
-for i in range(150,351):
-    CalcEdgeWeights(G,i)
-    sol = dict(nx.all_pairs_dijkstra(G,weight='traveltime'))
+slopes = nx.get_edge_attributes(G,"slope")
+distances = nx.get_edge_attributes(G,"distance")
+for i in range(150,155):
+    CalcEdgeWeights(G,slopes,distances,i)
+    sol = dict(nx.johnson(G,weight='traveltime'))
     travel_times.append(sol)
     print(i)
 print(f"Done calculating all shortest paths in: {time.time()-start_time} seconds")
 pos = nx.get_node_attributes(G,"Pos")
 colors = nx.get_edge_attributes(G,"color").values()
-nx.draw(G,pos, with_labels=True, connectionstyle='arc3, rad = 0.1',edge_color=colors)
+#nx.draw(G,pos, with_labels=True, connectionstyle='arc3, rad = 0.1',edge_color=colors)
 #nx.draw_networkx_edge_labels(G,pos,edge_labels=angles)
-plt.show()  # pyplot draw()
+#plt.show()  # pyplot draw()
 
 print(G)
