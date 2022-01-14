@@ -5,13 +5,14 @@ import os
 import random
 import numpy as np
 from multiprocessing import Pool
-
+import time
 
 
 class Route:
-    def __init__(self,customers,max_capacity):
+    def __init__(self,customers,distance_matrix,max_capacity):
         self._route = [0,0]
         self._arrival_times = [0,0]
+        self.distance_matrix = distance_matrix
         self.time_done_with_last_cust = 0
         self.last_cust = 0
         self.customers = customers
@@ -49,6 +50,10 @@ class Route:
         return total_dist
     
     def CustomerDist(self,cust1,cust2):
+        if(cust1< cust2):
+            return self.distance_matrix[cust1,cust2]
+        else:
+            return self.distance_matrix[cust2,cust1]
         return math.sqrt(pow(self.customers[cust1][1] - self.customers[cust2][1],2) + pow(self.customers[cust1][2] - self.customers[cust2][2],2))
 
     def RemoveCust(self,cust):
@@ -86,17 +91,14 @@ class Route:
 
         for i in range(1,len(self._route)):
             #the increase in arrival_times when this customer is inserted here
-            arrival_time_at_new_cust = self._arrival_times[i-1] + self.customers[self._route[i-1]][6] + self.CustomerDist(self._route[i-1],cust) 
-            
+            arrival_time_at_new_cust = self._arrival_times[i-1] + self.customers[self._route[i-1]][6] 
+            arrival_time_at_new_cust += self.CustomerDist(self._route[i-1],cust) 
             if(arrival_time_at_new_cust >self.customers[cust][6]):
                 break
             
             if(arrival_time_at_new_cust < self.customers[cust][4]):
                 arrival_time_at_new_cust = self.customers[cust][4]
             
-            # increase = arrival_time_at_new_cust + self.CustomerDist(self._route[i],cust)  + self.customers[cust][6] - self._arrival_times[i]
-            # if(increase < 0):
-            #     increase = 0
             
             #Check whether or not this position is feasible
             possible = True
@@ -127,7 +129,8 @@ class Route:
 
     def InsertCust(self,cust,pos):
         arrival_time_at_new_cust = self._arrival_times[pos-1] + self.customers[self._route[pos-1]][6] + self.CustomerDist(self._route[pos-1],cust)
-
+        if(arrival_time_at_new_cust < self.customers[cust][4]):
+            arrival_time_at_new_cust = self.customers[cust][4]
         #Update arrival times
         new_arr_time = arrival_time_at_new_cust + self.CustomerDist(self._route[pos],cust)  + self.customers[cust][6]
         for j in range(pos,len(self._route)):
@@ -150,7 +153,11 @@ class Route:
 
         return self._route[cust],self.CustomerDist(self._route[cust-1],self._route[cust]) + self.CustomerDist(self._route[cust],self._route[cust+1]) - self.CustomerDist(self._route[cust-1],self._route[cust+1])
 
-            
+    def SwapRandom(self,route):
+        for i in range(1,len(self._route)-1):
+            for j in range(1,len(route._route)-1):
+                #Check the swap
+                return None
                 
 
 
@@ -175,6 +182,46 @@ def HandleMove(routes,src,dest,pos,cust):
     routes[src].RemoveCust(cust)
     routes[dest].InsertCust(cust,pos)
 
+#Swaps two random customers
+def SwapRandomCustomers(routes):
+    best_dest = -1
+    best_src = -1
+    best_cust = -1
+    best_cust2 = -1
+    best_imp = -math.inf
+    best_pos = -1
+    for i in range(4):
+        dest = random.randrange(len(routes))
+        src = random.randrange(len(routes))
+        tries = 0
+        while((len(routes[dest]._route) == 2 )and tries < 10):
+            dest = random.randrange(len(routes))
+            tries+= 1
+        tries = 0
+        while((dest == src or len(routes[src]._route) == 2 )and tries < 10):
+            src = random.randrange(len(routes))
+            tries+= 1
+        #raise Exception("Not implemented")
+
+
+#Swaps tails of two random routes
+def SwapRandomTails(routes):
+    best_dest =  -1
+    best_src = -1
+    best_cust = -1
+    best_cust2 = -1
+    best_imp = -math.inf
+    best_pos = -1
+    for i in range(4):
+        dest = random.randrange(len(routes))
+        src = random.randrange(len(routes))
+        tries = 0
+        while((dest == src or len(routes[src]._route) == 2 )and tries < 10):
+            src = random.randrange(len(routes))
+            tries+= 1
+
+
+#Moves a random customer to a different route
 def MoveRandomCustomer(routes):
     #global amt_imp, amt_worse,amt_notdone
     best_dest = -1
@@ -189,9 +236,11 @@ def MoveRandomCustomer(routes):
         while((dest == src or len(routes[src]._route) == 2 )and tries < 10):
             src = random.randrange(len(routes))
             tries+= 1
-        cust,decrease = routes[src].RandomCust()
-        if(cust is  None):
+        if(len(routes[src]._route) == 2):
             continue
+        
+        cust,decrease = routes[src].RandomCust()
+
         pos,increase = routes[dest].BestPossibleInsert(cust)
         if(pos == -1):
             continue
@@ -208,13 +257,20 @@ def MoveRandomCustomer(routes):
         return -math.inf,None
     
 
+def CalculateDistanceMatrix(customers):
+    matrix = np.empty([len(customers),len(customers)])
+    for i in range(len(customers)):
+        for j in range(i,len(customers)):
+            matrix[i,j] = math.sqrt(pow(customers[i][1] - customers[j][1],2) + pow(customers[i][2] - customers[j][2],2))
+    return matrix
+
 
 def OptimizeInstance(instance_name,id,print_extended_info=False):
     name,num_vehiles,vehicle_capacity,customers = psi.ParseInstance(instance_name)
 
     customers[1:] = sorted(customers[1:],key=GetDueDate)
-
-    routes = [ Route(customers,vehicle_capacity) for _ in range(num_vehiles)]
+    distance_matrix = CalculateDistanceMatrix(customers)
+    routes = [ Route(customers,distance_matrix,vehicle_capacity) for _ in range(num_vehiles)]
     #print(CalcTotalDistance(routes))
     to_add = [i for i in range(1,len(customers))]
 
@@ -238,10 +294,12 @@ def OptimizeInstance(instance_name,id,print_extended_info=False):
 
     iteration =0
     temp = 30
-    alpha = 0.98
+    alpha = 0.95
     totalp = 0
     countp = 0
-    while(iteration < 40000000):
+    start_time = time.time()
+    last_changed_accepted_on_it = -1
+    while(iteration < 1000000):
         p = random.uniform(0,1)
         i = 0
         action = None
@@ -251,6 +309,7 @@ def OptimizeInstance(instance_name,id,print_extended_info=False):
             if(i >0):
                 action()
                 amt_imp += 1
+                last_changed_accepted_on_it = iteration
             else:
                  a_p = math.exp(i/temp)
                  totalp += a_p
@@ -258,6 +317,7 @@ def OptimizeInstance(instance_name,id,print_extended_info=False):
                  if(random.uniform(0,1) <= a_p ):
                      amt_worse += 1
                      action()
+                     last_changed_accepted_on_it = iteration
         else:
             amt_notdone += 1
         if(iteration % 10000 == 0 and iteration != 0):
@@ -267,11 +327,11 @@ def OptimizeInstance(instance_name,id,print_extended_info=False):
             #     print("Average a_p after first 1000 it:","No worse",amt_notdone,amt_imp)
             # return
             temp *= alpha
-        if(iteration % 10000 == 0 and iteration != 0):
-            print(f"{id}: Temp: {temp}, Score: {CalcTotalDistance(routes)}")
+        if(iteration % 100000 == 0 and iteration != 0):
+            print(f"{id}: Temp: {temp}, Score: {CalcTotalDistance(routes)}, IT: {iteration}, last changed accepted {iteration-last_changed_accepted_on_it} iterations ago")
         iteration += 1
 
-    print(f"DONE {id}: {name}, Score: {CalcTotalDistance(routes)}")
+    print(f"DONE {id}: {name}, Score: {CalcTotalDistance(routes)}, in {time.time() - start_time}s")
     #print("",)
     if print_extended_info:
         i =0
@@ -292,7 +352,7 @@ def OptimizeAll():
         else:
             continue
 if __name__ == '__main__':
-    with Pool(6) as p:
-        p.starmap(OptimizeInstance,[("solomon_instances/c101.txt",0),("solomon_instances/c101.txt",1),("solomon_instances/c101.txt",2),("solomon_instances/c101.txt",3),("solomon_instances/c101.txt",4),("solomon_instances/c101.txt",5)])
-    #OptimizeInstance("solomon_instances/c101.txt")
+    #with Pool(6) as p:
+    #    p.starmap(OptimizeInstance,[("solomon_instances/c101.txt",0),("solomon_instances/c101.txt",1),("solomon_instances/c101.txt",2),("solomon_instances/c101.txt",3),("solomon_instances/c101.txt",4),("solomon_instances/c101.txt",5)])
+    OptimizeInstance("solomon_instances/c101.txt",0)
 #OptimizeAll()
