@@ -1,4 +1,5 @@
 import enum
+#import profile
 import parse_solomon_instance as psi
 import math
 import os
@@ -6,7 +7,7 @@ import random
 import numpy as np
 from multiprocessing import Pool
 import time
-
+from docplex.mp.model import Model
 
 class Route:
     def __init__(self,customers,distance_matrix,max_capacity):
@@ -158,8 +159,10 @@ class Route:
             for j in range(1,len(route._route)-1):
                 #Check the swap
                 return None
-                
 
+    def GetRouteTuple(self):
+        res = [self.customers[c][0] for c in  self._route]
+        return tuple(res)
 
 
 
@@ -265,9 +268,7 @@ def CalculateDistanceMatrix(customers):
     return matrix
 
 
-def OptimizeInstance(instance_name,id,print_extended_info=False):
-    name,num_vehiles,vehicle_capacity,customers = psi.ParseInstance(instance_name)
-
+def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_extended_info=False):
     customers[1:] = sorted(customers[1:],key=GetDueDate)
     distance_matrix = CalculateDistanceMatrix(customers)
     routes = [ Route(customers,distance_matrix,vehicle_capacity) for _ in range(num_vehiles)]
@@ -294,12 +295,13 @@ def OptimizeInstance(instance_name,id,print_extended_info=False):
 
     iteration =0
     temp = 30
-    alpha = 0.95
+    alpha = 0.97
     totalp = 0
     countp = 0
     start_time = time.time()
     last_changed_accepted_on_it = -1
-    while(iteration < 1000000):
+    columns = set()
+    while(iteration < 2000000):
         p = random.uniform(0,1)
         i = 0
         action = None
@@ -308,6 +310,8 @@ def OptimizeInstance(instance_name,id,print_extended_info=False):
         if(not (action is None)):
             if(i >0):
                 action()
+                for route in routes:
+                         columns.add(route.GetRouteTuple())
                 amt_imp += 1
                 last_changed_accepted_on_it = iteration
             else:
@@ -317,6 +321,8 @@ def OptimizeInstance(instance_name,id,print_extended_info=False):
                  if(random.uniform(0,1) <= a_p ):
                      amt_worse += 1
                      action()
+                     for route in routes:
+                         columns.add(route.GetRouteTuple())
                      last_changed_accepted_on_it = iteration
         else:
             amt_notdone += 1
@@ -334,13 +340,65 @@ def OptimizeInstance(instance_name,id,print_extended_info=False):
     print(f"DONE {id}: {name}, Score: {CalcTotalDistance(routes)}, in {time.time() - start_time}s")
     #print("",)
     if print_extended_info:
-        i =0
-        for route in routes:
-            print("",f"{i}: {route.CalcDist()}")
-            i += 1
-        print("",f"Total: {amt_notdone + amt_imp + amt_worse}, improvements: {amt_imp}, worse: {amt_worse}, not done: {amt_notdone}")
+        # i =0
+        # for route in routes:
+        #     print("",f"{i}: {route.CalcDist()}")
+        #     i += 1
+        print("",f" {id}: Total: {amt_notdone + amt_imp + amt_worse}, improvements: {amt_imp}, worse: {amt_worse}, not done: {amt_notdone}")
+    return columns
+
+def OptimizeInstance(instance_name,num_threads =1,print_extended_info=False):
+    name,num_vehiles,vehicle_capacity,customers = psi.ParseInstance(instance_name)
+    original_customers = customers.copy()
+    found_columns = []
+    with Pool(6) as p:
+        args = [(i,name,num_vehiles,vehicle_capacity,customers.copy(),print_extended_info) for i in range(num_threads)]
+        found_columns = p.starmap(LocalSearchInstance,args)
+    #found_collumns = LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_extended_info)
+    found_columns = list(set().union(*found_columns))
+    print(len(found_columns))
+    SolveILP(found_columns,original_customers,num_vehiles)
 
 
+def SolveILP(columns,customers,num_vehicles):
+    columns = list(columns)
+    costs = []
+    cust_in_route = np.zeros([len(customers),len(columns)])
+    for index,column in enumerate(columns):
+        cost = 0
+        for i in range(len(column)-1):
+            cost += math.sqrt(pow(customers[column[i]][1] - customers[column[i+1]][1],2) + pow(customers[column[i]][2] - customers[column[i+1]][2],2))
+            cust_in_route[column[i],index] = 1
+            cust_in_route[column[i+1],index] = 1
+            
+        costs.append(cost)
+
+
+    mdl = Model(name="Optimized",log_output=True, float_precision=6)
+    column_decisions = mdl.var_list([i for i in range(len(columns))],mdl.binary_vartype,name=lambda f: "route_" +str(f))
+
+    for cust in range(1,len(customers)):
+        mdl.add_constraint(mdl.sum(cust_in_route[cust,cx] * column_decisions[cx] for cx in range(len(columns)) ) == 1)
+
+    mdl.add_constraint(mdl.sum(column_decisions[cx] for cx in range(len(columns))) <= num_vehicles)
+    total_costs = mdl.sum(column_decisions[cx] * costs[cx] for cx in range(len(columns)))
+    mdl.minimize(total_costs)
+    sol = mdl.solve()
+    if sol:
+        vars = mdl.find_matching_vars(pattern="sp_")
+        # res = ""
+        # for v in vars:
+        #     if(v.solution_value == 1):
+        #         #print(v.name.split(', ')[1][0])
+        #         res += v.name.split(', ')[1][0]
+        # print(res)
+
+        # ars = mdl.find_matching_vars(pattern="ar")
+        # wts = mdl.find_matching_vars(pattern="wt")
+        # for ar in range(len(ars)):
+        #     print(ars[ar].solution_value,customer_timewindows[ar],wts[ar].solution_value)
+    else:
+        print("NO SOLUTION")
 
 def OptimizeAll():
     dir = "solomon_instances"
@@ -354,5 +412,5 @@ def OptimizeAll():
 if __name__ == '__main__':
     #with Pool(6) as p:
     #    p.starmap(OptimizeInstance,[("solomon_instances/c101.txt",0),("solomon_instances/c101.txt",1),("solomon_instances/c101.txt",2),("solomon_instances/c101.txt",3),("solomon_instances/c101.txt",4),("solomon_instances/c101.txt",5)])
-    OptimizeInstance("solomon_instances/c101.txt",0)
+    OptimizeInstance("solomon_instances/rc101.txt",num_threads=4,print_extended_info=True)
 #OptimizeAll()
