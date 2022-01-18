@@ -1,4 +1,6 @@
 import enum
+from msilib.schema import CustomAction
+from turtle import pos
 #import profile
 import parse_solomon_instance as psi
 import math
@@ -92,33 +94,35 @@ class Route:
 
         for i in range(1,len(self._route)):
             #the increase in arrival_times when this customer is inserted here
-            arrival_time_at_new_cust = self._arrival_times[i-1] + self.customers[self._route[i-1]][6] 
-            arrival_time_at_new_cust += self.CustomerDist(self._route[i-1],cust) 
-            if(arrival_time_at_new_cust >self.customers[cust][6]):
+            # arrival_time_at_new_cust = self._arrival_times[i-1] + self.customers[self._route[i-1]][6] 
+            # arrival_time_at_new_cust += self.CustomerDist(self._route[i-1],cust) 
+            # if(arrival_time_at_new_cust >self.customers[cust][6]):
+            #     break
+            
+            # if(arrival_time_at_new_cust < self.customers[cust][4]):
+            #     arrival_time_at_new_cust = self.customers[cust][4]
+            
+            
+            # #Check whether or not this position is feasible
+            # possible = True
+            # new_arr_time = arrival_time_at_new_cust + self.CustomerDist(self._route[i],cust)  + self.customers[cust][6]
+            # for j in range(i,len(self._route)):
+            #     if(new_arr_time > self.customers[self._route[j]][5]):
+            #         #With the new customer inserted we dont meet the timewindow of j
+            #         possible = False
+            #         break
+            #     if(new_arr_time < self.customers[self._route[j]][4]):
+            #         new_arr_time = self.customers[self._route[j]][4]
+            #     if(j != len(self._route)-1):
+            #         new_arr_time += self.CustomerDist(self._route[j],self._route[j+1])  + self.customers[self._route[j]][6]
+            #     #if(self._arrival_times[j] + increase > self.customers[self._route[j]][5]):
+            #     #    possible = False
+            #     #    break
+            possible,ever_possible,dist_increase = self.CustPossibleAtPos(cust,i)
+            if(not ever_possible):
                 break
-            
-            if(arrival_time_at_new_cust < self.customers[cust][4]):
-                arrival_time_at_new_cust = self.customers[cust][4]
-            
-            
-            #Check whether or not this position is feasible
-            possible = True
-            new_arr_time = arrival_time_at_new_cust + self.CustomerDist(self._route[i],cust)  + self.customers[cust][6]
-            for j in range(i,len(self._route)):
-                if(new_arr_time > self.customers[self._route[j]][5]):
-                    #With the new customer inserted we dont meet the timewindow of j
-                    possible = False
-                    break
-                if(new_arr_time < self.customers[self._route[j]][4]):
-                    new_arr_time = self.customers[self._route[j]][4]
-                if(j != len(self._route)-1):
-                    new_arr_time += self.CustomerDist(self._route[j],self._route[j+1])  + self.customers[self._route[j]][6]
-                #if(self._arrival_times[j] + increase > self.customers[self._route[j]][5]):
-                #    possible = False
-                #    break
-            
             if(possible):
-                dist_increase = self.CustomerDist(self._route[i-1],cust) +  self.CustomerDist(self._route[i],cust) - self.CustomerDist(self._route[i-1],self._route[i])
+                #dist_increase = self.CustomerDist(self._route[i-1],cust) +  self.CustomerDist(self._route[i],cust) - self.CustomerDist(self._route[i-1],self._route[i])
                 #Check if this position is better than the current best position
                 if(dist_increase < best_dist_increae):
                     #Update best known solution
@@ -133,7 +137,10 @@ class Route:
         if(arrival_time_at_new_cust < self.customers[cust][4]):
             arrival_time_at_new_cust = self.customers[cust][4]
         #Update arrival times
-        new_arr_time = arrival_time_at_new_cust + self.CustomerDist(self._route[pos],cust)  + self.customers[cust][6]
+        try:
+            new_arr_time = arrival_time_at_new_cust + self.CustomerDist(self._route[pos],cust)  + self.customers[cust][6]
+        except:
+            print(f"oeps cust:{cust} pos:{pos} len:{len(self._route)} route:{self._route}")
         for j in range(pos,len(self._route)):
             if(new_arr_time < self.customers[self._route[j]][4]):
                 new_arr_time = self.customers[self._route[j]][4]
@@ -144,7 +151,7 @@ class Route:
         #Insert new values
         self._arrival_times.insert(pos,arrival_time_at_new_cust)
         self._route.insert(pos,cust)
-        self.used_capacity += self.customers[self._route[pos-1]][3]
+        self.used_capacity += self.customers[cust][3]
         return
     #Returns a random customer and the reduced length of the route that would be caused by removal of said customer
     def RandomCust(self):
@@ -154,11 +161,50 @@ class Route:
 
         return self._route[cust],self.CustomerDist(self._route[cust-1],self._route[cust]) + self.CustomerDist(self._route[cust],self._route[cust+1]) - self.CustomerDist(self._route[cust-1],self._route[cust+1])
 
-    def SwapRandom(self,route):
+    def CustPossibleAtPos(self,cust,pos,skip=0):
+        arrival_time_at_new_cust = self._arrival_times[pos-1] + self.customers[self._route[pos-1]][6] 
+        arrival_time_at_new_cust += self.CustomerDist(self._route[pos-1],cust)
+        if(arrival_time_at_new_cust >self.customers[cust][5]):
+            return False,False,-math.inf
+    
+        if(arrival_time_at_new_cust < self.customers[cust][4]):
+            arrival_time_at_new_cust = self.customers[cust][4]
+        new_arr_time = arrival_time_at_new_cust + self.CustomerDist(self._route[pos+skip],cust)  + self.customers[cust][6]
+        for j in range(pos+skip,len(self._route)):
+            if(new_arr_time > self.customers[self._route[j]][5]):
+                #With the new customer inserted we dont meet the timewindow of j
+                return False,True,-math.inf
+            if(new_arr_time < self.customers[self._route[j]][4]):
+                new_arr_time = self.customers[self._route[j]][4]
+            if(j != len(self._route)-1):
+                new_arr_time += self.CustomerDist(self._route[j],self._route[j+1])  + self.customers[self._route[j]][6]
+        dist_increase = self.CustomerDist(self._route[pos-1],cust) +  self.CustomerDist(self._route[pos+skip],cust) - self.CustomerDist(self._route[pos-1],self._route[pos])
+        return True,True,dist_increase
+
+    def CanSwap(self,cust1,cust2):
         for i in range(1,len(self._route)-1):
-            for j in range(1,len(route._route)-1):
-                #Check the swap
-                return None
+            if self._route[i] == cust1:
+                possible,_,dist_inrease = self.CustPossibleAtPos(cust2,i,1)
+                possible = possible and (self.used_capacity - self.customers[cust1][3] + self.customers[cust2][3] <= self.max_capacity)
+                return possible,dist_inrease,i
+                # arrival_time_at_new_cust = self._arrival_times[i-1] + self.customers[self._route[i-1]][6] 
+                # arrival_time_at_new_cust += self.CustomerDist(self._route[i-1],cust2)
+                # if(arrival_time_at_new_cust >self.customers[cust2][6]):
+                #     return False
+            
+                # if(arrival_time_at_new_cust < self.customers[cust2][4]):
+                #     arrival_time_at_new_cust = self.customers[cust2][4]
+                # new_arr_time = arrival_time_at_new_cust + self.CustomerDist(self._route[i+1],cust2)  + self.customers[cust2][6]
+                # for j in range(i+1,len(self._route)):
+                #     if(new_arr_time > self.customers[self._route[j]][5]):
+                #         #With the new customer inserted we dont meet the timewindow of j
+                #         return False
+                #     if(new_arr_time < self.customers[self._route[j]][4]):
+                #         new_arr_time = self.customers[self._route[j]][4]
+                #     if(j != len(self._route)-1):
+                #         new_arr_time += self.CustomerDist(self._route[j],self._route[j+1])  + self.customers[self._route[j]][6]
+                # return True,i 
+                
 
     def GetRouteTuple(self):
         res = [self.customers[c][0] for c in  self._route]
@@ -185,6 +231,14 @@ def HandleMove(routes,src,dest,pos,cust):
     routes[src].RemoveCust(cust)
     routes[dest].InsertCust(cust,pos)
 
+def HandleSwap(routes,src,dest,cust1,pos1,cust2,pos2):
+    #print("Swapping!")
+    routes[src].RemoveCust(cust1)
+    routes[src].InsertCust(cust2,pos1)
+
+    routes[dest].RemoveCust(cust2)
+    routes[dest].InsertCust(cust1,pos2)
+
 #Swaps two random customers
 def SwapRandomCustomers(routes):
     best_dest = -1
@@ -192,7 +246,8 @@ def SwapRandomCustomers(routes):
     best_cust = -1
     best_cust2 = -1
     best_imp = -math.inf
-    best_pos = -1
+    best_pos1 = -1
+    best_pos2 = -1
     for i in range(4):
         dest = random.randrange(len(routes))
         src = random.randrange(len(routes))
@@ -204,6 +259,27 @@ def SwapRandomCustomers(routes):
         while((dest == src or len(routes[src]._route) == 2 )and tries < 10):
             src = random.randrange(len(routes))
             tries+= 1
+
+        if(len(routes[src]._route) == 2 or len(routes[dest]._route) == 2 ):
+            continue
+        cust1,_ = routes[src].RandomCust()
+        cust2,_ = routes[dest].RandomCust()
+        possible1,increase1,pos1 = routes[src].CanSwap(cust1,cust2)
+        possible2,increase2,pos2 = routes[dest].CanSwap(cust2,cust1)
+        if(possible1 and possible2):
+            improvement = -(increase1+increase2)
+            if(improvement > best_imp):
+                best_dest=dest
+                best_src = src
+                best_cust = cust1
+                best_cust2 = cust2
+                best_pos1 = pos1
+                best_pos2 = pos2
+                best_imp = improvement
+    if(best_dest != 1):
+        return best_imp,lambda:HandleSwap(routes,best_src,best_dest,best_cust,best_pos1,best_cust2,best_pos2)
+    else:
+        return None,None
         #raise Exception("Not implemented")
 
 
@@ -276,36 +352,53 @@ def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_ext
     to_add = [i for i in range(1,len(customers))]
 
     #Create an initial solution
-    for route in routes:
-        skipped_all = False
-        while not skipped_all:
-            to_remove = -1
-            res = True
-            for cust in to_add:
-                if(route.AddCustomerToEnd(cust)):
-                    to_remove = cust
-                    res = False
-                    break
-            skipped_all = res
-            if(not res):
-                to_add.remove(to_remove)
+    # for route in routes:
+    #     skipped_all = False
+    #     while not skipped_all:
+    #         to_remove = -1
+    #         res = True
+    #         for cust in to_add:
+    #             if(route.AddCustomerToEnd(cust)):
+    #                 to_remove = cust
+    #                 res = False
+    #                 break
+    #         skipped_all = res
+    #         if(not res):
+    #             to_add.remove(to_remove)
+    for cust in to_add:
+        best_increase = math.inf
+        best_pos = -1
+        best_route = None
+        for route in routes:
+            pos,incr = route.BestPossibleInsert(cust)
+            if(incr < best_increase):
+                best_increase = incr
+                best_pos = pos
+                best_route = route
+        if(best_pos != -1):
+            best_route.InsertCust(cust,best_pos)
+        else:
+            raise Exception("Wow cust past niet")
     amt_imp = 0
     amt_worse = 0
     amt_notdone = 0
-
+    # if(len(to_add) != 0):
+    #     raise Exception("WTF!")
     iteration =0
     temp = 30
-    alpha = 0.97
+    alpha = 0.98
     totalp = 0
     countp = 0
     start_time = time.time()
     last_changed_accepted_on_it = -1
     columns = set()
-    while(iteration < 2000000):
+    while(iteration < 3000000):
         p = random.uniform(0,1)
         i = 0
         action = None
-        if(p <= 1):
+        if(p <= 0.5):
+            i, action =  SwapRandomCustomers(routes)#MoveRandomCustomer(routes)
+        elif (p <=1):
             i, action =  MoveRandomCustomer(routes)
         if(not (action is None)):
             if(i >0):
@@ -334,7 +427,11 @@ def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_ext
             # return
             temp *= alpha
         if(iteration % 100000 == 0 and iteration != 0):
-            print(f"{id}: Temp: {temp}, Score: {CalcTotalDistance(routes)}, IT: {iteration}, last changed accepted {iteration-last_changed_accepted_on_it} iterations ago")
+            used = 0
+            for route in routes:
+                if(len(route._route) >2):
+                    used += 1
+            print(f"{id}: Temp: {temp}, Score: {CalcTotalDistance(routes)}, N: {used}, IT: {iteration}, last changed accepted {iteration-last_changed_accepted_on_it} iterations ago")
         iteration += 1
 
     print(f"DONE {id}: {name}, Score: {CalcTotalDistance(routes)}, in {time.time() - start_time}s")
@@ -351,7 +448,7 @@ def OptimizeInstance(instance_name,num_threads =1,print_extended_info=False):
     name,num_vehiles,vehicle_capacity,customers = psi.ParseInstance(instance_name)
     original_customers = customers.copy()
     found_columns = []
-    with Pool(6) as p:
+    with Pool(num_threads) as p:
         args = [(i,name,num_vehiles,vehicle_capacity,customers.copy(),print_extended_info) for i in range(num_threads)]
         found_columns = p.starmap(LocalSearchInstance,args)
     #found_collumns = LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_extended_info)
@@ -385,7 +482,12 @@ def SolveILP(columns,customers,num_vehicles):
     mdl.minimize(total_costs)
     sol = mdl.solve()
     if sol:
-        vars = mdl.find_matching_vars(pattern="sp_")
+        vars = mdl.find_matching_vars(pattern="route_")
+        i = 0
+        for v in vars:
+            if(v.solution_value == 1):
+                print(columns[i])
+            i+= 1
         # res = ""
         # for v in vars:
         #     if(v.solution_value == 1):
@@ -412,5 +514,5 @@ def OptimizeAll():
 if __name__ == '__main__':
     #with Pool(6) as p:
     #    p.starmap(OptimizeInstance,[("solomon_instances/c101.txt",0),("solomon_instances/c101.txt",1),("solomon_instances/c101.txt",2),("solomon_instances/c101.txt",3),("solomon_instances/c101.txt",4),("solomon_instances/c101.txt",5)])
-    OptimizeInstance("solomon_instances/rc101.txt",num_threads=4,print_extended_info=True)
+    OptimizeInstance("solomon_instances/r104.txt",num_threads=6,print_extended_info=True)
 #OptimizeAll()
