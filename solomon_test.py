@@ -439,7 +439,7 @@ def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_ext
     best_sol = copy.deepcopy(routes)
     best_sol_value = CalcTotalDistance(best_sol)
     current_value = best_sol_value
-    while(iteration < 10):
+    while(iteration < 3000000):
         p = random.uniform(0,1)
         i = 0
         action = None
@@ -511,7 +511,8 @@ def OptimizeInstance(instance_name,num_threads =1,print_extended_info=False):
     found_columns = list(set().union(*found_columns))
     print(len(found_columns))
     sol,val = SolveILP(found_columns,original_customers,num_vehiles)
-    sc.CheckSolution(instance_name,sol,val)
+    failed = sc.CheckSolution(instance_name,sol,val)
+    return failed,sol,val
 
 
 def SolveILP(columns,customers,num_vehicles):
@@ -566,15 +567,26 @@ def SolveILP(columns,customers,num_vehicles):
 
 def OptimizeAll():
     dir = "solomon_instances"
-
-    for filename in os.listdir(dir):
-        if filename.endswith(".txt"): 
-            OptimizeInstance(dir +"/" +  filename,0)
-            continue
-        else:
-            continue
+    with open("results.txt","w") as res_file:
+        for filename in os.listdir(dir):
+            if filename.endswith(".txt"):
+                start_time = time.time() 
+                failed,sol,val = OptimizeInstance(dir +"/" +  filename,num_threads=6)
+                stop_time = time.time()
+                if(failed):
+                    res_file.write("FAIL ")
+                res_file.write(f"{filename}: {val} Found in {round(stop_time-start_time,3)}s\n")
+                with open(f"solutions/{filename}","w") as f:
+                    if(failed):
+                        f.write("FAILED\n")
+                    f.write(f"Score: {val}\n")
+                    f.write(str(sol))
+                continue
+            else:
+                continue
 if __name__ == '__main__':
+    OptimizeAll()
     #with Pool(6) as p:
     #    p.starmap(OptimizeInstance,[("solomon_instances/c101.txt",0),("solomon_instances/c101.txt",1),("solomon_instances/c101.txt",2),("solomon_instances/c101.txt",3),("solomon_instances/c101.txt",4),("solomon_instances/c101.txt",5)])
-    OptimizeInstance("solomon_instances/rc105.txt",num_threads=4,print_extended_info=True)
+    #OptimizeInstance("solomon_instances/rc105.txt",num_threads=4,print_extended_info=True)
 #OptimizeAll()
