@@ -1,6 +1,4 @@
 import enum
-from msilib.schema import CustomAction
-from turtle import pos
 #import profile
 import parse_solomon_instance as psi
 import math
@@ -504,12 +502,13 @@ def OptimizeInstance(instance_name,num_threads =1,print_extended_info=False):
     name,num_vehiles,vehicle_capacity,customers = psi.ParseInstance(instance_name)
     original_customers = customers.copy()
     found_columns = []
+    print(f"Starting local search on {num_threads} Threads")
     with Pool(num_threads) as p:
         args = [(i,name,num_vehiles,vehicle_capacity,customers.copy(),print_extended_info) for i in range(num_threads)]
         found_columns = p.starmap(LocalSearchInstance,args)
     #found_collumns = LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_extended_info)
     found_columns = list(set().union(*found_columns))
-    print(len(found_columns))
+    print(f"Done with local search. Starting ILP on {len(found_columns)} columns")
     sol,val = SolveILP(found_columns,original_customers,num_vehiles)
     failed = sc.CheckSolution(instance_name,sol,val)
     return failed,sol,val
