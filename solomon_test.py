@@ -12,6 +12,8 @@ import time
 from docplex.mp.model import Model
 import traceback
 import copy
+import sol_checker as sc
+
 
 class Route:
     def __init__(self,customers,distance_matrix,max_capacity):
@@ -508,7 +510,8 @@ def OptimizeInstance(instance_name,num_threads =1,print_extended_info=False):
     #found_collumns = LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_extended_info)
     found_columns = list(set().union(*found_columns))
     print(len(found_columns))
-    SolveILP(found_columns,original_customers,num_vehiles)
+    sol = SolveILP(found_columns,original_customers,num_vehiles)
+    sc.CheckSolution(instance_name,sol)
 
 
 def SolveILP(columns,customers,num_vehicles):
@@ -535,11 +538,13 @@ def SolveILP(columns,customers,num_vehicles):
     total_costs = mdl.sum(column_decisions[cx] * costs[cx] for cx in range(len(columns)))
     mdl.minimize(total_costs)
     sol = mdl.solve()
+    routes = []
     if sol:
         vars = mdl.find_matching_vars(pattern="route_")
         i = 0
         for v in vars:
             if(v.solution_value == 1):
+                routes.append(columns[i])
                 print(columns[i])
             i+= 1
         # res = ""
@@ -555,6 +560,7 @@ def SolveILP(columns,customers,num_vehicles):
         #     print(ars[ar].solution_value,customer_timewindows[ar],wts[ar].solution_value)
     else:
         print("NO SOLUTION")
+    return routes
 
 def OptimizeAll():
     dir = "solomon_instances"
@@ -568,5 +574,5 @@ def OptimizeAll():
 if __name__ == '__main__':
     #with Pool(6) as p:
     #    p.starmap(OptimizeInstance,[("solomon_instances/c101.txt",0),("solomon_instances/c101.txt",1),("solomon_instances/c101.txt",2),("solomon_instances/c101.txt",3),("solomon_instances/c101.txt",4),("solomon_instances/c101.txt",5)])
-    OptimizeInstance("solomon_instances/rc101.txt",num_threads=4,print_extended_info=True)
+    OptimizeInstance("solomon_instances/rc105.txt",num_threads=4,print_extended_info=True)
 #OptimizeAll()
