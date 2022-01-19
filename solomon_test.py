@@ -439,7 +439,7 @@ def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_ext
     best_sol = copy.deepcopy(routes)
     best_sol_value = CalcTotalDistance(best_sol)
     current_value = best_sol_value
-    while(iteration < 3000000):
+    while(iteration < 10):
         p = random.uniform(0,1)
         i = 0
         action = None
@@ -510,8 +510,8 @@ def OptimizeInstance(instance_name,num_threads =1,print_extended_info=False):
     #found_collumns = LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_extended_info)
     found_columns = list(set().union(*found_columns))
     print(len(found_columns))
-    sol = SolveILP(found_columns,original_customers,num_vehiles)
-    sc.CheckSolution(instance_name,sol)
+    sol,val = SolveILP(found_columns,original_customers,num_vehiles)
+    sc.CheckSolution(instance_name,sol,val)
 
 
 def SolveILP(columns,customers,num_vehicles):
@@ -539,7 +539,9 @@ def SolveILP(columns,customers,num_vehicles):
     mdl.minimize(total_costs)
     sol = mdl.solve()
     routes = []
+    obj_val = math.inf
     if sol:
+        obj_val = sol.objective_value
         vars = mdl.find_matching_vars(pattern="route_")
         i = 0
         for v in vars:
@@ -560,7 +562,7 @@ def SolveILP(columns,customers,num_vehicles):
         #     print(ars[ar].solution_value,customer_timewindows[ar],wts[ar].solution_value)
     else:
         print("NO SOLUTION")
-    return routes
+    return routes,obj_val
 
 def OptimizeAll():
     dir = "solomon_instances"

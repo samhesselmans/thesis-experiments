@@ -1,6 +1,6 @@
 import parse_solomon_instance as psi
 import math
-def CheckSolution(instance,routes):
+def CheckSolution(instance,routes,distance_target):
     name,num_vehiles,vehicle_capacity,customers = psi.ParseInstance(instance)
     # routes = [(0, 69, 98, 88, 53, 78, 60, 0)
     #             ,(0, 92, 31, 29, 27, 26, 32, 93, 0)
@@ -20,6 +20,7 @@ def CheckSolution(instance,routes):
 
     total_dist = 0
     customers_visited = set()
+    failed_total = False
     for route in routes:
         
         arrival_time = 0
@@ -44,8 +45,16 @@ def CheckSolution(instance,routes):
             arrival_time += dist_to_next + customers[route[i]][6]
         if not failed:
             print(f"PASS {route}")
+        failed_total = failed or failed_total
             
     print(total_dist)
     if(len(customers_visited) != len(customers)):
+        failed_total = True
         print(f"FAIL, did not visit all customers")
         print(len(customers_visited))
+    
+    if(round(distance_target,6) != round(total_dist,6)):
+        failed_total = True
+        print("FAIL Obective value wrong")
+
+    return failed_total
