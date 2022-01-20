@@ -437,7 +437,6 @@ def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_ext
     best_sol = copy.deepcopy(routes)
     best_sol_value = CalcTotalDistance(best_sol)
     current_value = best_sol_value
-    best_improved_on_iteration = 0
     while(iteration < 3000000):
         p = random.uniform(0,1)
         i = 0
@@ -455,7 +454,6 @@ def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_ext
                 if(current_value < best_sol_value):
                     best_sol_value = current_value
                     best_sol = copy.deepcopy(routes)
-                    best_improved_on_iteration = iteration
                 for route in routes:
                          columns.add(route.GetRouteTuple())
                 amt_imp += 1
@@ -482,17 +480,12 @@ def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_ext
             #     print("Average a_p after first 1000 it:","No worse",amt_notdone,amt_imp)
             # return
             temp *= alpha
-        if(iteration - best_improved_on_iteration > 20000 and temp < 1):
-            temp = 10
-            routes = copy.deepcopy(best_sol)
-            current_value = best_sol_value
-            print(f"{id}:Best solution changed to long ago. Restarting from best solution with T: {temp}")
         if(iteration % 100000 == 0 and iteration != 0):
             used = 0
             for route in routes:
                 if(len(route._route) >2):
                     used += 1
-            print(f"{id}: T: {round(temp,3)}, S: {round(CalcTotalDistance(routes),3)}, TS: {round(current_value,3)}, N: {used}, IT: {iteration}, LA {iteration-last_changed_accepted_on_it}, B: {round(best_sol_value,3)}, BI: {best_improved_on_iteration}")
+            print(f"{id}: T: {round(temp,3)}, S: {round(CalcTotalDistance(routes),3)}, TS: {round(current_value,3)}, N: {used}, IT: {iteration}, LA {iteration-last_changed_accepted_on_it}, B: {round(best_sol_value,3)}")
         iteration += 1
 
     print(f"DONE {id}: {name}, Score: {CalcTotalDistance(best_sol)}, in {time.time() - start_time}s")
@@ -532,7 +525,6 @@ def OptimizeInstance(instance_name,num_threads =1,print_extended_info=False):
     print(f"Done with local search. Starting ILP on {len(found_columns)} columns")
     sol,val = SolveILP(found_columns,original_customers,num_vehiles,best_sol_tuples)
     failed = sc.CheckSolution(instance_name,sol,val)
-    print(f"ILP improved solution by {round((best_val-val)/best_val * 100,2)}% and used {len(sol)} vehicles")
     return failed,sol,val
 
 
@@ -625,5 +617,5 @@ if __name__ == '__main__':
     #OptimizeAll()
     #with Pool(6) as p:
     #    p.starmap(OptimizeInstance,[("solomon_instances/c101.txt",0),("solomon_instances/c101.txt",1),("solomon_instances/c101.txt",2),("solomon_instances/c101.txt",3),("solomon_instances/c101.txt",4),("solomon_instances/c101.txt",5)])
-    OptimizeInstance("solomon_1000/C1_10_1.txt",num_threads=4,print_extended_info=True)
+    OptimizeInstance("solomon_instances/rc105.txt",num_threads=4,print_extended_info=True)
 #OptimizeAll()
