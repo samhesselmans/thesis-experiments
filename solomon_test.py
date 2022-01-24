@@ -1,10 +1,12 @@
 import enum
+
+#from scipy import rand
 #import profile
 import parse_solomon_instance as psi
 import math
 import os
 import random
-import numpy as np
+#import numpy as np
 from multiprocessing import Pool
 import time
 from docplex.mp.model import Model
@@ -56,9 +58,9 @@ class Route:
     
     def CustomerDist(self,cust1,cust2):
         if(cust1< cust2):
-            return self.distance_matrix[cust1,cust2]
+            return self.distance_matrix[cust1][cust2]
         else:
-            return self.distance_matrix[cust2,cust1]
+            return self.distance_matrix[cust2][cust1]
         return math.sqrt(pow(self.customers[cust1][1] - self.customers[cust2][1],2) + pow(self.customers[cust1][2] - self.customers[cust2][2],2))
 
     def RemoveCust(self,cust):
@@ -374,14 +376,16 @@ def MoveRandomCustomer(routes):
     
 
 def CalculateDistanceMatrix(customers):
-    matrix = np.empty([len(customers),len(customers)])
+    matrix = [[0 for _ in range(len(customers))] for _ in range(len(customers))]#np.empty([len(customers),len(customers)])
     for i in range(len(customers)):
         for j in range(i,len(customers)):
-            matrix[i,j] = math.sqrt(pow(customers[i][1] - customers[j][1],2) + pow(customers[i][2] - customers[j][2],2))
+            matrix[i][j] = math.sqrt(pow(customers[i][1] - customers[j][1],2) + pow(customers[i][2] - customers[j][2],2))
     return matrix
 
 
 def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_extended_info=False):
+    #c = customers[1:]
+    #random.shuffle(c)
     customers[1:] = sorted(customers[1:],key=GetDueDate)
     distance_matrix = CalculateDistanceMatrix(customers)
     routes = [ Route(customers,distance_matrix,vehicle_capacity) for _ in range(num_vehiles)]
@@ -438,7 +442,7 @@ def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_ext
     best_sol_value = CalcTotalDistance(best_sol)
     current_value = best_sol_value
     best_improved_on_iteration = 0
-    while(iteration < 3000000):
+    while(iteration < 2000000):
         p = random.uniform(0,1)
         i = 0
         action = None
@@ -482,7 +486,7 @@ def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_ext
             #     print("Average a_p after first 1000 it:","No worse",amt_notdone,amt_imp)
             # return
             temp *= alpha
-        if(iteration - best_improved_on_iteration > 20000 and temp < 1):
+        if(iteration - best_improved_on_iteration > 100000 and temp < 1):
             temp = 10
             routes = copy.deepcopy(best_sol)
             current_value = best_sol_value
@@ -539,13 +543,13 @@ def OptimizeInstance(instance_name,num_threads =1,print_extended_info=False):
 def SolveILP(columns,customers,num_vehicles,best_sol_ls):
     columns = list(columns)
     costs = []
-    cust_in_route = np.zeros([len(customers),len(columns)])
+    cust_in_route = [[0 for _ in range(len(columns))] for _ in range(len(customers))]#np.zeros([len(customers),len(columns)])
     for index,column in enumerate(columns):
         cost = 0
         for i in range(len(column)-1):
             cost += math.sqrt(pow(customers[column[i]][1] - customers[column[i+1]][1],2) + pow(customers[column[i]][2] - customers[column[i+1]][2],2))
-            cust_in_route[column[i],index] = 1
-            cust_in_route[column[i+1],index] = 1
+            cust_in_route[column[i]][index] = 1
+            cust_in_route[column[i+1]][index] = 1
             
         costs.append(cost)
 
@@ -556,7 +560,7 @@ def SolveILP(columns,customers,num_vehicles,best_sol_ls):
 
     #Add the customer constraint
     for cust in range(1,len(customers)):
-        mdl.add_constraint(mdl.sum(cust_in_route[cust,cx] * column_decisions[cx] for cx in range(len(columns)) ) == 1)
+        mdl.add_constraint(mdl.sum(cust_in_route[cust][cx] * column_decisions[cx] for cx in range(len(columns)) ) == 1)
 
     #Add the max vehicle constraint
     mdl.add_constraint(mdl.sum(column_decisions[cx] for cx in range(len(columns))) <= num_vehicles)
@@ -625,5 +629,5 @@ if __name__ == '__main__':
     #OptimizeAll()
     #with Pool(6) as p:
     #    p.starmap(OptimizeInstance,[("solomon_instances/c101.txt",0),("solomon_instances/c101.txt",1),("solomon_instances/c101.txt",2),("solomon_instances/c101.txt",3),("solomon_instances/c101.txt",4),("solomon_instances/c101.txt",5)])
-    OptimizeInstance("solomon_1000/C1_10_1.txt",num_threads=4,print_extended_info=True)
+    OptimizeInstance("solomon_instances/c101.txt",num_threads=6,print_extended_info=True)
 #OptimizeAll()
