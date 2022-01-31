@@ -438,7 +438,7 @@ def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_ext
     best_sol_value = CalcTotalDistance(best_sol)
     current_value = best_sol_value
     best_improved_on_iteration = 0
-    while(iteration < 3000000):
+    while(iteration < 12000000):
         p = random.uniform(0,1)
         i = 0
         action = None
@@ -482,7 +482,7 @@ def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_ext
             #     print("Average a_p after first 1000 it:","No worse",amt_notdone,amt_imp)
             # return
             temp *= alpha
-        if(iteration - best_improved_on_iteration > 20000 and temp < 1):
+        if(iteration - best_improved_on_iteration > 100000 and temp < 0.5):
             temp = 10
             routes = copy.deepcopy(best_sol)
             current_value = best_sol_value
@@ -561,6 +561,8 @@ def SolveILP(columns,customers,num_vehicles,best_sol_ls):
     #Add the max vehicle constraint
     mdl.add_constraint(mdl.sum(column_decisions[cx] for cx in range(len(columns))) <= num_vehicles)
     
+    print("Done adding constraints")
+
     #Set objective function
     total_costs = mdl.sum(column_decisions[cx] * costs[cx] for cx in range(len(columns)))
     mdl.minimize(total_costs)
@@ -571,7 +573,7 @@ def SolveILP(columns,customers,num_vehicles,best_sol_ls):
         if(column in best_sol_ls):
             warmstart.add_var_value(column_decisions[index],1)
     mdl.add_mip_start(warmstart)
-
+    print("Done adding warm start, Solving")
     #Solve the model
     sol = mdl.solve()
 
@@ -625,5 +627,5 @@ if __name__ == '__main__':
     #OptimizeAll()
     #with Pool(6) as p:
     #    p.starmap(OptimizeInstance,[("solomon_instances/c101.txt",0),("solomon_instances/c101.txt",1),("solomon_instances/c101.txt",2),("solomon_instances/c101.txt",3),("solomon_instances/c101.txt",4),("solomon_instances/c101.txt",5)])
-    OptimizeInstance("solomon_1000/C1_10_1.txt",num_threads=4,print_extended_info=True)
+    OptimizeInstance("solomon_1000/R1_10_1.TXT",num_threads=4,print_extended_info=True)
 #OptimizeAll()
