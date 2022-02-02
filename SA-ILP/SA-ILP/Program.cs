@@ -13,4 +13,4 @@ using SA_ILP;
 
 var solver = new Solver();
 
-solver.SolveInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\r101.txt");
+solver.SolveInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\R1_10_1.TXT", numInterations: 12000000);

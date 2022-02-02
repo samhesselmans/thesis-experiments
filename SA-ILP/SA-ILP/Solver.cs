@@ -389,7 +389,7 @@ namespace SA_ILP
             random = new Random();
         }
 
-        private void LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers,bool printExtendedInfo=false)
+        private void LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers,bool printExtendedInfo=false,int numInterations=3000000)
         {
             var distanceMatrix = CalculateDistanceMatrix(customers);
             //customers.Sort(1, customers.Count - 1, delegate (Customer x, Customer y) { x.TWEnd.CompareTo(y.TWEnd); });
@@ -448,7 +448,7 @@ namespace SA_ILP
             double bestSolValue = CalcTotalDistance(BestSolution);
             double currentValue = bestSolValue;
             int bestImprovedIteration = 0;
-            for (int iteration = 0; iteration < 3000000; iteration++)
+            for (int iteration = 0; iteration < numInterations; iteration++)
             {
                 double p = random.NextDouble();
                 double imp = 0;
@@ -528,10 +528,10 @@ namespace SA_ILP
 
         }
     
-        public void SolveInstance(string fileName)
+        public void SolveInstance(string fileName,int numInterations= 3000000)
         {
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
-            LocalSearchInstance(0, name, numV, capV, customers);
+            LocalSearchInstance(0, name, numV, capV, customers,numInterations: numInterations);
         }
 
     }
