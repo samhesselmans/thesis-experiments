@@ -438,7 +438,7 @@ def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_ext
     best_sol_value = CalcTotalDistance(best_sol)
     current_value = best_sol_value
     best_improved_on_iteration = 0
-    while(iteration < 12000000):
+    while(iteration < 3000000):
         p = random.uniform(0,1)
         i = 0
         action = None
@@ -627,5 +627,5 @@ if __name__ == '__main__':
     #OptimizeAll()
     #with Pool(6) as p:
     #    p.starmap(OptimizeInstance,[("solomon_instances/c101.txt",0),("solomon_instances/c101.txt",1),("solomon_instances/c101.txt",2),("solomon_instances/c101.txt",3),("solomon_instances/c101.txt",4),("solomon_instances/c101.txt",5)])
-    OptimizeInstance("solomon_1000/R1_10_1.TXT",num_threads=4,print_extended_info=True)
+    OptimizeInstance("solomon_instances/r101.txt",num_threads=1,print_extended_info=True)
 #OptimizeAll()
