@@ -456,8 +456,8 @@ def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_ext
                     best_sol_value = current_value
                     best_sol = copy.deepcopy(routes)
                     best_improved_on_iteration = iteration
-                for route in routes:
-                         columns.add(route.GetRouteTuple())
+                #for route in routes:
+                #         columns.add(route.GetRouteTuple())
                 amt_imp += 1
                 last_changed_accepted_on_it = iteration
             else:
@@ -470,8 +470,8 @@ def LocalSearchInstance(id,name,num_vehiles,vehicle_capacity,customers,print_ext
                     #  if(current_value -i != CalcTotalDistance(routes)):
                     #     print ("ERROR")
                      current_value -= i
-                     for route in routes:
-                         columns.add(route.GetRouteTuple())
+                     #for route in routes:
+                     #    columns.add(route.GetRouteTuple())
                      last_changed_accepted_on_it = iteration
         else:
             amt_notdone += 1
@@ -627,5 +627,5 @@ if __name__ == '__main__':
     #OptimizeAll()
     #with Pool(6) as p:
     #    p.starmap(OptimizeInstance,[("solomon_instances/c101.txt",0),("solomon_instances/c101.txt",1),("solomon_instances/c101.txt",2),("solomon_instances/c101.txt",3),("solomon_instances/c101.txt",4),("solomon_instances/c101.txt",5)])
-    OptimizeInstance("solomon_instances/r101.txt",num_threads=1,print_extended_info=True)
+    OptimizeInstance("solomon_instances/c101.txt",num_threads=1,print_extended_info=True)
 #OptimizeAll()

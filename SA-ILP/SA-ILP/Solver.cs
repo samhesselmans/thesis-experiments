@@ -31,6 +31,43 @@ namespace SA_ILP
 
         }
     }
+
+    class RouteStore
+    {
+       public List<int> Route { get; private set; }
+
+      public RouteStore(List<int> route)
+        {
+            this.Route = route;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            if (typeof(RouteStore) != obj.GetType())
+                return false;
+            var y = (RouteStore)obj;
+            if (this.Route.Count != y.Route.Count)
+                return false;
+            for (int i = 0; i < Route.Count; i++)
+            {
+                if (Route[i] != y.Route[i])
+                    return false;
+            }
+            return true;
+        }
+
+        //Programmed to efficiently support up to 1000 customers. If more customers are in the problem this might integer overflows and more hash matches.
+        public override int GetHashCode()
+        {
+            int total = 0;
+            for( int i=0; i< Route.Count; i++)
+            {
+                total += Route[i] * (i +1001); 
+            }
+            return total;
+            //return Route.Sum(x=>);//String.Join(";", Route).GetHashCode();
+        }
+    }
     class Route
     {
         public List<Customer> route;
@@ -279,8 +316,11 @@ namespace SA_ILP
                 int dest = viableRoutes[random.Next(numRoutes)];
 
                 //Select src excluding destination
-                var range = Enumerable.Range(0, numRoutes).Where(i => i != dest).ToList();
-                int src = range[random.Next(numRoutes - 1 )];
+                //var range = Enumerable.Range(0, numRoutes).Where(i => i != dest).ToList();
+                //int src = range[random.Next(numRoutes - 1)];
+                int src = random.Next(numRoutes - 1);
+                if (src >= dest)
+                    src += 1;
 
                 (var cust1, _) = routes[src].RandomCust();
                 (var cust2, _) = routes[dest].RandomCust();
@@ -343,8 +383,11 @@ namespace SA_ILP
                 int src = viableRoutes[random.Next(numRoutes)];
 
                 //Select src excluding destination from all routes
-                var range = Enumerable.Range(0, routes.Count).Where(i => i != src).ToList();
-                int dest = range[random.Next(routes.Count - 1)];
+                //var range = Enumerable.Range(0, routes.Count).Where(i => i != src).ToList();
+                //int dest = range[random.Next(routes.Count - 1)];
+                int dest = random.Next(numRoutes - 1);
+                if (dest >= src)
+                    dest += 1;
 
                 (Customer? cust, double decrease) = routes[src].RandomCust();
                 if(cust != null)
@@ -443,7 +486,7 @@ namespace SA_ILP
 
             int lastChangeExceptedOnIt = 0;
             var comp = new ListEqCompare();
-            HashSet<List<int>> Columns = new HashSet<List<int>>(comparer: comp);
+            HashSet<RouteStore> Columns = new HashSet<RouteStore>();
             List<Route> BestSolution = routes.ConvertAll(i => i.CreateDeepCopy());
             double bestSolValue = CalcTotalDistance(BestSolution);
             double currentValue = bestSolValue;
@@ -475,7 +518,7 @@ namespace SA_ILP
                         //Add columns
                         foreach (Route route in routes)
                         {
-                            //var res = Columns.Add(route.CreateIdList());
+                            var res = Columns.Add(new RouteStore(route.CreateIdList()));
 
                         }
                         amtImp += 1;
@@ -497,7 +540,7 @@ namespace SA_ILP
                             //Add columns
                             foreach (Route route in routes)
                             {
-                                //var res = Columns.Add(route.CreateIdList());
+                                var res = Columns.Add(new RouteStore(route.CreateIdList()));
                             }
                             lastChangeExceptedOnIt = iteration;
                         }
@@ -507,10 +550,10 @@ namespace SA_ILP
                     amtNotDone += 1;
                 if (iteration % 10000 == 0 && iteration != 0)
                     temp *= alpha;
-                if(iteration - bestImprovedIteration > 100000 && temp < 0.5)
+                if(iteration - bestImprovedIteration > 200000 && temp < 0.1)
                 {
                     //Restart
-                    temp = 10;
+                    temp = 30;
                     routes = BestSolution.ConvertAll(i => i.CreateDeepCopy());
                     currentValue = bestSolValue;
                     Console.WriteLine($"{id}:Best solution changed to long ago. Restarting from best solution with T: {temp}");
@@ -521,7 +564,7 @@ namespace SA_ILP
                     Console.WriteLine($"{id}: T: {Math.Round(temp, 3)}, S: {Math.Round(CalcTotalDistance(routes), 3)}, TS: {Math.Round(currentValue, 3)}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeExceptedOnIt}, B: {Math.Round(bestSolValue, 3)}, BI: {bestImprovedIteration}");
                 }
             }
-            Console.WriteLine($"DONE {id}: {name}, Score: {CalcTotalDistance(BestSolution)}, in {Math.Round((double)timer.ElapsedMilliseconds / 1000, 3)}s");
+            Console.WriteLine($"DONE {id}: {name}, Score: {CalcTotalDistance(BestSolution)}, Columns: {Columns.Count}, in {Math.Round((double)timer.ElapsedMilliseconds / 1000, 3)}s");
 
             if (printExtendedInfo)
                 Console.WriteLine($"  {id}: Total: {amtNotDone + amtImp + amtWorse}, improvements: {amtImp}, worse: {amtWorse}, not done: {amtNotDone}");
