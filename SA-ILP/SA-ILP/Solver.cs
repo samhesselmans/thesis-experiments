@@ -79,7 +79,7 @@ namespace SA_ILP
         public double max_capacity;
         private Random random;
 
-
+        public long numReference = 0;
         public Route(Customer depot,double[,] distanceMatrix,double maxCapacity)
         {
             this.route = new List<Customer>() { depot, depot };
@@ -117,6 +117,7 @@ namespace SA_ILP
 
         public double CustomerDist(Customer cust1, Customer cust2)
         {
+            numReference += 1;
             if(cust1.Id < cust2.Id)
             {
                 return distance_matrix[cust1.Id,cust2.Id];
@@ -160,6 +161,8 @@ namespace SA_ILP
 
         public (bool,bool,double) CustPossibleAtPos(Customer cust, int pos,int skip=0)
         {
+            if (arrival_times[pos - 1] + route[pos - 1].ServiceTime > cust.TWEnd)
+                return (false, false, double.MinValue);
 
             double TArrivalNewCust = arrival_times[pos-1] + route[pos-1].ServiceTime + CustomerDist(cust, route[pos-1]);
             if (TArrivalNewCust > cust.TWEnd)
@@ -302,13 +305,13 @@ namespace SA_ILP
         }
 
 
-        private (double,Action?) SwapRandomCustomers(List<Route> routes)
+        private (double,Action?) SwapRandomCustomers(List<Route> routes, List<int> viableRoutes)
         {
             int bestDest = -1, bestSrc = -1, bestPos1 = -1, bestPos2 = - 1;
             Customer bestCust1 = null, bestCust2 = null;
             double bestImp = double.MinValue;
 
-            var viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
+            //viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
             var numRoutes = viableRoutes.Count;
             for (int i = 0; i < 4; i++)
             {
@@ -367,14 +370,14 @@ namespace SA_ILP
                 
         }
 
-        private (double,Action?) MoveRandomCustomer(List<Route> routes)
+        private (double,Action?) MoveRandomCustomer(List<Route> routes,List<int> viableRoutes)
         {
             int bestDest = -1, bestSrc = -1, bestPos=-1;
             double bestImp = double.MinValue;
             Customer bestCust = null;
 
-            
-            var viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
+
+            //viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
             var numRoutes = viableRoutes.Count;
 
             for (int i =0; i< 4; i++)
@@ -439,6 +442,7 @@ namespace SA_ILP
             var c = new TWCOmparer();
             customers.Sort(1, customers.Count - 1, c);
             List<Route> routes = new List<Route>();
+            
 
             //Generate routes
             for (int i = 0; i < numVehicles; i++)
@@ -484,6 +488,8 @@ namespace SA_ILP
             Stopwatch timer = new Stopwatch();
             timer.Start();
 
+            List<int> viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
+
             int lastChangeExceptedOnIt = 0;
             var comp = new ListEqCompare();
             HashSet<RouteStore> Columns = new HashSet<RouteStore>();
@@ -497,15 +503,16 @@ namespace SA_ILP
                 double imp = 0;
                 Action? act = null;
                 if (p <= 0.5)
-                    (imp, act) = SwapRandomCustomers(routes);
+                    (imp, act) = SwapRandomCustomers(routes,viableRoutes);
                 else if (p <= 1)
-                    (imp, act) = MoveRandomCustomer(routes);
+                    (imp, act) = MoveRandomCustomer(routes,viableRoutes);
                 if (act != null)
                 {
                     //Accept all improvements
                     if (imp > 0)
                     {
                         act();
+                        viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                         currentValue -= imp;
                         if (currentValue < bestSolValue)
                         {
@@ -536,6 +543,7 @@ namespace SA_ILP
                             //Worse solution accepted
                             amtWorse += 1;
                             act();
+                            viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                             currentValue -= imp;
                             //Add columns
                             foreach (Route route in routes)
@@ -550,11 +558,12 @@ namespace SA_ILP
                     amtNotDone += 1;
                 if (iteration % 10000 == 0 && iteration != 0)
                     temp *= alpha;
-                if(iteration - bestImprovedIteration > 200000 && temp < 0.1)
+                if(iteration - bestImprovedIteration > 300000 && temp < 0.03)
                 {
                     //Restart
                     temp = 30;
                     routes = BestSolution.ConvertAll(i => i.CreateDeepCopy());
+                    viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                     currentValue = bestSolValue;
                     Console.WriteLine($"{id}:Best solution changed to long ago. Restarting from best solution with T: {temp}");
                 }
@@ -565,7 +574,7 @@ namespace SA_ILP
                 }
             }
             Console.WriteLine($"DONE {id}: {name}, Score: {CalcTotalDistance(BestSolution)}, Columns: {Columns.Count}, in {Math.Round((double)timer.ElapsedMilliseconds / 1000, 3)}s");
-
+            Console.WriteLine(routes.Sum(x => x.numReference));
             if (printExtendedInfo)
                 Console.WriteLine($"  {id}: Total: {amtNotDone + amtImp + amtWorse}, improvements: {amtImp}, worse: {amtWorse}, not done: {amtNotDone}");
 
