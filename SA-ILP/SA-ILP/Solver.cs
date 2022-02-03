@@ -220,6 +220,15 @@ namespace SA_ILP
             return (route[i], CustomerDist(route[i - 1], route[i]) + CustomerDist(route[i + 1], route[i]) - CustomerDist(route[i - 1], route[i + 1]));
         }
 
+        public (Customer?, int) RandomCustIndex()
+        {
+            if (route.Count == 2)
+                return (null, -1);
+
+            var i = random.Next(1, route.Count - 1);
+            return (route[i], i);
+        }
+
         public void InsertCust(Customer cust, int pos)
         {
             double TArrivalNewCust = arrival_times[pos - 1] + route[pos - 1].ServiceTime + CustomerDist(cust, route[pos - 1]);
@@ -239,18 +248,18 @@ namespace SA_ILP
             used_capacity += cust.Demand;
         }
 
-        public (bool,double,int) CanSwap(Customer cust1, Customer cust2)
+        public (bool,double,int) CanSwap(Customer cust1, Customer cust2, int index)
         {
-            for (int i=0; i < route.Count - 1; i++)
-            {
-                if (route[i] == cust1)
-                {
-                    (bool possible, _, double distIncrease) = CustPossibleAtPos(cust2, i, 1);
+            //for (int i=0; i < route.Count - 1; i++)
+            //{
+            //    if (route[i] == cust1)
+            //    {
+                    (bool possible, _, double distIncrease) = CustPossibleAtPos(cust2, index, 1);
                     possible &= (used_capacity - cust1.Demand + cust2.Demand < max_capacity);
-                    return (possible, distIncrease, i);
-                }
-            }
-            return (false,double.MaxValue,-1);
+                    return (possible, distIncrease, index);
+            //    }
+            //}
+            //return (false,double.MaxValue,-1);
         }
 
         public bool CheckRouteValidity()
@@ -325,14 +334,14 @@ namespace SA_ILP
                 if (src >= dest)
                     src += 1;
 
-                (var cust1, _) = routes[src].RandomCust();
-                (var cust2, _) = routes[dest].RandomCust();
+                (var cust1, int index1) = routes[src].RandomCustIndex();
+                (var cust2, int index2) = routes[dest].RandomCustIndex();
 
 
                 if(cust1 != null && cust2 != null)
                 {
-                    (bool possible1, double increase1, int pos1) = routes[src].CanSwap(cust1, cust2);
-                    (bool possible2, double increase2, int pos2) = routes[dest].CanSwap(cust2, cust1);
+                    (bool possible1, double increase1, int pos1) = routes[src].CanSwap(cust1, cust2,index1);
+                    (bool possible2, double increase2, int pos2) = routes[dest].CanSwap(cust2, cust1,index2);
 
                     if(possible1 && possible2)
                     {
