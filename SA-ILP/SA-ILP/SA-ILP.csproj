@@ -8,4 +8,14 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="MyPackage" Version="1.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="gurobi95.netstandard20">
+      <HintPath>..\..\..\..\..\..\..\gurobi950\win64\lib\gurobi95.netstandard20.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

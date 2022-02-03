@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
+
 namespace SA_ILP
 {
     public class Customer
@@ -582,6 +583,8 @@ namespace SA_ILP
                     Console.WriteLine($"{id}: T: {Math.Round(temp, 3)}, S: {Math.Round(CalcTotalDistance(routes), 3)}, TS: {Math.Round(currentValue, 3)}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeExceptedOnIt}, B: {Math.Round(bestSolValue, 3)}, BI: {bestImprovedIteration}");
                 }
             }
+            foreach (Route route in routes)
+                route.CheckRouteValidity();
             Console.WriteLine($"DONE {id}: {name}, Score: {CalcTotalDistance(BestSolution)}, Columns: {Columns.Count}, in {Math.Round((double)timer.ElapsedMilliseconds / 1000, 3)}s");
             Console.WriteLine(routes.Sum(x => x.numReference));
             if (printExtendedInfo)
