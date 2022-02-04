@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-
+using Gurobi;
 
 namespace SA_ILP
 {
@@ -30,6 +30,17 @@ namespace SA_ILP
             this.TWEnd = twend;
             this.ServiceTime = serviceTime;
 
+        }
+
+        public Customer(Customer cust)
+        {
+            this.Id = cust.Id;
+            this.X = cust.X;
+            this.Y = cust.Y;
+            this.Demand = cust.Demand;
+            this.TWEnd= cust.TWEnd;
+            this.TWStart = cust.TWStart;
+            this.ServiceTime = cust.ServiceTime;
         }
     }
 
@@ -60,6 +71,7 @@ namespace SA_ILP
         //Programmed to efficiently support up to 1000 customers. If more customers are in the problem this might integer overflows and more hash matches.
         public override int GetHashCode()
         {
+            return Route.Sum();
             int total = 0;
             for( int i=0; i< Route.Count; i++)
             {
@@ -434,10 +446,15 @@ namespace SA_ILP
         private double[,] CalculateDistanceMatrix(List<Customer> customers)
         {
             double[,] matrix = new double[customers.Count,customers.Count];
-            for(int i =0; i< customers.Count; i++) 
-                for(int j = i;j<customers.Count;j++)
-                    matrix[i,j] = Math.Sqrt(Math.Pow(customers[i].X - customers[j].X,2) + Math.Pow(customers[i].Y - customers[j].Y,2));
+            for (int i = 0; i < customers.Count; i++)
+                for (int j = i; j < customers.Count; j++)
+                    matrix[i, j] = CalculateDistance(customers[i], customers[j]);//Math.Sqrt(Math.Pow(customers[i].X - customers[j].X,2) + Math.Pow(customers[i].Y - customers[j].Y,2));
             return matrix;
+        }
+
+        private double CalculateDistance(Customer cust1, Customer cust2)
+        {
+            return Math.Sqrt(Math.Pow(cust1.X - cust2.X, 2) + Math.Pow(cust1.Y - cust2.Y, 2));
         }
 
         public Solver()
@@ -445,9 +462,9 @@ namespace SA_ILP
             random = new Random();
         }
 
-        private void LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers,bool printExtendedInfo=false,int numInterations=3000000)
+        private (HashSet<RouteStore>,List<Route>,double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers,double[,] distanceMatrix,bool printExtendedInfo=false,int numInterations=3000000)
         {
-            var distanceMatrix = CalculateDistanceMatrix(customers);
+            
             //customers.Sort(1, customers.Count - 1, delegate (Customer x, Customer y) { x.TWEnd.CompareTo(y.TWEnd); });
             var c = new TWCOmparer();
             customers.Sort(1, customers.Count - 1, c);
@@ -577,7 +594,7 @@ namespace SA_ILP
                     currentValue = bestSolValue;
                     Console.WriteLine($"{id}:Best solution changed to long ago. Restarting from best solution with T: {temp}");
                 }
-                if(iteration % 100000 == 0 && iteration != 0)
+                if(iteration % 1000000 == 0 && iteration != 0)
                 {
                     int cnt = routes.Count(x => x.route.Count > 2);
                     Console.WriteLine($"{id}: T: {Math.Round(temp, 3)}, S: {Math.Round(CalcTotalDistance(routes), 3)}, TS: {Math.Round(currentValue, 3)}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeExceptedOnIt}, B: {Math.Round(bestSolValue, 3)}, BI: {bestImprovedIteration}");
@@ -589,13 +606,97 @@ namespace SA_ILP
             Console.WriteLine(routes.Sum(x => x.numReference));
             if (printExtendedInfo)
                 Console.WriteLine($"  {id}: Total: {amtNotDone + amtImp + amtWorse}, improvements: {amtImp}, worse: {amtWorse}, not done: {amtNotDone}");
-
+            return (Columns, BestSolution, bestSolValue);
         }
     
-        public void SolveInstance(string fileName,int numInterations= 3000000)
+        public async Task SolveInstanceAsync(string fileName,int numThreads = 1, int numInterations= 3000000)
         {
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
-            LocalSearchInstance(0, name, numV, capV, customers,numInterations: numInterations);
+            List<Task<(HashSet<RouteStore>, List<Route>, double)>> tasks = new List<Task<(HashSet<RouteStore>, List<Route>, double)>>();
+            var distanceMatrix = CalculateDistanceMatrix(customers);
+            //LocalSearchInstance(-1, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, numInterations: numInterations);
+            for (int i =0; i< numThreads; i++)
+            {
+                var id = i;
+                tasks.Add(Task.Run(() => { return LocalSearchInstance(id, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, numInterations: numInterations); }));
+
+            }
+            HashSet<RouteStore> allColumns =  new HashSet<RouteStore>();
+            List<Route> bestSolution = new List<Route>();
+            int cnt = 0;
+            double best = double.MaxValue;
+            foreach(var task in tasks)
+            {
+                (var columns, var solution, var value) = await task;
+                if(value < best)
+                {
+                    best = value;
+                    bestSolution = solution;
+
+                }
+                allColumns.UnionWith(columns);
+                cnt += columns.Count;
+            }
+            Console.WriteLine();
+            Console.WriteLine($" Sum of unique columns found per start: {cnt}");
+            Console.WriteLine($" Total amount of unique column: {allColumns.Count}");
+
+            SolveILP(allColumns, customers, numV, bestSolution);
+        }
+
+        private void SolveILP(HashSet<RouteStore> columns, List<Customer> customers,int numVehicles, List<Route> bestSolutionLS)
+        {
+            var columList = columns.ToArray();
+            var bestSolStore = bestSolutionLS.ConvertAll(x => new RouteStore(x.CreateIdList()));
+            double[] costs = new double[columList.Length];
+            byte[,] custInRoute = new byte[customers.Count, columList.Length];
+            for(int i=0; i< columList.Length; i++)
+            {
+                double cost = 0;
+                for(int j =0; j< columList[i].Route.Count - 1; j++)
+                {
+                    cost += CalculateDistance(customers[columList[i].Route[j]], customers[columList[i].Route[j + 1]]);
+                    custInRoute[columList[i].Route[j], i] = 1;
+                    custInRoute[columList[i].Route[j+1], i] = 1;
+                }
+                costs[i] = cost;
+            }
+
+            GRBEnv env = new GRBEnv();
+            GRBModel model = new GRBModel(env);
+            GRBVar[] columnDecisions = new GRBVar[columList.Length];
+            //columnDecisions = model.AddVars(columList.Length, GRB.BINARY,);
+            for(int i=0;i< columList.Length; i++)
+            {
+                columnDecisions[i] = model.AddVar(0, 1, costs[i], GRB.BINARY, $"X{i}");
+            }
+
+            foreach(Customer cust in customers)
+            {
+                if (cust.Id == 0)
+                    continue;
+                GRBLinExpr custTotal = 0;
+                for (int i = 0; i < columList.Length; i++)
+                    custTotal.AddTerm(custInRoute[cust.Id, i], columnDecisions[i]);
+                model.AddConstr(custTotal == 1, $"Cust{cust.Id}");
+            }
+
+            GRBLinExpr numV = 0;
+            for (int i = 0; i < columList.Length; i++)
+                numV.AddTerm(1, columnDecisions[i]);
+            model.AddConstr(numV <= numVehicles, "Bound vehicles");
+            model.ModelSense = GRB.MINIMIZE;
+            
+            //Add warm start
+            for(int i =0; i< columList.Length; i++)
+            {
+                if (bestSolStore.Contains(columList[i]))
+                {
+                    columnDecisions[i].Start = 1;
+                }
+            }
+
+            model.Optimize();
         }
 
     }
