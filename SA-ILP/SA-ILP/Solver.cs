@@ -71,7 +71,18 @@ namespace SA_ILP
         //Programmed to efficiently support up to 1000 customers. If more customers are in the problem this might integer overflows and more hash matches.
         public override int GetHashCode()
         {
-            return Route.Sum();
+            //unchecked
+            //{
+            //    int hash = 19;
+            //    foreach (var foo in Route)
+            //    {
+            //        hash = hash * 31 + foo.GetHashCode();
+            //    }
+            //    return hash;
+            //}
+
+
+            //return Route.Sum();
             int total = 0;
             for( int i=0; i< Route.Count; i++)
             {
@@ -92,7 +103,9 @@ namespace SA_ILP
         public double max_capacity;
         private Random random;
 
+#if DEBUG
         public long numReference = 0;
+#endif
         public Route(Customer depot,double[,] distanceMatrix,double maxCapacity)
         {
             this.route = new List<Customer>() { depot, depot };
@@ -130,7 +143,9 @@ namespace SA_ILP
 
         public double CustomerDist(Customer cust1, Customer cust2)
         {
+#if DEBUG
             numReference += 1;
+#endif
             if(cust1.Id < cust2.Id)
             {
                 return distance_matrix[cust1.Id,cust2.Id];
@@ -174,15 +189,18 @@ namespace SA_ILP
 
         public (bool,bool,double) CustPossibleAtPos(Customer cust, int pos,int skip=0)
         {
+            //Check upper timewindow of the new customer
             if (arrival_times[pos - 1] + route[pos - 1].ServiceTime > cust.TWEnd)
                 return (false, false, double.MinValue);
 
+            //Check upper timewindow with distance
             double TArrivalNewCust = arrival_times[pos-1] + route[pos-1].ServiceTime + CustomerDist(cust, route[pos-1]);
             if (TArrivalNewCust > cust.TWEnd)
                 return (false, false, double.MinValue);
-
+            //Set the arrival time to the start of the timewindow if the vehicle arrives to early
             if (TArrivalNewCust < cust.TWStart)
                 TArrivalNewCust = cust.TWStart;
+
             double newArrivalTime = TArrivalNewCust + CustomerDist(cust,route[pos+skip]) + cust.ServiceTime;
             for(int i = pos + skip; i < route.Count; i++)
             {
@@ -193,7 +211,7 @@ namespace SA_ILP
                 if (i != route.Count - 1)
                     newArrivalTime += CustomerDist(route[i], route[i + 1]) + route[i].ServiceTime;
             }
-            double distIncrease = CustomerDist(route[pos - 1], cust) + CustomerDist(route[pos + skip], cust) - CustomerDist(route[pos - 1], route[pos]);
+            double distIncrease = CustomerDist(route[pos - 1], cust) + CustomerDist(cust, route[pos + skip]) - CustomerDist(route[pos - 1], route[pos]);
 
             //Kan dit geen problemen veroorzaken?
             for(int i=0;i< skip; i++)
@@ -216,9 +234,12 @@ namespace SA_ILP
                 if (!everPossible)
                     break;
                 if(possible)
-                    if(distIncrease<bestDistIncr)
+                    if (distIncrease < bestDistIncr)
+                    {
                         bestDistIncr = distIncrease;
-                        bestIndex =i;
+                        bestIndex = i;
+                    }
+
 
             }
             return (bestIndex, bestDistIncr);
@@ -230,7 +251,7 @@ namespace SA_ILP
                 return (null, double.MaxValue);
 
             var i = random.Next(1, route.Count - 1);
-            return (route[i], CustomerDist(route[i - 1], route[i]) + CustomerDist(route[i + 1], route[i]) - CustomerDist(route[i - 1], route[i + 1]));
+            return (route[i], CustomerDist(route[i - 1], route[i]) + CustomerDist(route[i], route[i + 1]) - CustomerDist(route[i - 1], route[i + 1]));
         }
 
         public (Customer?, int) RandomCustIndex()
@@ -538,7 +559,12 @@ namespace SA_ILP
                     //Accept all improvements
                     if (imp > 0)
                     {
+                        //double prev = CalcTotalDistance(routes);
                         act();
+                        //if (Math.Round(prev - CalcTotalDistance(routes), 6) != Math.Round(imp, 6) && p <= 0.5)
+                        //{
+                        //    Console.WriteLine("Somthing is wrong");
+                        //}
                         viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                         currentValue -= imp;
                         if (currentValue < bestSolValue)
@@ -547,14 +573,17 @@ namespace SA_ILP
                             bestSolValue = currentValue;
                             bestImprovedIteration = iteration;
                             BestSolution = routes.ConvertAll(i => i.CreateDeepCopy());
-                        }
 
+
+                        }
                         //Add columns
                         foreach (Route route in routes)
                         {
                             var res = Columns.Add(new RouteStore(route.CreateIdList()));
 
                         }
+
+
                         amtImp += 1;
                         lastChangeExceptedOnIt = iteration;
 
@@ -569,14 +598,19 @@ namespace SA_ILP
                         {
                             //Worse solution accepted
                             amtWorse += 1;
+                            //double prev = CalcTotalDistance(routes);
                             act();
+                            //if(Math.Round(prev - CalcTotalDistance(routes), 6) != Math.Round(imp, 6) && p <= 0.5)
+                            //{
+                            //    Console.WriteLine("Somthing is wrong");
+                            //}
                             viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                             currentValue -= imp;
-                            //Add columns
-                            foreach (Route route in routes)
-                            {
-                                var res = Columns.Add(new RouteStore(route.CreateIdList()));
-                            }
+                            ////Add columns
+                            //foreach (Route route in routes)
+                            //{
+                            //    var res = Columns.Add(new RouteStore(route.CreateIdList()));
+                            //}
                             lastChangeExceptedOnIt = iteration;
                         }
                     }
@@ -603,22 +637,32 @@ namespace SA_ILP
             foreach (Route route in routes)
                 route.CheckRouteValidity();
             Console.WriteLine($"DONE {id}: {name}, Score: {CalcTotalDistance(BestSolution)}, Columns: {Columns.Count}, in {Math.Round((double)timer.ElapsedMilliseconds / 1000, 3)}s");
+#if DEBUG
             Console.WriteLine(routes.Sum(x => x.numReference));
+#endif
             if (printExtendedInfo)
                 Console.WriteLine($"  {id}: Total: {amtNotDone + amtImp + amtWorse}, improvements: {amtImp}, worse: {amtWorse}, not done: {amtNotDone}");
             return (Columns, BestSolution, bestSolValue);
         }
-    
-        public async Task SolveInstanceAsync(string fileName,int numThreads = 1, int numInterations= 3000000)
+        
+        public void SolveInstance(string fileName, int numIterations = 3000000)
         {
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
             List<Task<(HashSet<RouteStore>, List<Route>, double)>> tasks = new List<Task<(HashSet<RouteStore>, List<Route>, double)>>();
             var distanceMatrix = CalculateDistanceMatrix(customers);
-            //LocalSearchInstance(-1, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, numInterations: numInterations);
+            LocalSearchInstance(-1, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, numInterations: numIterations);
+
+        }
+
+        public async Task SolveInstanceAsync(string fileName,int numThreads = 1, int numIterations= 3000000)
+        {
+            (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
+            List<Task<(HashSet<RouteStore>, List<Route>, double)>> tasks = new List<Task<(HashSet<RouteStore>, List<Route>, double)>>();
+            var distanceMatrix = CalculateDistanceMatrix(customers);
             for (int i =0; i< numThreads; i++)
             {
                 var id = i;
-                tasks.Add(Task.Run(() => { return LocalSearchInstance(id, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, numInterations: numInterations); }));
+                tasks.Add(Task.Run(() => { return LocalSearchInstance(id, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, numInterations: numIterations); }));
 
             }
             HashSet<RouteStore> allColumns =  new HashSet<RouteStore>();
@@ -662,8 +706,13 @@ namespace SA_ILP
                 costs[i] = cost;
             }
 
+            //Create model
             GRBEnv env = new GRBEnv();
             GRBModel model = new GRBModel(env);
+
+            model.Parameters.TimeLimit = 3600;
+
+            //Create decision variables
             GRBVar[] columnDecisions = new GRBVar[columList.Length];
             //columnDecisions = model.AddVars(columList.Length, GRB.BINARY,);
             for(int i=0;i< columList.Length; i++)
