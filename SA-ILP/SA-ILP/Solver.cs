@@ -68,6 +68,11 @@ namespace SA_ILP
             return true;
         }
 
+        public override string ToString()
+        {
+            return String.Join(' ', Route);
+        }
+
         //Programmed to efficiently support up to 1000 customers. If more customers are in the problem this might integer overflows and more hash matches.
         public override int GetHashCode()
         {
@@ -654,33 +659,37 @@ namespace SA_ILP
 
         }
 
-        public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal)> SolveInstanceAsync(string fileName,int numThreads = 1, int numIterations= 3000000)
+        public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal,double ilpTime,double lsTime,double lsVal)> SolveInstanceAsync(string fileName,int numThreads = 1, int numIterations= 3000000)
         {
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
             List<Task<(HashSet<RouteStore>, List<Route>, double)>> tasks = new List<Task<(HashSet<RouteStore>, List<Route>, double)>>();
             var distanceMatrix = CalculateDistanceMatrix(customers);
+            Stopwatch watch = new Stopwatch();
+            watch.Start();
             for (int i =0; i< numThreads; i++)
             {
                 var id = i;
                 tasks.Add(Task.Run(() => { return LocalSearchInstance(id, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, numInterations: numIterations); }));
 
             }
+            
             HashSet<RouteStore> allColumns =  new HashSet<RouteStore>();
             List<Route> bestSolution = new List<Route>();
             int cnt = 0;
-            double best = double.MaxValue;
+            double bestLSVal = double.MaxValue;
             foreach(var task in tasks)
             {
                 (var columns, var solution, var value) = await task;
-                if(value < best)
+                if(value < bestLSVal)
                 {
-                    best = value;
+                    bestLSVal = value;
                     bestSolution = solution;
 
                 }
                 allColumns.UnionWith(columns);
                 cnt += columns.Count;
             }
+            watch.Stop();
             Console.WriteLine();
             Console.WriteLine($" Sum of unique columns found per start: {cnt}");
             Console.WriteLine($" Total amount of unique column: {allColumns.Count}");
@@ -688,7 +697,7 @@ namespace SA_ILP
             (var ilpSol, double ilpVal, double time) = SolveILP(allColumns, customers, numV, bestSolution);
             bool failed = SolomonParser.CheckSolution(fileName, ilpSol, ilpVal);
 
-            return (failed, ilpSol, ilpVal);
+            return (failed, ilpSol, ilpVal,time,(double)watch.ElapsedMilliseconds/1000,bestLSVal);
             
         }
 
@@ -829,7 +838,7 @@ namespace SA_ILP
                         arrivalTime = customers[route.Route[i]].TWStart;
 
                     //Update travel distances
-                    if (i != route.Route.Count)
+                    if (i != route.Route.Count -1)
                     {
                         double dist = Solver.CalculateObjective(customers[route.Route[i]], customers[route.Route[i + 1]]);
                         totalDist += dist;
