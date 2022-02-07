@@ -24,7 +24,7 @@ Stopwatch watch = new Stopwatch();
 watch.Start();
 //for(int i = 0; i < 10; i++)
 //solver.SolveInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\rc101.txt", numIterations: 80000000);
-await solver.SolveInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\rc102.txt",numThreads:4, numIterations: 60000000);
+(bool failed, List<RouteStore> ilpSol, double ilpVal)  = await solver.SolveInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\rc103.txt",numThreads:4, numIterations: 60000000);
 
 //GRBEnv env = new GRBEnv();
 //GRBModel model = new GRBModel(env);

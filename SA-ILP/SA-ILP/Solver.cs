@@ -469,11 +469,11 @@ namespace SA_ILP
             double[,] matrix = new double[customers.Count,customers.Count];
             for (int i = 0; i < customers.Count; i++)
                 for (int j = i; j < customers.Count; j++)
-                    matrix[i, j] = CalculateDistance(customers[i], customers[j]);//Math.Sqrt(Math.Pow(customers[i].X - customers[j].X,2) + Math.Pow(customers[i].Y - customers[j].Y,2));
+                    matrix[i, j] = CalculateObjective(customers[i], customers[j]);//Math.Sqrt(Math.Pow(customers[i].X - customers[j].X,2) + Math.Pow(customers[i].Y - customers[j].Y,2));
             return matrix;
         }
 
-        private double CalculateDistance(Customer cust1, Customer cust2)
+        public static double CalculateObjective(Customer cust1, Customer cust2)
         {
             return Math.Sqrt(Math.Pow(cust1.X - cust2.X, 2) + Math.Pow(cust1.Y - cust2.Y, 2));
         }
@@ -654,7 +654,7 @@ namespace SA_ILP
 
         }
 
-        public async Task SolveInstanceAsync(string fileName,int numThreads = 1, int numIterations= 3000000)
+        public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal)> SolveInstanceAsync(string fileName,int numThreads = 1, int numIterations= 3000000)
         {
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
             List<Task<(HashSet<RouteStore>, List<Route>, double)>> tasks = new List<Task<(HashSet<RouteStore>, List<Route>, double)>>();
@@ -685,10 +685,14 @@ namespace SA_ILP
             Console.WriteLine($" Sum of unique columns found per start: {cnt}");
             Console.WriteLine($" Total amount of unique column: {allColumns.Count}");
 
-            SolveILP(allColumns, customers, numV, bestSolution);
+            (var ilpSol, double ilpVal, double time) = SolveILP(allColumns, customers, numV, bestSolution);
+            bool failed = SolomonParser.CheckSolution(fileName, ilpSol, ilpVal);
+
+            return (failed, ilpSol, ilpVal);
+            
         }
 
-        private void SolveILP(HashSet<RouteStore> columns, List<Customer> customers,int numVehicles, List<Route> bestSolutionLS)
+        private (List<RouteStore>,double,double) SolveILP(HashSet<RouteStore> columns, List<Customer> customers,int numVehicles, List<Route> bestSolutionLS)
         {
             var columList = columns.ToArray();
             var bestSolStore = bestSolutionLS.ConvertAll(x => new RouteStore(x.CreateIdList()));
@@ -699,7 +703,7 @@ namespace SA_ILP
                 double cost = 0;
                 for(int j =0; j< columList[i].Route.Count - 1; j++)
                 {
-                    cost += CalculateDistance(customers[columList[i].Route[j]], customers[columList[i].Route[j + 1]]);
+                    cost += CalculateObjective(customers[columList[i].Route[j]], customers[columList[i].Route[j + 1]]);
                     custInRoute[columList[i].Route[j], i] = 1;
                     custInRoute[columList[i].Route[j+1], i] = 1;
                 }
@@ -746,6 +750,14 @@ namespace SA_ILP
             }
 
             model.Optimize();
+
+            List<RouteStore> solution = new List<RouteStore>();
+            for( int i=0; i< columnDecisions.Length; i++)
+            {
+                if (columnDecisions[i].X == 1)
+                    solution.Add(columList[i]);
+            }
+            return (solution, model.ObjVal,model.Runtime);
         }
 
     }
@@ -784,6 +796,68 @@ namespace SA_ILP
                 return (name, numV, capV, customers);
             }
         }
+
+        public static bool CheckSolution(string instance, List<RouteStore> solution,double value)
+        {
+            (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(instance);
+
+            double totalDist = 0;
+            HashSet<int> CustomersVisited = new HashSet<int>();
+            bool failedTotal = false;
+            foreach (var route in solution)
+            {
+                double arrivalTime = 0;
+                bool failed = false;
+                double usedCapacity = 0;
+                for(int i=0; i< route.Route.Count; i++)
+                {
+                    var res = CustomersVisited.Add(route.Route[i]);
+                    //If the customer is visited twice and it is not the depot. Fail the solution
+                    if (route.Route[i] != 0 && !res)
+                    {
+                        failed = true;
+                        Console.WriteLine($"FAIL. Visited customer {route.Route[i]} more than once");
+                    }
+                    //Check capacity
+                    usedCapacity += customers[route.Route[i]].Demand;
+                    if(usedCapacity > capV)
+                    {
+                        failed = true;
+                        Console.WriteLine($"FAIL. Exceeded vehicle capacity");
+                    }
+                    if (arrivalTime > customers[route.Route[i]].TWStart)
+                        arrivalTime = customers[route.Route[i]].TWStart;
+
+                    //Update travel distances
+                    if (i != route.Route.Count)
+                    {
+                        double dist = Solver.CalculateObjective(customers[route.Route[i]], customers[route.Route[i + 1]]);
+                        totalDist += dist;
+                        arrivalTime += dist + customers[route.Route[i]].ServiceTime;
+                    }
+
+
+                }
+                if (!failed)
+                    Console.WriteLine("PASSED");
+                failedTotal |= failed;
+            }
+
+            //Check if all customers were visited
+            if (CustomersVisited.Count != customers.Count)
+            {
+                failedTotal = true;
+                Console.WriteLine("Did not visit all customers");
+            }
+            //Check if the solution values match
+            if(Math.Round(totalDist,6) != Math.Round(value,6)){
+                failedTotal = true;
+                Console.WriteLine("Wrong objective value reported");
+            }
+            return failedTotal;
+
+        }
+
     }
 
     public class TWCOmparer : IComparer<Customer>
