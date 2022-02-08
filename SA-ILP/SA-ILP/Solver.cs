@@ -12,16 +12,21 @@ namespace SA_ILP
     public class Customer
     {
         public int Id { get; private set; }
-        public int X { get; private set; }
-        public int Y { get; private set; }
+        public double X { get; private set; }
+        public double Y { get; private set; }
         public double Demand    { get; private set; }
         public double TWStart { get; private set; }
         public double TWEnd { get; private set; }
 
         public double ServiceTime { get; private set; }
 
-        public Customer(int id, int x, int y, double demand, double twstart, double twend,double serviceTime)
+        public double Elevation { get; private set; }
+
+        public Customer(int id, double x, double y, double demand, double twstart, double twend,double serviceTime,double elevation = 0)
         {
+            if (twend == 0)
+                twend = double.MaxValue;
+
             this.Id = id;
             this.X = x;
             this.Y = y;
@@ -29,6 +34,7 @@ namespace SA_ILP
             this.TWStart = twstart;
             this.TWEnd = twend;
             this.ServiceTime = serviceTime;
+            this.Elevation = elevation;
 
         }
 
@@ -101,7 +107,8 @@ namespace SA_ILP
     {
         public List<Customer> route;
         public List<double> arrival_times;
-        public double[,] distance_matrix;
+        public double[,,] objective_matrix;
+        public int numLoadLevels;
         public double time_done;
         //public Customer lastCust;
         public double used_capacity;
@@ -111,11 +118,12 @@ namespace SA_ILP
 #if DEBUG
         public long numReference = 0;
 #endif
-        public Route(Customer depot,double[,] distanceMatrix,double maxCapacity)
+        public Route(Customer depot,double[,,] distanceMatrix,double maxCapacity)
         {
             this.route = new List<Customer>() { depot, depot };
             this.arrival_times = new List<double>() { 0,0};
-            this.distance_matrix = distanceMatrix;
+            this.objective_matrix = distanceMatrix;
+            this.numLoadLevels = distanceMatrix.GetLength(2);
             this.time_done = 0;
             //this.lastCust = depot;
             used_capacity = 0;
@@ -124,11 +132,12 @@ namespace SA_ILP
 
         }
 
-        public Route(List<Customer> route, List<double> arrivalTimes, double[,] distanceMatrix, double usedCapcity, double maxCapacity)
+        public Route(List<Customer> route, List<double> arrivalTimes, double[,,] distanceMatrix, double usedCapcity, double maxCapacity)
         {
             this.route = route;
             this.arrival_times = arrivalTimes;
-            this.distance_matrix = distanceMatrix;
+            this.objective_matrix = distanceMatrix;
+            this.numLoadLevels = distanceMatrix.GetLength(2);
             this.time_done = 0;
             used_capacity = usedCapcity;
             this.max_capacity = maxCapacity;
@@ -136,29 +145,36 @@ namespace SA_ILP
 
         }
 
-        public double CalcDist()
+        public double CalcObjective()
         {
             var total_dist = 0.0;
+            var totalWeight = used_capacity;
             for(int i = 0;i < route.Count-1; i++)
             {
-                total_dist += this.CustomerDist(route[i], route[i + 1]);
+                total_dist += this.CustomerDist(route[i], route[i + 1],totalWeight);
+                totalWeight -= route[i + 1].Demand;
             }
             return total_dist;
         }
 
-        public double CustomerDist(Customer cust1, Customer cust2)
+        public double CustomerDist(Customer cust1, Customer cust2,double weight)
         {
 #if DEBUG
             numReference += 1;
 #endif
-            if(cust1.Id < cust2.Id)
-            {
-                return distance_matrix[cust1.Id,cust2.Id];
-            }
-            else
-            {
-                return distance_matrix[cust2.Id, cust1.Id];
-            }
+            int loadLevel = 0;
+
+            //TODO: lloadlevel selection
+
+            return objective_matrix[cust1.Id, cust2.Id, loadLevel];
+            //if(cust1.Id < cust2.Id)
+            //{
+            //    return distance_matrix[cust1.Id,cust2.Id];
+            //}
+            //else
+            //{
+            //    return distance_matrix[cust2.Id, cust1.Id];
+            //}
         }
 
         public void RemoveCust(Customer cust)
@@ -167,12 +183,15 @@ namespace SA_ILP
             int index = -1;
             Customer lastCust = null;
             Customer previous_cust = route[0];
-            for(int i = 1; i < route.Count-1; i++)
+            this.used_capacity -= cust.Demand;
+            double load = used_capacity;
+            for (int i = 1; i < route.Count-1; i++)
             {
                 var c = route[i];
                 if(c != cust)
                 {
-                    var dist = CustomerDist(previous_cust, c);
+                    var dist = CustomerDist(previous_cust, c,load);
+                    load -= c.Demand;
                     if(newArriveTime + dist < c.TWStart)
                         newArriveTime = c.TWStart;
                     else
@@ -188,43 +207,109 @@ namespace SA_ILP
             route.RemoveAt(index);
             arrival_times.RemoveAt(index);
             //this.lastCust = lastCust;
-            this.used_capacity -= cust.Demand;
+            
 
         }
 
-        public (bool,bool,double) CustPossibleAtPos(Customer cust, int pos,int skip=0)
+        public (bool possible,bool possibleInLaterPosition,double objectiveIncrease) CustPossibleAtPos(Customer cust, int pos,int skip=0)
         {
-            //Check upper timewindow of the new customer
-            if (arrival_times[pos - 1] + route[pos - 1].ServiceTime > cust.TWEnd)
-                return (false, false, double.MinValue);
+            double totalTravelTime = 0;
+            double load = used_capacity + cust.Demand;
 
-            //Check upper timewindow with distance
-            double TArrivalNewCust = arrival_times[pos-1] + route[pos-1].ServiceTime + CustomerDist(cust, route[pos-1]);
-            if (TArrivalNewCust > cust.TWEnd)
-                return (false, false, double.MinValue);
-            //Set the arrival time to the start of the timewindow if the vehicle arrives to early
-            if (TArrivalNewCust < cust.TWStart)
-                TArrivalNewCust = cust.TWStart;
-
-            double newArrivalTime = TArrivalNewCust + CustomerDist(cust,route[pos+skip]) + cust.ServiceTime;
-            for(int i = pos + skip; i < route.Count; i++)
+            //Remove the demand of the removed customers from the inital load
+            for(int i=0; i< skip; i++)
             {
-                if (newArrivalTime > route[i].TWEnd)
-                    return (false, true, double.MinValue);
-                if(newArrivalTime < route[i].TWStart)
-                    newArrivalTime = route[i].TWStart;
-                if (i != route.Count - 1)
-                    newArrivalTime += CustomerDist(route[i], route[i + 1]) + route[i].ServiceTime;
-            }
-            double distIncrease = CustomerDist(route[pos - 1], cust) + CustomerDist(cust, route[pos + skip]) - CustomerDist(route[pos - 1], route[pos]);
-
-            //Kan dit geen problemen veroorzaken?
-            for(int i=0;i< skip; i++)
-            {
-                distIncrease -= CustomerDist(route[pos + i],route[pos + i + 1]);
+                load -= route[pos + i].Demand;
             }
 
-            return (true, true, distIncrease);
+            double arrivalTime = 0;
+            for(int i = 0; i< route.Count; i++)
+            {
+                if(i == pos)
+                {
+                    if (arrivalTime > cust.TWEnd)
+                        return (false, false, double.MinValue);
+
+                    //Wait for the timewindow start
+                    if(arrivalTime < cust.TWStart)
+                        arrivalTime = cust.TWStart;
+
+                    load -= cust.Demand;
+                    var time = CustomerDist(cust,route[i+skip],load);
+                    totalTravelTime += time;
+                    arrivalTime += time + cust.ServiceTime;
+                    i += skip;
+                }
+                else
+                {
+                    if (arrivalTime > route[i].TWEnd)
+                        //If we dont meet the timewindow on the route and we have not visited the new customer, we are late because of the additional load. The customer can never fit in this route
+                        if(i < pos)
+                            return (false, false, double.MinValue);
+                        else
+                            return(false,true,double.MinValue);
+
+                    //Wait for the timewindow start
+                    if (arrivalTime < route[i].TWStart)
+                        arrivalTime = route[i].TWStart;
+
+                    load -= route[i].Demand;
+
+                    if (i != route.Count - 1)
+                    {
+                        var time = CustomerDist(route[i], route[i + 1], load);
+                        totalTravelTime += time;
+                        arrivalTime += time  + route[i].ServiceTime;
+
+                    }
+                }
+            }
+            //TODO: cache current objective value
+            return (true,true,totalTravelTime - CalcObjective());
+            
+
+            ////Check upper timewindow of the new customer
+            //if (arrival_times[pos - 1] + route[pos - 1].ServiceTime > cust.TWEnd && skip == 0)
+            //    return (false, false, double.MinValue);
+
+            ////TODO: cache these values
+            //double delivered = 0;
+            //for(int i =0; i< pos;i++)
+            //    delivered += route[i].Demand;
+            //double currentLoad = used_capacity - delivered;
+
+
+            ////Check upper timewindow with distance
+            //double TArrivalNewCust = arrival_times[pos-1] + route[pos-1].ServiceTime + CustomerDist( route[pos-1],cust,currentLoad);
+            //if (TArrivalNewCust > cust.TWEnd)
+            //    return (false, false, double.MinValue);
+            ////Set the arrival time to the start of the timewindow if the vehicle arrives to early
+            //if (TArrivalNewCust < cust.TWStart)
+            //    TArrivalNewCust = cust.TWStart;
+
+            //currentLoad -= cust.Demand;
+
+            //double newArrivalTime = TArrivalNewCust + CustomerDist(cust,route[pos+skip],currentLoad) + cust.ServiceTime;
+            //for(int i = pos + skip; i < route.Count; i++)
+            //{
+            //    if (newArrivalTime > route[i].TWEnd)
+            //        return (false, true, double.MinValue);
+            //    if(newArrivalTime < route[i].TWStart)
+            //        newArrivalTime = route[i].TWStart;
+            //    currentLoad -= cust.Demand;
+            //    if (i != route.Count - 1)
+            //        newArrivalTime += CustomerDist(route[i], route[i + 1], currentLoad) + route[i].ServiceTime;
+            //}
+            ////Objective has to be completly recalculated...
+            //double distIncrease = CustomerDist(route[pos - 1], cust, used_capacity - delivered) + CustomerDist(cust, route[pos + skip], used_capacity - delivered + cust.Demand) - CustomerDist(route[pos - 1], route[pos], used_capacity - delivered);
+
+            ////Kan dit geen problemen veroorzaken?
+            //for(int i=0;i< skip; i++)
+            //{
+            //    distIncrease -= CustomerDist(route[pos + i],route[pos + i + 1]);
+            //}
+
+            //return (true, true, distIncrease);
         }
 
         public (int,double) BestPossibleInsert(Customer cust)
@@ -250,13 +335,35 @@ namespace SA_ILP
             return (bestIndex, bestDistIncr);
         }
 
-        public (Customer?,double) RandomCust()
+        public (Customer? toRemove,double objectiveDecrease) RandomCust()
         {
             if (route.Count == 2)
                 return (null, double.MaxValue);
 
             var i = random.Next(1, route.Count - 1);
-            return (route[i], CustomerDist(route[i - 1], route[i]) + CustomerDist(route[i], route[i + 1]) - CustomerDist(route[i - 1], route[i + 1]));
+            double newCost = 0;
+            double load = used_capacity - route[i].Demand;
+            for(int j =0; j < route.Count; j++)
+            {
+                double time;
+                if(i == j)
+                {
+                    time = CustomerDist(route[j], route[j + 2], load);
+                    load -= route[j + 2].Demand;
+                    j += 1;
+                }
+                else
+                {
+                    time = CustomerDist(route[j], route[j + 1], load);
+                    load -= route[j + 1].Demand;
+                }
+                    
+
+                
+                newCost += time;
+            }
+
+            return (route[i], CalcObjective() - newCost);
         }
 
         public (Customer?, int) RandomCustIndex()
@@ -334,7 +441,7 @@ namespace SA_ILP
 
         public Route CreateDeepCopy()
         {
-            return new Route(route.ConvertAll(i=>i),arrival_times.ConvertAll(i => i), distance_matrix,used_capacity,max_capacity);
+            return new Route(route.ConvertAll(i=>i),arrival_times.ConvertAll(i => i), objective_matrix,used_capacity,max_capacity);
         }
 
         public List<int> CreateIdList()
@@ -349,7 +456,7 @@ namespace SA_ILP
         Random random;
         private double CalcTotalDistance(List<Route> routes)
         {
-            return routes.Sum(x => x.CalcDist());
+            return routes.Sum(x => x.CalcObjective());
         }
 
 
@@ -469,12 +576,13 @@ namespace SA_ILP
                 return (bestImp, null);
         }
 
-        private double[,] CalculateDistanceMatrix(List<Customer> customers)
+        //Calculates the Solomon distance matrix
+        private double[,,] CalculateDistanceMatrix(List<Customer> customers)
         {
-            double[,] matrix = new double[customers.Count,customers.Count];
+            double[,,] matrix = new double[customers.Count,customers.Count,1];
             for (int i = 0; i < customers.Count; i++)
-                for (int j = i; j < customers.Count; j++)
-                    matrix[i, j] = CalculateObjective(customers[i], customers[j]);//Math.Sqrt(Math.Pow(customers[i].X - customers[j].X,2) + Math.Pow(customers[i].Y - customers[j].Y,2));
+                for (int j = 0; j < customers.Count; j++)
+                    matrix[i, j,1] = CalculateObjective(customers[i], customers[j]);//Math.Sqrt(Math.Pow(customers[i].X - customers[j].X,2) + Math.Pow(customers[i].Y - customers[j].Y,2));
             return matrix;
         }
 
@@ -488,7 +596,7 @@ namespace SA_ILP
             random = new Random();
         }
 
-        private (HashSet<RouteStore>,List<Route>,double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers,double[,] distanceMatrix,bool printExtendedInfo=false,int numInterations=3000000)
+        private (HashSet<RouteStore>,List<Route>,double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers,double[,,] distanceMatrix,bool printExtendedInfo=false,int numInterations=3000000)
         {
             
             //customers.Sort(1, customers.Count - 1, delegate (Customer x, Customer y) { x.TWEnd.CompareTo(y.TWEnd); });
@@ -659,11 +767,22 @@ namespace SA_ILP
 
         }
 
-        public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal,double ilpTime,double lsTime,double lsVal)> SolveInstanceAsync(string fileName,int numThreads = 1, int numIterations= 3000000)
+        public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal)> SolveSolomonInstanceAsync(string fileName, int numThreads = 1, int numIterations = 3000000)
         {
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
-            List<Task<(HashSet<RouteStore>, List<Route>, double)>> tasks = new List<Task<(HashSet<RouteStore>, List<Route>, double)>>();
             var distanceMatrix = CalculateDistanceMatrix(customers);
+            (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads, numIterations);
+            bool failed = SolomonParser.CheckSolution(fileName, ilpSol, ilpVal);
+            return (failed, ilpSol, ilpVal, ilpTime, lsTime, lsVal);
+        }
+
+        public async Task<( List<RouteStore> ilpSol, double ilpVal,double ilpTime,double lsTime,double lsVal)> SolveInstanceAsync(string name,int numV,double capV, List<Customer> customers, double[,,] distanceMatrix,int numThreads, int numIterations)
+        {
+            //(string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
+            //var distanceMatrix = CalculateDistanceMatrix(customers);
+
+            List<Task<(HashSet<RouteStore>, List<Route>, double)>> tasks = new List<Task<(HashSet<RouteStore>, List<Route>, double)>>();
+            
             Stopwatch watch = new Stopwatch();
             watch.Start();
             for (int i =0; i< numThreads; i++)
@@ -695,9 +814,9 @@ namespace SA_ILP
             Console.WriteLine($" Total amount of unique column: {allColumns.Count}");
 
             (var ilpSol, double ilpVal, double time) = SolveILP(allColumns, customers, numV, bestSolution);
-            bool failed = SolomonParser.CheckSolution(fileName, ilpSol, ilpVal);
+            
 
-            return (failed, ilpSol, ilpVal,time,(double)watch.ElapsedMilliseconds/1000,bestLSVal);
+            return (ilpSol, ilpVal,time,(double)watch.ElapsedMilliseconds/1000,bestLSVal);
             
         }
 

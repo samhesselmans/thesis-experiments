@@ -11,8 +11,11 @@ watch.Start();
 //solver.SolveInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\rc101.txt", numIterations: 80000000);
 //await solver.SolveInstanceAsync(@"..\..\..\..\..\solomon_instances\rc103.txt",numThreads:4, numIterations: 60000000);
 
+string baseDir = "../../../../../";
+var result = VRPLTT.ParseVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"));
 Console.WriteLine(VRPLTT.CalculateTravelTime(10,10,800,350));
 //await SolveAllAsync(@"..\..\..\..\..\solomon_instances", Path.Join(@"..\..\..\..\..\solutions\solomon_instances",DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")),numThreads:1);
+
 
 
 async Task SolveAllAsync(string dir,string solDir, int numThreads = 4, int numIterations = 3000000)
@@ -29,7 +32,7 @@ async Task SolveAllAsync(string dir,string solDir, int numThreads = 4, int numIt
 
         foreach (var file in Directory.GetFiles(dir))
         {
-            (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime,double lsVal) = await solver.SolveInstanceAsync(file, numThreads: numThreads, numIterations: numIterations);
+            (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime,double lsVal) = await solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations);
             using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileName(file))))
             {
                 if (failed)
