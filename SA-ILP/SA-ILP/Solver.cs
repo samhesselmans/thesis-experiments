@@ -240,8 +240,8 @@ namespace SA_ILP
                     arrivalTime += time + cust.ServiceTime;
                     i += skip;
                 }
-                else
-                {
+                //else
+                //{
                     if (arrivalTime > route[i].TWEnd)
                         //If we dont meet the timewindow on the route and we have not visited the new customer, we are late because of the additional load. The customer can never fit in this route
                         if(i < pos)
@@ -257,12 +257,17 @@ namespace SA_ILP
 
                     if (i != route.Count - 1)
                     {
-                        var time = CustomerDist(route[i], route[i + 1], load);
+                        double time;
+                        //If the current customer is the customer before the potential position of the new customer update the time accordingly
+                        if(i == pos-1)
+                            time = CustomerDist(route[i], cust, load);
+                        else
+                            time = CustomerDist(route[i], route[i + 1], load);
                         totalTravelTime += time;
                         arrivalTime += time  + route[i].ServiceTime;
 
                     }
-                }
+                //}
             }
             //TODO: cache current objective value
             return (true,true,totalTravelTime - CalcObjective());
@@ -343,24 +348,29 @@ namespace SA_ILP
             var i = random.Next(1, route.Count - 1);
             double newCost = 0;
             double load = used_capacity - route[i].Demand;
-            for(int j =0; j < route.Count; j++)
+            for(int j =0; j < route.Count -1; j++)
             {
                 double time;
+                Customer nextCust;
+
+                //Skip the to be removed customer
                 if(i == j)
                 {
-                    time = CustomerDist(route[j], route[j + 2], load);
-                    load -= route[j + 2].Demand;
-                    j += 1;
+                    continue;
+                }
+
+                //If the next customer would be the removed customer, skip it.
+                if (j == i-1)
+                {
+                    nextCust = route[j + 2];
                 }
                 else
-                {
-                    time = CustomerDist(route[j], route[j + 1], load);
-                    load -= route[j + 1].Demand;
-                }
-                    
+                    nextCust = route[j + 1];
+                   
 
                 
-                newCost += time;
+                newCost += CustomerDist(route[j],nextCust,load);
+                load -= nextCust.Demand;
             }
 
             return (route[i], CalcObjective() - newCost);
@@ -377,21 +387,52 @@ namespace SA_ILP
 
         public void InsertCust(Customer cust, int pos)
         {
-            double TArrivalNewCust = arrival_times[pos - 1] + route[pos - 1].ServiceTime + CustomerDist(cust, route[pos - 1]);
-            if(TArrivalNewCust < cust.TWStart)
-                TArrivalNewCust = cust.TWStart;
-            double newArrivalTime = TArrivalNewCust + CustomerDist(route[pos], cust) + cust.ServiceTime;
-            for(int i=pos; i< route.Count; i++)
-            {
-                if (newArrivalTime < route[i].TWStart)
-                    newArrivalTime = route[i].TWStart;
-                arrival_times[i] = newArrivalTime;
-                if (i != route.Count - 1)
-                    newArrivalTime += CustomerDist(route[i], route[i + 1]) + route[i].ServiceTime;
-            }
-            arrival_times.Insert(pos, TArrivalNewCust);
-            route.Insert(pos, cust);
+            //double TArrivalNewCust = arrival_times[pos - 1] + route[pos - 1].ServiceTime + CustomerDist(cust, route[pos - 1]);
+            //if(TArrivalNewCust < cust.TWStart)
+            //    TArrivalNewCust = cust.TWStart;
+            double newArrivalTime = 0;// TArrivalNewCust + CustomerDist(route[pos], cust) + cust.ServiceTime;
             used_capacity += cust.Demand;
+            double load = used_capacity;
+            double newCustArrivalTime = 0;
+            for(int i=0; i< route.Count; i++)
+            {
+                if(i == pos)
+                {
+                    if (newArrivalTime < cust.TWStart)
+                        newArrivalTime = cust.TWStart;
+
+                    newCustArrivalTime = newArrivalTime;
+                    load -= cust.Demand;
+                    newArrivalTime += CustomerDist(cust, route[i], load) + cust.ServiceTime;
+
+                    //if (newArrivalTime < route[i].TWStart)
+                    //    newArrivalTime = route[i].TWStart;
+
+                    //arrival_times[i] = newArrivalTime;
+                }
+                //else
+                //{
+                    if (newArrivalTime < route[i].TWStart)
+                        newArrivalTime = route[i].TWStart;
+                    arrival_times[i] = newArrivalTime;
+                    load -= route[i].Demand;
+                    if (i != route.Count - 1)
+                    {
+                        double time;
+                        //If the next index is the new cust target pos, use the travel time to the new customer
+                        if (i == pos - 1)
+                            time = CustomerDist(route[i], cust, load);
+                        else
+                            time = CustomerDist(route[i], route[i + 1], load);
+                        newArrivalTime += time + route[i].ServiceTime;
+                    }
+                        
+                //}
+
+            }
+            arrival_times.Insert(pos, newCustArrivalTime);
+            route.Insert(pos, cust);
+            
         }
 
         public (bool,double,int) CanSwap(Customer cust1, Customer cust2, int index)
@@ -582,7 +623,7 @@ namespace SA_ILP
             double[,,] matrix = new double[customers.Count,customers.Count,1];
             for (int i = 0; i < customers.Count; i++)
                 for (int j = 0; j < customers.Count; j++)
-                    matrix[i, j,1] = CalculateObjective(customers[i], customers[j]);//Math.Sqrt(Math.Pow(customers[i].X - customers[j].X,2) + Math.Pow(customers[i].Y - customers[j].Y,2));
+                    matrix[i, j,0] = CalculateObjective(customers[i], customers[j]);//Math.Sqrt(Math.Pow(customers[i].X - customers[j].X,2) + Math.Pow(customers[i].Y - customers[j].Y,2));
             return matrix;
         }
 
@@ -758,7 +799,7 @@ namespace SA_ILP
             return (Columns, BestSolution, bestSolValue);
         }
         
-        public void SolveInstance(string fileName, int numIterations = 3000000)
+        public void SolveSolomonInstance(string fileName, int numIterations = 3000000)
         {
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
             List<Task<(HashSet<RouteStore>, List<Route>, double)>> tasks = new List<Task<(HashSet<RouteStore>, List<Route>, double)>>();

@@ -3,17 +3,20 @@ using SA_ILP;
 using System.Diagnostics;
 using Gurobi;
 
+
+string baseDir = "../../../../../";
+
 var solver = new Solver();
 Stopwatch watch = new Stopwatch();
 
 watch.Start();
 //for(int i = 0; i < 10; i++)
-//solver.SolveInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\rc101.txt", numIterations: 80000000);
-//await solver.SolveInstanceAsync(@"..\..\..\..\..\solomon_instances\rc103.txt",numThreads:4, numIterations: 60000000);
+solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\c101.txt", numIterations: 80000000);
+//await solver.SolveSolomonInstanceAsync(@"..\..\..\..\..\solomon_instances\rc103.txt",numThreads:1, numIterations: 60000000);
 
-string baseDir = "../../../../../";
-var result = VRPLTT.ParseVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"));
-Console.WriteLine(VRPLTT.CalculateTravelTime(10,10,800,350));
+
+//var result = VRPLTT.ParseVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"));
+//Console.WriteLine(VRPLTT.CalculateTravelTime(10,10,800,350));
 //await SolveAllAsync(@"..\..\..\..\..\solomon_instances", Path.Join(@"..\..\..\..\..\solutions\solomon_instances",DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")),numThreads:1);
 
 
