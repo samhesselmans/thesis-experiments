@@ -8,10 +8,10 @@ Stopwatch watch = new Stopwatch();
 
 watch.Start();
 //for(int i = 0; i < 10; i++)
-//solver.SolveInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\rc101.txt", numIterations: 80000000);
+solver.SolveInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\c101.txt", numIterations: 50000000);
 //await solver.SolveInstanceAsync(@"..\..\..\..\..\solomon_instances\rc103.txt",numThreads:4, numIterations: 60000000);
 
-Console.WriteLine(VRPLTT.CalculateTravelTime(10,10,800,350));
+//Console.WriteLine(VRPLTT.CalculateTravelTime(10,10,800,350));
 //await SolveAllAsync(@"..\..\..\..\..\solomon_instances", Path.Join(@"..\..\..\..\..\solutions\solomon_instances",DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")),numThreads:1);
 
 
