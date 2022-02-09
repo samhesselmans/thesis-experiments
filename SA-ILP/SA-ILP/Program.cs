@@ -9,8 +9,30 @@ string baseDir = "../../../../../";
 var solver = new Solver();
 Stopwatch watch = new Stopwatch();
 
-watch.Start();
+
+
+
+//double[,,] test = new double[1000,1000,10];
+//double[] test2 = new double[1000 * 1000 * 10];
+//Random random = new Random();
+//watch.Start();
+//double total  = 0;
+//for(int i =0; i< 10000000; i++)
+//{
+//    total += test[random.Next(1000),random.Next(1000),random.Next(10)];
+//}
+//Console.WriteLine(watch.ElapsedMilliseconds);
+//watch.Restart();
+//total = 0;
+//for (int i = 0; i < 10000000; i++)
+//{
+//    total += test2[random.Next(1000)* random.Next(1000)* random.Next(10)];
+//}
+//Console.WriteLine(watch.ElapsedMilliseconds);
+
+
 //for(int i = 0; i < 10; i++)
+//solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"),numLoadLevels:10);
 solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\R1_10_1.TXT", numIterations: 50000000);
 //await solver.SolveSolomonInstanceAsync(@"..\..\..\..\..\solomon_instances\rc103.txt",numThreads:1, numIterations: 60000000);
 

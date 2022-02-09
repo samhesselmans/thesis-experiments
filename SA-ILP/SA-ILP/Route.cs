@@ -65,19 +65,14 @@ namespace SA_ILP
 #if DEBUG
             numReference += 1;
 #endif
-            int loadLevel = 0;
+            int loadLevel = (int)((weight / max_capacity) * numLoadLevels);
 
-            //TODO: lloadlevel selection
+            //This happens if the vehicle is fully loaded. It wants to check the next loadlevel
+            if (loadLevel == numLoadLevels)
+                loadLevel--;
+
             var val = objective_matrix[cust1.Id, cust2.Id, loadLevel];
             return val;
-            //if(cust1.Id < cust2.Id)
-            //{
-            //    return distance_matrix[cust1.Id,cust2.Id];
-            //}
-            //else
-            //{
-            //    return distance_matrix[cust2.Id, cust1.Id];
-            //}
         }
 
         public void RemoveCust(Customer cust)
@@ -354,6 +349,7 @@ namespace SA_ILP
 
         public bool CheckRouteValidity()
         {
+            //TODO: update to use loadlevels
             double arrivalTime = 0;
             bool failed = false;
             double usedCapacity = 0;

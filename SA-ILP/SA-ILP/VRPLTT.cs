@@ -9,7 +9,7 @@ namespace SA_ILP
 {
     internal static class VRPLTT
     {
-        public static double CalculateTravelTime(double heightDiff, double length, double vehicleMass,double powerInput)
+        private static double CalculateSpeed(double heightDiff, double length, double vehicleMass,double powerInput)
         {
             double speed = 25;
             double slope = Math.Atan(heightDiff / length) * Math.PI / 180;
@@ -34,6 +34,17 @@ namespace SA_ILP
             return 0;
 
 
+        }
+
+        public static double CalculateTravelTime(double heightDiff, double length, double vehicleMass, double powerInput)
+        {
+            if (length == 0)
+                return 0;
+            //Speed in m/s
+            double speed = CalculateSpeed(heightDiff, length, vehicleMass, powerInput)/3.6;
+
+            //Return travel time in minutes
+            return length * 1000  / speed /60;
         }
 
         public static (double[,] distances,List<Customer> customers) ParseVRPLTTInstance(string file)

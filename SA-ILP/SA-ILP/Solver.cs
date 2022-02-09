@@ -201,6 +201,26 @@ namespace SA_ILP
             return matrix;
         }
 
+        private double[,,] CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix,double minWeight,double maxWeight,int numLoadLevels,double powerInput)
+        {
+            double[,,] matrix = new double[customers.Count, customers.Count, numLoadLevels];
+            for (int i = 0;i < customers.Count;i++)
+                for (int j = 0;j < customers.Count;j++)
+                    for(int l =0; l < numLoadLevels; l++)
+                    {
+                        double loadLevelWeight = minWeight + ((maxWeight - minWeight) / numLoadLevels) * l + ((maxWeight - minWeight) / numLoadLevels)/2;
+
+                        double dist;
+                        if (i < j)
+                            dist = distanceMatrix[i, j];
+                        else
+                            dist = distanceMatrix[j, i];
+
+                        matrix[i,j,l] = VRPLTT.CalculateTravelTime(customers[i].Elevation - customers[j].Elevation, dist, loadLevelWeight, powerInput);
+                    }
+            return matrix;
+        }
+
         public static double CalculateDistanceObjective(Customer cust1, Customer cust2)
         {
             return Math.Sqrt(Math.Pow(cust1.X - cust2.X, 2) + Math.Pow(cust1.Y - cust2.Y, 2));
@@ -211,7 +231,7 @@ namespace SA_ILP
             random = new Random();
         }
 
-        private (HashSet<RouteStore>,List<Route>,double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers,double[,,] distanceMatrix,bool printExtendedInfo=false,int numInterations=3000000)
+        private (HashSet<RouteStore>,List<Route>,double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers,double[,,] distanceMatrix,bool printExtendedInfo=false,int numInterations=3000000,bool checkInitialSolution=true)
         {
             
             //customers.Sort(1, customers.Count - 1, delegate (Customer x, Customer y) { x.TWEnd.CompareTo(y.TWEnd); });
@@ -248,13 +268,15 @@ namespace SA_ILP
                     throw new Exception("Cust past niet!");
             }
 
-            //Validate intial solution
-            foreach (Route route in routes)
-                if (route.CheckRouteValidity())
-                {
-                    Console.WriteLine("Initiele oplossing niet valid");
-                    throw new Exception();
-                }
+
+            if(checkInitialSolution)
+                //Validate intial solution
+                foreach (Route route in routes)
+                    if (route.CheckRouteValidity())
+                    {
+                        Console.WriteLine("Initiele oplossing niet valid");
+                        throw new Exception();
+                    }
 
             int amtImp = 0, amtWorse = 0, amtNotDone = 0;
             double temp = 30;
@@ -351,8 +373,7 @@ namespace SA_ILP
                     Console.WriteLine($"{id}: T: {Math.Round(temp, 3)}, S: {Math.Round(CalcTotalDistance(routes), 3)}, TS: {Math.Round(currentValue, 3)}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeExceptedOnIt}, B: {Math.Round(bestSolValue, 3)}, BI: {bestImprovedIteration}");
                 }
             }
-            foreach (Route route in routes)
-                route.CheckRouteValidity();
+
             Console.WriteLine($"DONE {id}: {name}, Score: {CalcTotalDistance(BestSolution)}, Columns: {Columns.Count}, in {Math.Round((double)timer.ElapsedMilliseconds / 1000, 3)}s");
 #if DEBUG
             Console.WriteLine(routes.Sum(x => x.numReference));
@@ -367,7 +388,18 @@ namespace SA_ILP
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
             List<Task<(HashSet<RouteStore>, List<Route>, double)>> tasks = new List<Task<(HashSet<RouteStore>, List<Route>, double)>>();
             var distanceMatrix = CalculateDistanceMatrix(customers);
-            LocalSearchInstance(-1, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, numInterations: numIterations);
+            (var colums, var sol,var value ) = LocalSearchInstance(-1, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, numInterations: numIterations);
+            foreach (Route route in sol)
+                route.CheckRouteValidity();
+
+        }
+
+        public void SolveVRPLTTInstance(string fileName, int numIterations = 3000000,double bikeMinMass = 150,double bikeMaxMass = 350,int numLoadLevels=10,double inputPower = 400)
+        {
+            (double[,] distances, List< Customer > customers) = VRPLTT.ParseVRPLTTInstance(fileName);
+            double[,,] matrix = CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
+            LocalSearchInstance(-1, "", customers.Count, bikeMaxMass-bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix, numInterations: numIterations,checkInitialSolution:false);
+            //(List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads, numIterations);
 
         }
 
@@ -375,6 +407,7 @@ namespace SA_ILP
         {
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
             var distanceMatrix = CalculateDistanceMatrix(customers);
+
             (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads, numIterations);
             bool failed = SolomonParser.CheckSolomonSolution(fileName, ilpSol, ilpVal);
             return (failed, ilpSol, ilpVal, ilpTime, lsTime, lsVal);
