@@ -11,7 +11,7 @@ Stopwatch watch = new Stopwatch();
 
 watch.Start();
 //for(int i = 0; i < 10; i++)
-solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\c101.txt", numIterations: 50000000);
+solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\R1_10_1.TXT", numIterations: 50000000);
 //await solver.SolveSolomonInstanceAsync(@"..\..\..\..\..\solomon_instances\rc103.txt",numThreads:1, numIterations: 60000000);
 
 

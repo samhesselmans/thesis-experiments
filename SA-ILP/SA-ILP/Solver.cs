@@ -9,46 +9,7 @@ using Gurobi;
 
 namespace SA_ILP
 {
-    public class Customer
-    {
-        public int Id { get; private set; }
-        public double X { get; private set; }
-        public double Y { get; private set; }
-        public double Demand    { get; private set; }
-        public double TWStart { get; private set; }
-        public double TWEnd { get; private set; }
 
-        public double ServiceTime { get; private set; }
-
-        public double Elevation { get; private set; }
-
-        public Customer(int id, double x, double y, double demand, double twstart, double twend,double serviceTime,double elevation = 0)
-        {
-            if (twend == 0)
-                twend = double.MaxValue;
-
-            this.Id = id;
-            this.X = x;
-            this.Y = y;
-            this.Demand = demand;
-            this.TWStart = twstart;
-            this.TWEnd = twend;
-            this.ServiceTime = serviceTime;
-            this.Elevation = elevation;
-
-        }
-
-        public Customer(Customer cust)
-        {
-            this.Id = cust.Id;
-            this.X = cust.X;
-            this.Y = cust.Y;
-            this.Demand = cust.Demand;
-            this.TWEnd= cust.TWEnd;
-            this.TWStart = cust.TWStart;
-            this.ServiceTime = cust.ServiceTime;
-        }
-    }
 
     class RouteStore
     {
@@ -103,394 +64,7 @@ namespace SA_ILP
             //return Route.Sum(x=>);//String.Join(";", Route).GetHashCode();
         }
     }
-    class Route
-    {
-        public List<Customer> route;
-        public List<double> arrival_times;
-        public double[,,] objective_matrix;
-        public int numLoadLevels;
-        public double time_done;
-        //public Customer lastCust;
-        public double used_capacity;
-        public double max_capacity;
-        private Random random;
-
-#if DEBUG
-        public long numReference = 0;
-#endif
-        public Route(Customer depot,double[,,] distanceMatrix,double maxCapacity)
-        {
-            this.route = new List<Customer>() { depot, depot };
-            this.arrival_times = new List<double>() { 0,0};
-            this.objective_matrix = distanceMatrix;
-            this.numLoadLevels = distanceMatrix.GetLength(2);
-            this.time_done = 0;
-            //this.lastCust = depot;
-            used_capacity = 0;
-            this.max_capacity = maxCapacity;
-            random = new Random();
-
-        }
-
-        public Route(List<Customer> route, List<double> arrivalTimes, double[,,] distanceMatrix, double usedCapcity, double maxCapacity)
-        {
-            this.route = route;
-            this.arrival_times = arrivalTimes;
-            this.objective_matrix = distanceMatrix;
-            this.numLoadLevels = distanceMatrix.GetLength(2);
-            this.time_done = 0;
-            used_capacity = usedCapcity;
-            this.max_capacity = maxCapacity;
-            random = new Random();
-
-        }
-
-        public double CalcObjective()
-        {
-            var total_dist = 0.0;
-            var totalWeight = used_capacity;
-            for(int i = 0;i < route.Count-1; i++)
-            {
-                total_dist += this.CustomerDist(route[i], route[i + 1],totalWeight);
-                totalWeight -= route[i + 1].Demand;
-            }
-            return total_dist;
-        }
-
-        public double CustomerDist(Customer cust1, Customer cust2,double weight)
-        {
-#if DEBUG
-            numReference += 1;
-#endif
-            int loadLevel = 0;
-
-            //TODO: lloadlevel selection
-
-            return objective_matrix[cust1.Id, cust2.Id, loadLevel];
-            //if(cust1.Id < cust2.Id)
-            //{
-            //    return distance_matrix[cust1.Id,cust2.Id];
-            //}
-            //else
-            //{
-            //    return distance_matrix[cust2.Id, cust1.Id];
-            //}
-        }
-
-        public void RemoveCust(Customer cust)
-        {
-            double newArriveTime = 0;
-            int index = -1;
-            Customer lastCust = null;
-            Customer previous_cust = route[0];
-            this.used_capacity -= cust.Demand;
-            double load = used_capacity;
-            for (int i = 1; i < route.Count-1; i++)
-            {
-                var c = route[i];
-                if(c != cust)
-                {
-                    var dist = CustomerDist(previous_cust, c,load);
-                    load -= c.Demand;
-                    if(newArriveTime + dist < c.TWStart)
-                        newArriveTime = c.TWStart;
-                    else
-                        newArriveTime += dist;
-                    arrival_times[i] = newArriveTime;
-                    newArriveTime += c.ServiceTime;
-                    lastCust = c;
-                    previous_cust = c;
-                }
-                else
-                    index = i;
-            }
-            route.RemoveAt(index);
-            arrival_times.RemoveAt(index);
-            //this.lastCust = lastCust;
-            
-
-        }
-
-        public (bool possible,bool possibleInLaterPosition,double objectiveIncrease) CustPossibleAtPos(Customer cust, int pos,int skip=0)
-        {
-            double totalTravelTime = 0;
-            double load = used_capacity + cust.Demand;
-
-            //Remove the demand of the removed customers from the inital load
-            for(int i=0; i< skip; i++)
-            {
-                load -= route[pos + i].Demand;
-            }
-
-            double arrivalTime = 0;
-            for(int i = 0; i< route.Count; i++)
-            {
-                if(i == pos)
-                {
-                    if (arrivalTime > cust.TWEnd)
-                        return (false, false, double.MinValue);
-
-                    //Wait for the timewindow start
-                    if(arrivalTime < cust.TWStart)
-                        arrivalTime = cust.TWStart;
-
-                    load -= cust.Demand;
-                    var time = CustomerDist(cust,route[i+skip],load);
-                    totalTravelTime += time;
-                    arrivalTime += time + cust.ServiceTime;
-                    i += skip;
-                }
-                //else
-                //{
-                    if (arrivalTime > route[i].TWEnd)
-                        //If we dont meet the timewindow on the route and we have not visited the new customer, we are late because of the additional load. The customer can never fit in this route
-                        if(i < pos)
-                            return (false, false, double.MinValue);
-                        else
-                            return(false,true,double.MinValue);
-
-                    //Wait for the timewindow start
-                    if (arrivalTime < route[i].TWStart)
-                        arrivalTime = route[i].TWStart;
-
-                    load -= route[i].Demand;
-
-                    if (i != route.Count - 1)
-                    {
-                        double time;
-                        //If the current customer is the customer before the potential position of the new customer update the time accordingly
-                        if(i == pos-1)
-                            time = CustomerDist(route[i], cust, load);
-                        else
-                            time = CustomerDist(route[i], route[i + 1], load);
-                        totalTravelTime += time;
-                        arrivalTime += time  + route[i].ServiceTime;
-
-                    }
-                //}
-            }
-            //TODO: cache current objective value
-            return (true,true,totalTravelTime - CalcObjective());
-            
-
-            ////Check upper timewindow of the new customer
-            //if (arrival_times[pos - 1] + route[pos - 1].ServiceTime > cust.TWEnd && skip == 0)
-            //    return (false, false, double.MinValue);
-
-            ////TODO: cache these values
-            //double delivered = 0;
-            //for(int i =0; i< pos;i++)
-            //    delivered += route[i].Demand;
-            //double currentLoad = used_capacity - delivered;
-
-
-            ////Check upper timewindow with distance
-            //double TArrivalNewCust = arrival_times[pos-1] + route[pos-1].ServiceTime + CustomerDist( route[pos-1],cust,currentLoad);
-            //if (TArrivalNewCust > cust.TWEnd)
-            //    return (false, false, double.MinValue);
-            ////Set the arrival time to the start of the timewindow if the vehicle arrives to early
-            //if (TArrivalNewCust < cust.TWStart)
-            //    TArrivalNewCust = cust.TWStart;
-
-            //currentLoad -= cust.Demand;
-
-            //double newArrivalTime = TArrivalNewCust + CustomerDist(cust,route[pos+skip],currentLoad) + cust.ServiceTime;
-            //for(int i = pos + skip; i < route.Count; i++)
-            //{
-            //    if (newArrivalTime > route[i].TWEnd)
-            //        return (false, true, double.MinValue);
-            //    if(newArrivalTime < route[i].TWStart)
-            //        newArrivalTime = route[i].TWStart;
-            //    currentLoad -= cust.Demand;
-            //    if (i != route.Count - 1)
-            //        newArrivalTime += CustomerDist(route[i], route[i + 1], currentLoad) + route[i].ServiceTime;
-            //}
-            ////Objective has to be completly recalculated...
-            //double distIncrease = CustomerDist(route[pos - 1], cust, used_capacity - delivered) + CustomerDist(cust, route[pos + skip], used_capacity - delivered + cust.Demand) - CustomerDist(route[pos - 1], route[pos], used_capacity - delivered);
-
-            ////Kan dit geen problemen veroorzaken?
-            //for(int i=0;i< skip; i++)
-            //{
-            //    distIncrease -= CustomerDist(route[pos + i],route[pos + i + 1]);
-            //}
-
-            //return (true, true, distIncrease);
-        }
-
-        public (int,double) BestPossibleInsert(Customer cust)
-        {
-            double bestDistIncr = double.MaxValue;
-            int bestIndex = -1;
-            if (this.used_capacity + cust.Demand > max_capacity)
-                return (bestIndex, bestDistIncr);
-            for (int i = 1; i < route.Count; i++)
-            {
-                (bool possible, bool everPossible, double distIncrease) = CustPossibleAtPos(cust, i);
-                if (!everPossible)
-                    break;
-                if(possible)
-                    if (distIncrease < bestDistIncr)
-                    {
-                        bestDistIncr = distIncrease;
-                        bestIndex = i;
-                    }
-
-
-            }
-            return (bestIndex, bestDistIncr);
-        }
-
-        public (Customer? toRemove,double objectiveDecrease) RandomCust()
-        {
-            if (route.Count == 2)
-                return (null, double.MaxValue);
-
-            var i = random.Next(1, route.Count - 1);
-            double newCost = 0;
-            double load = used_capacity - route[i].Demand;
-            for(int j =0; j < route.Count -1; j++)
-            {
-                double time;
-                Customer nextCust;
-
-                //Skip the to be removed customer
-                if(i == j)
-                {
-                    continue;
-                }
-
-                //If the next customer would be the removed customer, skip it.
-                if (j == i-1)
-                {
-                    nextCust = route[j + 2];
-                }
-                else
-                    nextCust = route[j + 1];
-                   
-
-                
-                newCost += CustomerDist(route[j],nextCust,load);
-                load -= nextCust.Demand;
-            }
-
-            return (route[i], CalcObjective() - newCost);
-        }
-
-        public (Customer?, int) RandomCustIndex()
-        {
-            if (route.Count == 2)
-                return (null, -1);
-
-            var i = random.Next(1, route.Count - 1);
-            return (route[i], i);
-        }
-
-        public void InsertCust(Customer cust, int pos)
-        {
-            //double TArrivalNewCust = arrival_times[pos - 1] + route[pos - 1].ServiceTime + CustomerDist(cust, route[pos - 1]);
-            //if(TArrivalNewCust < cust.TWStart)
-            //    TArrivalNewCust = cust.TWStart;
-            double newArrivalTime = 0;// TArrivalNewCust + CustomerDist(route[pos], cust) + cust.ServiceTime;
-            used_capacity += cust.Demand;
-            double load = used_capacity;
-            double newCustArrivalTime = 0;
-            for(int i=0; i< route.Count; i++)
-            {
-                if(i == pos)
-                {
-                    if (newArrivalTime < cust.TWStart)
-                        newArrivalTime = cust.TWStart;
-
-                    newCustArrivalTime = newArrivalTime;
-                    load -= cust.Demand;
-                    newArrivalTime += CustomerDist(cust, route[i], load) + cust.ServiceTime;
-
-                    //if (newArrivalTime < route[i].TWStart)
-                    //    newArrivalTime = route[i].TWStart;
-
-                    //arrival_times[i] = newArrivalTime;
-                }
-                //else
-                //{
-                    if (newArrivalTime < route[i].TWStart)
-                        newArrivalTime = route[i].TWStart;
-                    arrival_times[i] = newArrivalTime;
-                    load -= route[i].Demand;
-                    if (i != route.Count - 1)
-                    {
-                        double time;
-                        //If the next index is the new cust target pos, use the travel time to the new customer
-                        if (i == pos - 1)
-                            time = CustomerDist(route[i], cust, load);
-                        else
-                            time = CustomerDist(route[i], route[i + 1], load);
-                        newArrivalTime += time + route[i].ServiceTime;
-                    }
-                        
-                //}
-
-            }
-            arrival_times.Insert(pos, newCustArrivalTime);
-            route.Insert(pos, cust);
-            
-        }
-
-        public (bool,double,int) CanSwap(Customer cust1, Customer cust2, int index)
-        {
-            //for (int i=0; i < route.Count - 1; i++)
-            //{
-            //    if (route[i] == cust1)
-            //    {
-                    (bool possible, _, double distIncrease) = CustPossibleAtPos(cust2, index, 1);
-                    possible &= (used_capacity - cust1.Demand + cust2.Demand < max_capacity);
-                    return (possible, distIncrease, index);
-            //    }
-            //}
-            //return (false,double.MaxValue,-1);
-        }
-
-        public bool CheckRouteValidity()
-        {
-            double arrivalTime = 0;
-            bool failed = false;
-            double usedCapacity = 0;
-            for(int i=0;i < route.Count - 1; i++)
-            {
-                usedCapacity += route[i + 1].Demand;
-                if(usedCapacity > max_capacity)
-                {
-                    failed = true;
-                    Console.WriteLine($"FAIL exceeded vehicle capacity {route}");
-                }
-                if(arrivalTime > route[i].TWEnd)
-                {
-                    failed = true;
-                    Console.WriteLine($"FAIL did not meet customer {route[i].Id}:{route[i]} due date. Arrived on {arrivalTime} on route {route}");
-                }
-                if(arrivalTime < route[i].TWStart)
-                    arrivalTime = route[i].TWStart;
-                if(arrivalTime < arrival_times[i] - Math.Pow(10,-9) || arrivalTime > arrival_times[i] + Math.Pow(10, -9))
-                {
-                    Console.WriteLine($"FAIL arrival times did not match {arrivalTime} and {arrival_times[i]} for cust {route[i].Id} on route {route}");
-                    failed = true;
-                }
-                arrivalTime += Math.Sqrt(Math.Pow(route[i].X - route[i + 1].X, 2) + Math.Pow(route[i].Y - route[i + 1].Y, 2)) + route[i].ServiceTime;
-
-            }
-            return failed;
-        }
-
-        public Route CreateDeepCopy()
-        {
-            return new Route(route.ConvertAll(i=>i),arrival_times.ConvertAll(i => i), objective_matrix,used_capacity,max_capacity);
-        }
-
-        public List<int> CreateIdList()
-        {
-            return route.ConvertAll(i => i.Id);
-        }
-
-    }
+    
 
     internal class Solver
     {
@@ -623,11 +197,11 @@ namespace SA_ILP
             double[,,] matrix = new double[customers.Count,customers.Count,1];
             for (int i = 0; i < customers.Count; i++)
                 for (int j = 0; j < customers.Count; j++)
-                    matrix[i, j,0] = CalculateObjective(customers[i], customers[j]);//Math.Sqrt(Math.Pow(customers[i].X - customers[j].X,2) + Math.Pow(customers[i].Y - customers[j].Y,2));
+                    matrix[i, j,0] = CalculateDistanceObjective(customers[i], customers[j]);//Math.Sqrt(Math.Pow(customers[i].X - customers[j].X,2) + Math.Pow(customers[i].Y - customers[j].Y,2));
             return matrix;
         }
 
-        public static double CalculateObjective(Customer cust1, Customer cust2)
+        public static double CalculateDistanceObjective(Customer cust1, Customer cust2)
         {
             return Math.Sqrt(Math.Pow(cust1.X - cust2.X, 2) + Math.Pow(cust1.Y - cust2.Y, 2));
         }
@@ -693,12 +267,12 @@ namespace SA_ILP
             List<int> viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
 
             int lastChangeExceptedOnIt = 0;
-            var comp = new ListEqCompare();
             HashSet<RouteStore> Columns = new HashSet<RouteStore>();
             List<Route> BestSolution = routes.ConvertAll(i => i.CreateDeepCopy());
             double bestSolValue = CalcTotalDistance(BestSolution);
             double currentValue = bestSolValue;
             int bestImprovedIteration = 0;
+            int numRestarts = 0;
             for (int iteration = 0; iteration < numInterations; iteration++)
             {
                 double p = random.NextDouble();
@@ -713,12 +287,8 @@ namespace SA_ILP
                     //Accept all improvements
                     if (imp > 0)
                     {
-                        //double prev = CalcTotalDistance(routes);
                         act();
-                        //if (Math.Round(prev - CalcTotalDistance(routes), 6) != Math.Round(imp, 6) && p <= 0.5)
-                        //{
-                        //    Console.WriteLine("Somthing is wrong");
-                        //}
+
                         viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                         currentValue -= imp;
                         if (currentValue < bestSolValue)
@@ -752,19 +322,11 @@ namespace SA_ILP
                         {
                             //Worse solution accepted
                             amtWorse += 1;
-                            //double prev = CalcTotalDistance(routes);
+
                             act();
-                            //if(Math.Round(prev - CalcTotalDistance(routes), 6) != Math.Round(imp, 6) && p <= 0.5)
-                            //{
-                            //    Console.WriteLine("Somthing is wrong");
-                            //}
                             viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                             currentValue -= imp;
-                            ////Add columns
-                            //foreach (Route route in routes)
-                            //{
-                            //    var res = Columns.Add(new RouteStore(route.CreateIdList()));
-                            //}
+
                             lastChangeExceptedOnIt = iteration;
                         }
                     }
@@ -773,8 +335,9 @@ namespace SA_ILP
                     amtNotDone += 1;
                 if (iteration % 10000 == 0 && iteration != 0)
                     temp *= alpha;
-                if(iteration - bestImprovedIteration > 300000 && temp < 0.03)
+                if(iteration - bestImprovedIteration > 1000000 * (numRestarts*3+1) && temp < 0.03)
                 {
+                    numRestarts += 1;
                     //Restart
                     temp = 30;
                     routes = BestSolution.ConvertAll(i => i.CreateDeepCopy());
@@ -813,7 +376,7 @@ namespace SA_ILP
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
             var distanceMatrix = CalculateDistanceMatrix(customers);
             (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads, numIterations);
-            bool failed = SolomonParser.CheckSolution(fileName, ilpSol, ilpVal);
+            bool failed = SolomonParser.CheckSolomonSolution(fileName, ilpSol, ilpVal);
             return (failed, ilpSol, ilpVal, ilpTime, lsTime, lsVal);
         }
 
@@ -872,7 +435,7 @@ namespace SA_ILP
                 double cost = 0;
                 for(int j =0; j< columList[i].Route.Count - 1; j++)
                 {
-                    cost += CalculateObjective(customers[columList[i].Route[j]], customers[columList[i].Route[j + 1]]);
+                    cost += CalculateDistanceObjective(customers[columList[i].Route[j]], customers[columList[i].Route[j + 1]]);
                     custInRoute[columList[i].Route[j], i] = 1;
                     custInRoute[columList[i].Route[j+1], i] = 1;
                 }
@@ -966,7 +529,7 @@ namespace SA_ILP
             }
         }
 
-        public static bool CheckSolution(string instance, List<RouteStore> solution,double value)
+        public static bool CheckSolomonSolution(string instance, List<RouteStore> solution,double value)
         {
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(instance);
 
@@ -1000,7 +563,7 @@ namespace SA_ILP
                     //Update travel distances
                     if (i != route.Route.Count -1)
                     {
-                        double dist = Solver.CalculateObjective(customers[route.Route[i]], customers[route.Route[i + 1]]);
+                        double dist = Solver.CalculateDistanceObjective(customers[route.Route[i]], customers[route.Route[i + 1]]);
                         totalDist += dist;
                         arrivalTime += dist + customers[route.Route[i]].ServiceTime;
                     }
@@ -1059,52 +622,14 @@ namespace SA_ILP
                 }
                 else
                 {
-                    // ...and y is not null, compare the
-                    // lengths of the two strings.
-                    //
+
                     return x.TWEnd.CompareTo(y.TWEnd);//x.Length.CompareTo(y.Length);
 
-                    //if (retval != 0)
-                    //{
-                    //    // If the strings are not of equal length,
-                    //    // the longer string is greater.
-                    //    //
-                    //    return retval;
-                    //}
-                    //else
-                    //{
-                    //    // If the strings are of equal length,
-                    //    // sort them with ordinary string comparison.
-                    //    //
-                    //    return x.CompareTo(y);
-                    //}
+
                 }
             }
         }
     }
 
-    class ListEqCompare : IEqualityComparer<List<int>>
-    {
-        public bool Equals(List<int> x, List<int> y)
-        {
-            if (x.Count != y.Count)
-                return false;
-            for (int i = 0; i < x.Count; i++)
-            {
-                if (x[i] != y[i])
-                    return false;
-            }
-            return true;
-        }
-
-        public int GetHashCode(List<int> obj)
-        {
-            int hash = 0;
-            foreach (int num in obj)
-                hash = hash ^ EqualityComparer<int>.Default.GetHashCode(num);
-
-            return hash;
-        }
-    }
 
 }
