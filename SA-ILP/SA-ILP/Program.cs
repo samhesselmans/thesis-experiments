@@ -32,8 +32,8 @@ Stopwatch watch = new Stopwatch();
 
 
 //for(int i = 0; i < 10; i++)
-//solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"),numLoadLevels:10);
-solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\R1_10_1.TXT", numIterations: 50000000);
+solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "seattle_full.csv"),numLoadLevels:10,numIterations:3000000);
+//solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\R1_10_1.TXT", numIterations: 50000000);
 //await solver.SolveSolomonInstanceAsync(@"..\..\..\..\..\solomon_instances\rc103.txt",numThreads:1, numIterations: 60000000);
 
 

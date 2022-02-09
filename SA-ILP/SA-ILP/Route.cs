@@ -120,6 +120,10 @@ namespace SA_ILP
                 load -= route[pos + i].Demand;
             }
 
+            //Need to check capacity, otherwise loadlevel claculation fails
+            if (load > max_capacity)
+                return (false, false, double.MinValue);
+
             double arrivalTime = 0;
             for (int i = 0; i < route.Count; i++)
             {
