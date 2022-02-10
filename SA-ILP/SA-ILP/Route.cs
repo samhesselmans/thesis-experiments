@@ -16,6 +16,9 @@ namespace SA_ILP
         //public Customer lastCust;
         public double used_capacity;
         public double max_capacity;
+
+        private double penalty = 100;
+
         private Random random;
 
 #if DEBUG
@@ -48,13 +51,24 @@ namespace SA_ILP
 
         }
 
+        public double CalculatePenaltyTerm(double arrivalTime,double timewindowStart)
+        {
+            return 0;// 10000 + timewindowStart - arrivalTime;// timewindowStart - arrivalTime;
+        }
+
         public double CalcObjective()
         {
             var total_dist = 0.0;
+            double total_time_waited = 0;
             var totalWeight = used_capacity;
             for (int i = 0; i < route.Count - 1; i++)
             {
                 total_dist += this.CustomerDist(route[i], route[i + 1], totalWeight);
+
+                //Adding heavy penalty for violating timewindow start
+                if (arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime < route[i + 1].TWStart)
+                    //total_dist += penalty;
+                    total_dist += CalculatePenaltyTerm((arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime), route[i + 1].TWStart);//route[i + 1].TWStart - (arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime);
                 totalWeight -= route[i + 1].Demand;
             }
             return total_dist;
@@ -86,7 +100,7 @@ namespace SA_ILP
             for (int i = 1; i < route.Count - 1; i++)
             {
                 var c = route[i];
-                if (c != cust)
+                if (c.Id != cust.Id)
                 {
                     var dist = CustomerDist(previous_cust, c, load);
                     load -= c.Demand;
@@ -102,11 +116,55 @@ namespace SA_ILP
                 else
                     index = i;
             }
+            if (index == -1)
+                Console.WriteLine("Helpt");
             route.RemoveAt(index);
             arrival_times.RemoveAt(index);
             //this.lastCust = lastCust;
 
 
+        }
+
+        public (bool possible, double decrease) CanSwapInternally(Customer cust1, Customer cust2, int index1, int index2)
+        {
+            double load = used_capacity;
+            double arrival_time = 0;
+            double totalTravelTime = 0;
+            for(int i=0; i<route.Count - 1; i++)
+            {
+                Customer currentCust;
+                Customer nextCust;
+                if (i == index1 - 1)
+                    nextCust = cust2;
+                else if (i == index2 - 1)
+                    nextCust = cust1;
+                else
+                    nextCust = route[i+1];
+
+                if(i == index1)
+                    currentCust = cust2;
+                else if(i == index2)
+                    currentCust = cust1;
+                else 
+                    currentCust = route[i];
+
+                if (arrival_time > currentCust.TWEnd)
+                    return (false, double.MinValue);
+
+                if(arrival_time < currentCust.TWStart)
+                {
+                    totalTravelTime += CalculatePenaltyTerm(arrival_time, currentCust.TWStart);
+
+                    //Wil ik dit nog doen bij de violation van een timewindow? Misschien moet ik alleen de penalty toepassen en niet de arrivaltime aanpassen
+                    arrival_time = currentCust.TWStart;
+                }
+                var dist = CustomerDist(currentCust, nextCust, load);
+                totalTravelTime += dist;
+                arrival_time += dist + currentCust.ServiceTime;
+
+
+            }
+            return (true, totalTravelTime - CalcObjective() );
         }
 
         public (bool possible, bool possibleInLaterPosition, double objectiveIncrease) CustPossibleAtPos(Customer cust, int pos, int skip = 0)
@@ -134,7 +192,15 @@ namespace SA_ILP
 
                     //Wait for the timewindow start
                     if (arrivalTime < cust.TWStart)
+                    {
+                        totalTravelTime += CalculatePenaltyTerm(arrivalTime,cust.TWStart);//cust.TWStart - arrivalTime;
                         arrivalTime = cust.TWStart;
+
+                        //For testing not allowing wait
+                        //return (false,true,double.MinValue);
+                        //totalTravelTime += penalty;
+
+                    }
 
                     load -= cust.Demand;
                     var time = CustomerDist(cust, route[i + skip], load);
@@ -153,8 +219,15 @@ namespace SA_ILP
 
                 //Wait for the timewindow start
                 if (arrivalTime < route[i].TWStart)
+                {
+                    totalTravelTime += CalculatePenaltyTerm(arrivalTime,route[i].TWStart);//route[i].TWStart - arrivalTime;
                     arrivalTime = route[i].TWStart;
 
+                    //For testing not allowing wait
+                    //return (false, true, double.MinValue);
+                    //totalTravelTime += penalty;
+
+                }
                 load -= route[i].Demand;
 
                 if (i != route.Count - 1)
@@ -250,6 +323,7 @@ namespace SA_ILP
             var i = random.Next(1, route.Count - 1);
             double newCost = 0;
             double load = used_capacity - route[i].Demand;
+            double arrival_time = 0;
             for (int j = 0; j < route.Count - 1; j++)
             {
                 double time;
@@ -270,8 +344,15 @@ namespace SA_ILP
                     nextCust = route[j + 1];
 
 
-
-                newCost += CustomerDist(route[j], nextCust, load);
+                var cost = CustomerDist(route[j], nextCust, load);
+                newCost += cost;
+                arrival_time += cost + route[j].ServiceTime;
+                if (arrival_time < nextCust.TWStart)
+                {
+                    newCost += CalculatePenaltyTerm(arrival_time, nextCust.TWStart);//nextCust.TWStart- arrival_time;
+                    //newCost += penalty;
+                    arrival_time = nextCust.TWStart;
+                }
                 load -= nextCust.Demand;
             }
 
@@ -337,7 +418,7 @@ namespace SA_ILP
 
         }
 
-        public (bool, double, int) CanSwap(Customer cust1, Customer cust2, int index)
+        public (bool, double, int) CanSwapBetweenRoutes(Customer cust1, Customer cust2, int index)
         {
             //for (int i=0; i < route.Count - 1; i++)
             //{
