@@ -53,7 +53,7 @@ namespace SA_ILP
 
         public double CalculatePenaltyTerm(double arrivalTime,double timewindowStart)
         {
-            return 0;// 10000 + timewindowStart - arrivalTime;// timewindowStart - arrivalTime;
+            return 0;// 1000 + timewindowStart - arrivalTime;// timewindowStart - arrivalTime;
         }
 
         public double CalcObjective()
@@ -159,12 +159,15 @@ namespace SA_ILP
                     arrival_time = currentCust.TWStart;
                 }
                 var dist = CustomerDist(currentCust, nextCust, load);
+                load -= nextCust.Demand;
                 totalTravelTime += dist;
                 arrival_time += dist + currentCust.ServiceTime;
 
+                if (arrival_time > nextCust.TWEnd)
+                    return (false, double.MinValue);
 
             }
-            return (true, totalTravelTime - CalcObjective() );
+            return (true, totalTravelTime - CalcObjective());
         }
 
         public (bool possible, bool possibleInLaterPosition, double objectiveIncrease) CustPossibleAtPos(Customer cust, int pos, int skip = 0)

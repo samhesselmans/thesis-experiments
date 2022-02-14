@@ -45,5 +45,10 @@ namespace SA_ILP
             this.TWStart = cust.TWStart;
             this.ServiceTime = cust.ServiceTime;
         }
+
+        public override string ToString()
+        {
+            return Id.ToString();
+        }
     }
 }

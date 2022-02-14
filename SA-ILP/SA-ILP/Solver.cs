@@ -75,6 +75,44 @@ namespace SA_ILP
         }
 
 
+        private (double, Action?) GreedilyMoveRandomCustomer(List<Route> routes, List<int> viableRoutes)
+        {
+            var routeIndex = viableRoutes[random.Next(viableRoutes.Count)];
+            (Customer cust, double decr) = routes[routeIndex].RandomCust();
+
+            Route bestRoute = null;
+            double bestImp = double.MinValue;
+            int bestPos = -1;
+
+            for (int i = 0; i < routes.Count; i++)
+            {
+                //Temporary. Might be nice to swap greedily within a route
+                if (i == routeIndex)
+                    continue;
+                (var pos, double increase) = routes[i].BestPossibleInsert(cust);
+                if (pos == -1)
+                    continue;
+
+                if(decr - increase > bestImp)
+                {
+                    bestImp = decr - increase;
+                    bestPos = pos;
+                    bestRoute = routes[i];
+                }
+
+            }
+            if (bestRoute != null)
+                return (bestImp, () =>
+                {
+                    routes[routeIndex].RemoveCust(cust);
+                    bestRoute.InsertCust(cust, bestPos);
+                }
+                );
+            else
+                return (bestImp, null);
+        }
+
+
         private (double,Action?) SwapRandomCustomers(List<Route> routes, List<int> viableRoutes)
         {
             int bestDest = -1, bestSrc = -1, bestPos1 = -1, bestPos2 = - 1;
@@ -86,14 +124,20 @@ namespace SA_ILP
             for (int i = 0; i < 4; i++)
             {
                 //Select destination
-                int dest = viableRoutes[random.Next(numRoutes)];
+                int dest_index = random.Next(numRoutes);
+                int dest = viableRoutes[dest_index];
 
                 //Select src excluding destination
                 //var range = Enumerable.Range(0, numRoutes).Where(i => i != dest).ToList();
-                //int src = range[random.Next(numRoutes - 1)];
-                int src = random.Next(numRoutes);
-                //if (src >= dest)
+
+                //int src = random.Next(numRoutes - 1);//range[random.Next(numRoutes - 1)];
+                //if (src >= dest_index)
                 //    src += 1;
+                //src = viableRoutes[src];
+
+
+                int src = viableRoutes[random.Next(numRoutes)];
+
 
                 (var cust1, int index1) = routes[src].RandomCustIndex();
                 (var cust2, int index2) = routes[dest].RandomCustIndex();
@@ -115,7 +159,7 @@ namespace SA_ILP
                     {
                         (bool possible1, double increase1) = routes[src].CanSwapInternally(cust1,cust2,index1,index2);
                         possible = possible1;
-                        imp = increase1;
+                        imp = -increase1;
                     }
 
 
@@ -140,9 +184,17 @@ namespace SA_ILP
                 return (bestImp, () =>
                 {
                     //Remove old customer and insert new customer in its place
+                    
                     routes[bestSrc].RemoveCust(bestCust1);
+
+
                     //Remove old customer and insert new customer in its place
                     routes[bestDest].RemoveCust(bestCust2);
+
+                    if (bestSrc == bestDest)
+                        if (bestPos2 < bestPos1)
+                            bestPos1--;
+
 
                     routes[bestSrc].InsertCust(bestCust2, bestPos1);
                     routes[bestDest].InsertCust(bestCust1, bestPos2);
@@ -248,7 +300,7 @@ namespace SA_ILP
 
         private (HashSet<RouteStore>,List<Route>,double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers,double[,,] distanceMatrix,bool printExtendedInfo=false,int numInterations=3000000,bool checkInitialSolution=true)
         {
-            
+            Console.WriteLine("Starting local search");
             //customers.Sort(1, customers.Count - 1, delegate (Customer x, Customer y) { x.TWEnd.CompareTo(y.TWEnd); });
             var c = new TWCOmparer();
             customers.Sort(1, customers.Count - 1, c);
@@ -299,6 +351,8 @@ namespace SA_ILP
                         throw new Exception();
                     }
 
+            Console.WriteLine("Finished making initial solution");
+
             int amtImp = 0, amtWorse = 0, amtNotDone = 0;
             double temp = 30;
             double alpha = 0.98;
@@ -321,10 +375,12 @@ namespace SA_ILP
                 double p = random.NextDouble();
                 double imp = 0;
                 Action? act = null;
-                if (p <= 0.5)
-                    (imp, act) = SwapRandomCustomers(routes,viableRoutes);
+                if (p <=0.45)
+                    (imp, act) = SwapRandomCustomers(routes, viableRoutes);
+                else if (p <= 0.9)
+                    (imp, act) = MoveRandomCustomer(routes, viableRoutes);
                 else if (p <= 1)
-                    (imp, act) = MoveRandomCustomer(routes,viableRoutes);
+                    (imp, act) = GreedilyMoveRandomCustomer(routes, viableRoutes);
                 if (act != null)
                 {
                     if (currentValue > double.MaxValue - 1000000)
@@ -332,10 +388,11 @@ namespace SA_ILP
                     //Accept all improvements
                     if (imp > 0)
                     {
-                        double expectedVal = CalcTotalDistance(routes) - imp;
+                        //double expectedVal = CalcTotalDistance(routes) - imp;
+                        //var beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
                         act();
-                        if (Math.Round(CalcTotalDistance(routes),6) != Math.Round(expectedVal,6))
-                            Console.WriteLine($"dit gaat mis expected {expectedVal} not equal to {CalcTotalDistance(routes)}, P: {p}");
+                        //if (Math.Round(CalcTotalDistance(routes),6) != Math.Round(expectedVal,6))
+                        //    Console.WriteLine($"dit gaat mis expected {expectedVal} not equal to {CalcTotalDistance(routes)}, P: {p}");
 
                         viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                         currentValue -= imp;
