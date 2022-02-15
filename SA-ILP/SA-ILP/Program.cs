@@ -30,10 +30,16 @@ Stopwatch watch = new Stopwatch();
 //}
 //Console.WriteLine(watch.ElapsedMilliseconds);
 
-
+//var testarr = new List<int>() { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+//testarr.Reverse(3, 5);
+//Console.WriteLine(testarr);
 //for(int i = 0; i < 10; i++)
-//solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"),numLoadLevels:100,numIterations:50000000);
-solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\C2_10_1.TXT", numIterations: 50000000);
+//Console.Write(10.00683123.ToString("0.000"));
+
+
+
+
+solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\r104.txt", numIterations: 50000000);
 //await solver.SolveSolomonInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\R1_10_10.TXT", numThreads:4, numIterations: 50000000);
 
 
@@ -42,6 +48,24 @@ solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments
 //await SolveAllAsync(@"..\..\..\..\..\solomon_instances", Path.Join(@"..\..\..\..\..\solutions\solomon_instances",DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")),numThreads:1);
 
 
+void RunTest()
+{
+    double total = 0;
+    double best = double.MaxValue;
+    int num = 10;
+    watch.Start();
+    //Zonder reverse operator sydney: Average score: 145,097, best score: 139,5727, Total time: 324,000
+    //Met reverse operator sydney: Average score: 143,894, best score: 141,1361, Total time: 326,000 
+
+    for (int i = 0; i < num; i++)
+    {
+        double res = solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000);
+        if (res < best)
+            best = res;
+        total += res;
+    }
+    Console.WriteLine($"Finsihed all. Average score: {(total / num).ToString("0.000")}, best score: {best.ToString("0.0000")}, Total time: {(watch.ElapsedMilliseconds / 1000).ToString("0.000")}");
+}
 
 async Task SolveAllAsync(string dir,string solDir, int numThreads = 4, int numIterations = 3000000)
 {

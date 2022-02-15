@@ -53,7 +53,7 @@ namespace SA_ILP
 
         public double CalculatePenaltyTerm(double arrivalTime,double timewindowStart)
         {
-            return 0;// 1000 + timewindowStart - arrivalTime;// timewindowStart - arrivalTime;
+            return 10 + timewindowStart - arrivalTime;// timewindowStart - arrivalTime;
         }
 
         public double CalcObjective()
@@ -316,6 +316,80 @@ namespace SA_ILP
 
             }
             return (bestIndex, bestDistIncr);
+        }
+
+        public void ReverseSubRoute(int index1, int index2, List<double> newArrivalTimes)
+        {
+            this.arrival_times = newArrivalTimes;
+
+            this.route.Reverse(index1, index2 - index1 + 1);
+
+        }
+
+        public (bool possible, double improvement,List<double> newArrivalTimes) CanReverseSubRoute(int index1, int index2)
+        {
+            double load = used_capacity;
+            double arrival_time = 0;
+            double newCost = 0;
+            //int[] newArrivalTimes = new int[arrival_times.Count];
+            List<double> newArrivalTimes = new List<double>() { 0};
+            //Check if the action would be possible and calculate the new objective score
+            for(int i=0; i<route.Count - 1; i++)
+            {
+                Customer currentCust;
+                Customer nextCust;
+                if(i >= index1 && i <= index2)
+                {
+                    //In the to be reversed subroute, select in reversed order
+                    currentCust = route[index2 - i + index1];
+                    if (i < index2)
+                        nextCust = route[index2 - i + index1 - 1];
+                    else
+                        nextCust = route[i + 1];
+
+                }
+                else if(i == index1 - 1)
+                {
+                    nextCust = route[index2];
+                    currentCust = route[i];
+                }
+                else
+                {
+                    currentCust = route[i];
+                    nextCust = route[i + 1];
+                }
+
+
+
+
+
+
+                //Travel time to new customer
+                double dist = CustomerDist(currentCust, nextCust,load);
+                //Add travel time to total cost
+                newCost += dist;
+
+                //Update arrival time for next customer
+                arrival_time += dist + currentCust.ServiceTime;
+
+                if (arrival_time < nextCust.TWStart)
+                {
+                    newCost += CalculatePenaltyTerm(arrival_time, nextCust.TWStart);
+                    arrival_time = nextCust.TWStart;
+                }
+
+                newArrivalTimes.Add(arrival_time);
+
+                //Check the timewindow end of the next customer
+                if (arrival_time > nextCust.TWEnd)
+                    return (false, double.MinValue,newArrivalTimes);
+
+                //After traveling to the next customer we can remove it's load
+                load -= nextCust.Demand;
+
+            }
+
+            return (true, CalcObjective() - newCost, newArrivalTimes);
         }
 
         public (Customer? toRemove, double objectiveDecrease) RandomCust()
