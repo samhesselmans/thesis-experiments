@@ -16,7 +16,7 @@ namespace SA_ILP
         //public Customer lastCust;
         public double used_capacity;
         public double max_capacity;
-
+        private double CachedObjective;
         private double penalty = 100;
 
         private Random random;
@@ -35,6 +35,7 @@ namespace SA_ILP
             used_capacity = 0;
             this.max_capacity = maxCapacity;
             random = new Random();
+            
 
         }
 
@@ -53,7 +54,7 @@ namespace SA_ILP
 
         public double CalculatePenaltyTerm(double arrivalTime,double timewindowStart)
         {
-            return 10 + timewindowStart - arrivalTime;// timewindowStart - arrivalTime;
+            return 100 + timewindowStart - arrivalTime;// timewindowStart - arrivalTime;
         }
 
         public double CalcObjective()
@@ -71,6 +72,7 @@ namespace SA_ILP
                     total_dist += CalculatePenaltyTerm((arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime), route[i + 1].TWStart);//route[i + 1].TWStart - (arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime);
                 totalWeight -= route[i + 1].Demand;
             }
+            CachedObjective = total_dist;
             return total_dist;
         }
 
@@ -92,6 +94,7 @@ namespace SA_ILP
         public void RemoveCust(Customer cust)
         {
             double newArriveTime = 0;
+            CachedObjective = -1;
             int index = -1;
             Customer lastCust = null;
             Customer previous_cust = route[0];
@@ -167,7 +170,12 @@ namespace SA_ILP
                     return (false, double.MinValue);
 
             }
-            return (true, totalTravelTime - CalcObjective());
+
+            double objective = CachedObjective;
+            if(objective == -1)
+                objective = CalcObjective();
+
+            return (true, totalTravelTime - objective);
         }
 
         public (bool possible, bool possibleInLaterPosition, double objectiveIncrease) CustPossibleAtPos(Customer cust, int pos, int skip = 0)
@@ -247,8 +255,12 @@ namespace SA_ILP
                 }
                 //}
             }
+            double objective = CachedObjective;
+            if (objective == -1)
+                objective = CalcObjective();
+
             //TODO: cache current objective value
-            return (true, true, totalTravelTime - CalcObjective());
+            return (true, true, totalTravelTime - objective);
 
 
             ////Check upper timewindow of the new customer
@@ -298,6 +310,7 @@ namespace SA_ILP
         public (int, double) BestPossibleInsert(Customer cust)
         {
             double bestDistIncr = double.MaxValue;
+            CachedObjective = -1;
             int bestIndex = -1;
             if (this.used_capacity + cust.Demand > max_capacity)
                 return (bestIndex, bestDistIncr);
@@ -320,6 +333,10 @@ namespace SA_ILP
 
         public void ReverseSubRoute(int index1, int index2, List<double> newArrivalTimes)
         {
+
+            //Invalidate the cache
+            CachedObjective = -1;
+
             this.arrival_times = newArrivalTimes;
 
             this.route.Reverse(index1, index2 - index1 + 1);
@@ -389,7 +406,11 @@ namespace SA_ILP
 
             }
 
-            return (true, CalcObjective() - newCost, newArrivalTimes);
+            double objective = CachedObjective;
+            if (objective == -1)
+                objective = CalcObjective();
+
+            return (true, objective - newCost, newArrivalTimes);
         }
 
         public (Customer? toRemove, double objectiveDecrease) RandomCust()
@@ -433,7 +454,11 @@ namespace SA_ILP
                 load -= nextCust.Demand;
             }
 
-            return (route[i], CalcObjective() - newCost);
+            double objective = CachedObjective;
+            if (objective == -1)
+                objective = CalcObjective();
+
+            return (route[i], objective - newCost);
         }
 
         public (Customer?, int) RandomCustIndex()
@@ -454,6 +479,7 @@ namespace SA_ILP
             used_capacity += cust.Demand;
             double load = used_capacity;
             double newCustArrivalTime = 0;
+            CachedObjective = -1;
             for (int i = 0; i < route.Count; i++)
             {
                 if (i == pos)

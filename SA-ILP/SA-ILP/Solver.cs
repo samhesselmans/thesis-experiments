@@ -363,12 +363,29 @@ namespace SA_ILP
             random = new Random();
         }
 
+        private void StupidShuffle(List<Customer> customers,double timesShuffle=1)
+        {
+            for(int i =0; i< timesShuffle * customers.Count; i++)
+            {
+                int index1 = random.Next(1, customers.Count);
+                int index2 = random.Next(1, customers.Count);
+
+                var temp = customers[index1];
+                customers[index1] = customers[index2];
+                customers[index2] = temp;
+            }
+
+
+        }
         private (HashSet<RouteStore>,List<Route>,double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers,double[,,] distanceMatrix,bool printExtendedInfo=false,int numInterations=3000000,int timeLimit=30000,bool checkInitialSolution=true)
         {
             Console.WriteLine("Starting local search");
             //customers.Sort(1, customers.Count - 1, delegate (Customer x, Customer y) { x.TWEnd.CompareTo(y.TWEnd); });
-            var c = new TWCOmparer();
-            customers.Sort(1, customers.Count - 1, c);
+            //var c = new TWCOmparer();
+            //customers.Sort(1, customers.Count - 1, c);
+
+            StupidShuffle(customers);
+
             List<Route> routes = new List<Route>();
             
 
@@ -438,6 +455,8 @@ namespace SA_ILP
             double currentValue = bestSolValue;
             int bestImprovedIteration = 0;
             int numRestarts = 0;
+            int previousUpdateIteration = 0;
+
             for (int iteration = 0; iteration < numInterations && timer.ElapsedMilliseconds <= timeLimit; iteration++)
             {
                 double p = random.NextDouble();
@@ -520,11 +539,14 @@ namespace SA_ILP
                     currentValue = bestSolValue;
                     Console.WriteLine($"{id}:Best solution changed to long ago. Restarting from best solution with T: {temp}");
                 }
-                if(printTimer.ElapsedMilliseconds > 10*1000)
+                if(printTimer.ElapsedMilliseconds > 5*1000)
                 {
+                    var elapsed = printTimer.ElapsedMilliseconds;
                     printTimer.Restart();
+                    double itsPerSecond = (iteration - previousUpdateIteration) / ((double)elapsed / 1000);
+                    previousUpdateIteration = iteration;
                     int cnt = routes.Count(x => x.route.Count > 2);
-                    Console.WriteLine($"{id}: T: {temp.ToString("0.000")}, S: {CalcTotalDistance(routes).ToString("0.000")}, TS: {currentValue.ToString("0.000")}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeExceptedOnIt}, B: {bestSolValue.ToString("0.000")}, BI: {bestImprovedIteration}");
+                    Console.WriteLine($"{id}: T: {temp.ToString("0.000")}, S: {CalcTotalDistance(routes).ToString("0.000")}, TS: {currentValue.ToString("0.000")}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeExceptedOnIt}, B: {bestSolValue.ToString("0.000")}, BI: {bestImprovedIteration}, IT/s: {itsPerSecond.ToString("0.00")}/s");
                 }
             }
 
@@ -571,11 +593,11 @@ namespace SA_ILP
             //Console.WriteLine($"Total waiting time: {totalWaitingTime} over {numViolations} customers");
         }
 
-        public double SolveVRPLTTInstance(string fileName, int numIterations = 3000000,double bikeMinMass = 150,double bikeMaxMass = 350,int numLoadLevels=10,double inputPower = 400)
+        public double SolveVRPLTTInstance(string fileName, int numIterations = 3000000,double bikeMinMass = 150,double bikeMaxMass = 350,int numLoadLevels=10,double inputPower = 400,int timelimit = 30000)
         {
             (double[,] distances, List< Customer > customers) = VRPLTT.ParseVRPLTTInstance(fileName);
             double[,,] matrix = CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
-            (var colums, var sol, var value) = LocalSearchInstance(-1, "", customers.Count, bikeMaxMass-bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix, numInterations: numIterations,checkInitialSolution:false);
+            (var colums, var sol, var value) = LocalSearchInstance(-1, "", customers.Count, bikeMaxMass-bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix, numInterations: numIterations,checkInitialSolution:false,timeLimit:timelimit);
             double totalWaitingTime = 0;
             int numViolations = 0;
             foreach(Route r in sol)
@@ -620,7 +642,9 @@ namespace SA_ILP
             {
                 var id = i;
                 tasks.Add(Task.Run(() => { return LocalSearchInstance(id, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, numInterations: numIterations); }));
-
+               
+                //Sleeping to make sure the different randoms for each route are different.
+                Thread.Sleep(100);
             }
             
             HashSet<RouteStore> allColumns =  new HashSet<RouteStore>();

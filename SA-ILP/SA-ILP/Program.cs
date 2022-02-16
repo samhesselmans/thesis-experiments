@@ -36,10 +36,10 @@ Stopwatch watch = new Stopwatch();
 //for(int i = 0; i < 10; i++)
 //Console.Write(10.00683123.ToString("0.000"));
 
+RunTest();
 
 
-
-solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\r104.txt", numIterations: 50000000);
+//solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\r104.txt", numIterations: 50000000);
 //await solver.SolveSolomonInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\R1_10_10.TXT", numThreads:4, numIterations: 50000000);
 
 
@@ -56,10 +56,13 @@ void RunTest()
     watch.Start();
     //Zonder reverse operator sydney: Average score: 145,097, best score: 139,5727, Total time: 324,000
     //Met reverse operator sydney: Average score: 143,894, best score: 141,1361, Total time: 326,000 
+    //Met nieuwe move operator sydney: Finsihed all. Average score: 143,777, best score: 140,0621, Total time: 325,000
+
+    //avg 600
 
     for (int i = 0; i < num; i++)
     {
-        double res = solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000);
+        double res = solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "seattle_full.csv"), numLoadLevels: 10, numIterations: 50000000,timelimit:60000);
         if (res < best)
             best = res;
         total += res;
