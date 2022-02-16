@@ -240,10 +240,37 @@ namespace SA_ILP
                 
         }
 
-        //private (double,Action) MoveRandomCustomerToRandomCustomer(List<Route> routes,List<int> viableRoutes)
-        //{
+        private (double, Action?) MoveRandomCustomerToRandomCustomer(List<Route> routes, List<int> viableRoutes)
+        {
+            int src_index = random.Next(viableRoutes.Count);
+            int src = viableRoutes[src_index];
 
-        //}
+            //Current;ly this operator does not allow movement wihtin a route
+            int destIndex = random.Next(viableRoutes.Count-1);
+            if (destIndex >= src_index)
+                destIndex++;
+
+            int dest = viableRoutes[destIndex];
+
+            (Customer cust1, double decr1) = routes[src].RandomCust();
+            (Customer cust2, int pos) = routes[dest].RandomCustIndex();
+
+
+            if (cust1.Id != cust2.Id)
+            {
+               (bool possible,_,double objectiveIncr) =  routes[dest].CustPossibleAtPos(cust1, pos);
+
+                if (possible)
+                    return (decr1 - objectiveIncr, () => {
+                        routes[src].RemoveCust(cust1);
+                        routes[dest].InsertCust(cust1, pos);
+                    }
+                    );
+            }
+
+            return (double.MinValue,null);
+
+        }
 
         private (double,Action?) MoveRandomCustomer(List<Route> routes,List<int> viableRoutes)
         {
@@ -416,11 +443,11 @@ namespace SA_ILP
                 double p = random.NextDouble();
                 double imp = 0;
                 Action? act = null;
-                if (p <=0.35)
+                if (p <= 0.25)
                     (imp, act) = SwapRandomCustomers(routes, viableRoutes);
-                else if (p <= 0.8)
-                    (imp, act) = MoveRandomCustomer(routes, viableRoutes);
-                else if (p <= 0.9)
+                else if (p <= 0.5)
+                    (imp, act) = MoveRandomCustomerToRandomCustomer(routes, viableRoutes);//MoveRandomCustomer(routes, viableRoutes);
+                else if (p <= 0.75)
                     (imp, act) = ReverseOperator(routes, viableRoutes);
                 else if (p <= 1)
                     (imp, act) = GreedilyMoveRandomCustomer(routes, viableRoutes);
