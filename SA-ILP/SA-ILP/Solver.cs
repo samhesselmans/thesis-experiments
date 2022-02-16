@@ -392,8 +392,9 @@ namespace SA_ILP
             Console.WriteLine("Finished making initial solution");
 
             int amtImp = 0, amtWorse = 0, amtNotDone = 0;
-            double temp = 30;
-            double alpha = 0.98;
+            double tempMult = 30;
+            double temp = 1;
+            double alpha = 0.99;
             double totalP = 0;
             double countP = 0;
             Stopwatch timer = new Stopwatch();
@@ -401,7 +402,12 @@ namespace SA_ILP
             Stopwatch printTimer = new Stopwatch();
             printTimer.Start();
 
+            numInterations = 10000 * customers.Count;
+            int maxNotImproving = 2 * customers.Count;
+            int numDecreases = 0;
+            int lastDecreaseIn = 0;
 
+            double tempMin = 0.001;
             List<int> viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
 
             int lastChangeExceptedOnIt = 0;
@@ -411,16 +417,19 @@ namespace SA_ILP
             double currentValue = bestSolValue;
             int bestImprovedIteration = 0;
             int numRestarts = 0;
-            for (int iteration = 0; iteration < numInterations && timer.ElapsedMilliseconds <= timeLimit; iteration++)
+
+
+            int iteration = 0;
+            for (; iteration < numInterations && timer.ElapsedMilliseconds <= timeLimit && temp > tempMin; iteration++)
             {
                 double p = random.NextDouble();
                 double imp = 0;
                 Action? act = null;
-                if (p <=0.35)
+                if (p <=0.25)
                     (imp, act) = SwapRandomCustomers(routes, viableRoutes);
-                else if (p <= 0.8)
+                else if (p <= 0.5)
                     (imp, act) = MoveRandomCustomer(routes, viableRoutes);
-                else if (p <= 0.9)
+                else if (p <= 0.75)
                     (imp, act) = ReverseOperator(routes, viableRoutes);
                 else if (p <= 1)
                     (imp, act) = GreedilyMoveRandomCustomer(routes, viableRoutes);
@@ -431,6 +440,7 @@ namespace SA_ILP
                     //Accept all improvements
                     if (imp > 0)
                     {
+                       
 //                        double expectedVal = CalcTotalDistance(routes) - imp;
 //                        var beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
                         act();
@@ -441,6 +451,8 @@ namespace SA_ILP
                         currentValue -= imp;
                         if (currentValue < bestSolValue)
                         {
+                            //numDecreases = 0;
+                            lastDecreaseIn = numDecreases;
                             //New best solution found
                             bestSolValue = currentValue;
                             bestImprovedIteration = iteration;
@@ -463,7 +475,7 @@ namespace SA_ILP
 
                     else
                     {
-                        double acceptP = Math.Exp(imp / temp);
+                        double acceptP = Math.Exp(imp / (temp * tempMult));
                         totalP += acceptP;
                         countP += 1;
                         if (random.NextDouble() <= acceptP)
@@ -480,14 +492,24 @@ namespace SA_ILP
                     }
                 }
                 else
+                {
                     amtNotDone += 1;
-                if (iteration % 10000 == 0 && iteration != 0)
+
+                    //Not finding a possiblity does not count iteration?
+                    iteration--;
+                }
+                    
+                if (iteration % 1000*customers.Count == 0 && iteration != 0)
+                {
                     temp *= alpha;
-                if(iteration - bestImprovedIteration > 1000000 * (numRestarts*3+1) && temp < 0.03)
+                    numDecreases++;
+                }
+                if (numDecreases - lastDecreaseIn > maxNotImproving)
                 {
                     numRestarts += 1;
+                    lastDecreaseIn = numDecreases;
                     //Restart
-                    temp = 30;
+                    temp = 1;
                     routes = BestSolution.ConvertAll(i => i.CreateDeepCopy());
                     viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                     currentValue = bestSolValue;
