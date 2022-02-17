@@ -556,7 +556,7 @@ namespace SA_ILP
 #endif
             if (printExtendedInfo)
                 Console.WriteLine($"  {id}: Total: {amtNotDone + amtImp + amtWorse}, improvements: {amtImp}, worse: {amtWorse}, not done: {amtNotDone}");
-            return (Columns, BestSolution, bestSolValue);
+            return (Columns, BestSolution, CalcTotalDistance(BestSolution));
         }
         
         public void SolveSolomonInstance(string fileName, int numIterations = 3000000)

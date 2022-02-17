@@ -54,15 +54,23 @@ void RunTest()
     double best = double.MaxValue;
     int num = 10;
     watch.Start();
+    //LAPTOP
     //Zonder reverse operator sydney: Average score: 145,097, best score: 139,5727, Total time: 324,000
     //Met reverse operator sydney: Average score: 143,894, best score: 141,1361, Total time: 326,000
     //Met nieuwe move operator sydney: Finsihed all. Average score: 143,777, best score: 140,0621, Total time: 325,000
 
     //avg 600
 
+    //DESKTOP
+    //Seattle full
+    //Zonder greedy move op             Finsihed all. Average score: 459,158, best score: 400,1997, Total time: 341,000 WAARSCHJNLIJK NIET VALID
+    //Met greedy move op                Finsihed all. Average score: 398,136, best score: 394,7354, Total time: 340,000 WAARSCHJNLIJK NIET VALID
+    //Met greedy move op (less chance)  Finsihed all. Average score: 397,662, best score: 393,0073, Total time: 340,000 WAARSCHJNLIJK NIET VALID
+
+
     for (int i = 0; i < num; i++)
     {
-        double res = solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "seattle_full.csv"), numLoadLevels: 10, numIterations: 50000000,timelimit:60000);
+        double res = solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000,timelimit:30000);
         if (res < best)
             best = res;
         total += res;
