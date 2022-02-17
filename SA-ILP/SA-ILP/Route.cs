@@ -19,10 +19,14 @@ namespace SA_ILP
         private double CachedObjective;
         private double penalty = 100;
 
+        private Dictionary<int,(int,double)> BestCustomerPos;
+
         private Random random;
 
 #if DEBUG
         public long numReference = 0;
+        public long bestFitCacheHit = 0;
+        public long bestFitCacheMiss = 0;
 #endif
         public Route(Customer depot, double[,,] distanceMatrix, double maxCapacity)
         {
@@ -35,7 +39,7 @@ namespace SA_ILP
             used_capacity = 0;
             this.max_capacity = maxCapacity;
             random = new Random();
-            
+            BestCustomerPos = new Dictionary<int,(int,double)>();
 
         }
 
@@ -49,6 +53,7 @@ namespace SA_ILP
             used_capacity = usedCapcity;
             this.max_capacity = maxCapacity;
             random = new Random();
+            BestCustomerPos = new Dictionary<int, (int, double)>();
 
         }
 
@@ -91,10 +96,18 @@ namespace SA_ILP
             return val;
         }
 
+        private void ResetCache()
+        {
+            BestCustomerPos = new Dictionary<int, (int,double)>();
+            CachedObjective = -1;
+        }
+
         public void RemoveCust(Customer cust)
         {
             double newArriveTime = 0;
-            CachedObjective = -1;
+            
+            ResetCache();
+
             int index = -1;
             Customer lastCust = null;
             Customer previous_cust = route[0];
@@ -310,7 +323,17 @@ namespace SA_ILP
         public (int, double) BestPossibleInsert(Customer cust)
         {
             double bestDistIncr = double.MaxValue;
-            CachedObjective = -1;
+            if (BestCustomerPos.ContainsKey(cust.Id))
+            {
+#if DEBUG
+                bestFitCacheHit++;
+#endif
+                return BestCustomerPos[cust.Id];
+            }
+#if DEBUG
+            bestFitCacheMiss ++;
+#endif
+            //ResetCache();
             int bestIndex = -1;
             if (this.used_capacity + cust.Demand > max_capacity)
                 return (bestIndex, bestDistIncr);
@@ -328,6 +351,7 @@ namespace SA_ILP
 
 
             }
+            BestCustomerPos[cust.Id] = (bestIndex,bestDistIncr);
             return (bestIndex, bestDistIncr);
         }
 
@@ -335,7 +359,7 @@ namespace SA_ILP
         {
 
             //Invalidate the cache
-            CachedObjective = -1;
+            ResetCache();
 
             this.arrival_times = newArrivalTimes;
 
@@ -479,7 +503,7 @@ namespace SA_ILP
             used_capacity += cust.Demand;
             double load = used_capacity;
             double newCustArrivalTime = 0;
-            CachedObjective = -1;
+            ResetCache();
             for (int i = 0; i < route.Count; i++)
             {
                 if (i == pos)
