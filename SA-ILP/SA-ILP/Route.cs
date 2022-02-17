@@ -28,7 +28,7 @@ namespace SA_ILP
         public long bestFitCacheHit = 0;
         public long bestFitCacheMiss = 0;
 #endif
-        public Route(Customer depot, double[,,] distanceMatrix, double maxCapacity)
+        public Route(Customer depot, double[,,] distanceMatrix, double maxCapacity, int seed)
         {
             this.route = new List<Customer>() { depot, depot };
             this.arrival_times = new List<double>() { 0, 0 };
@@ -38,12 +38,12 @@ namespace SA_ILP
             //this.lastCust = depot;
             used_capacity = 0;
             this.max_capacity = maxCapacity;
-            random = new Random();
-            BestCustomerPos = new Dictionary<int,(int,double)>();
-
+            random = new Random(seed);
+            //BestCustomerPos = new Dictionary<int,(int,double)>();
+            ResetCache();
         }
 
-        public Route(List<Customer> route, List<double> arrivalTimes, double[,,] distanceMatrix, double usedCapcity, double maxCapacity)
+        public  Route(List<Customer> route, List<double> arrivalTimes, double[,,] distanceMatrix, double usedCapcity, double maxCapacity,int seed)
         {
             this.route = route;
             this.arrival_times = arrivalTimes;
@@ -52,9 +52,9 @@ namespace SA_ILP
             this.time_done = 0;
             used_capacity = usedCapcity;
             this.max_capacity = maxCapacity;
-            random = new Random();
-            BestCustomerPos = new Dictionary<int, (int, double)>();
-
+            random = new Random(seed);
+            //BestCustomerPos = new Dictionary<int, (int, double)>();
+            ResetCache();
         }
 
         public double CalculatePenaltyTerm(double arrivalTime,double timewindowStart)
@@ -71,9 +71,8 @@ namespace SA_ILP
             {
                 total_dist += this.CustomerDist(route[i], route[i + 1], totalWeight);
 
-                //Adding heavy penalty for violating timewindow start
+                //Adding penalty for violating timewindow start
                 if (arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime < route[i + 1].TWStart)
-                    //total_dist += penalty;
                     total_dist += CalculatePenaltyTerm((arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime), route[i + 1].TWStart);//route[i + 1].TWStart - (arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime);
                 totalWeight -= route[i + 1].Demand;
             }
@@ -113,7 +112,7 @@ namespace SA_ILP
             Customer previous_cust = route[0];
             this.used_capacity -= cust.Demand;
             double load = used_capacity;
-            for (int i = 1; i < route.Count - 1; i++)
+            for (int i = 1; i < route.Count; i++)
             {
                 var c = route[i];
                 if (c.Id != cust.Id)
@@ -559,33 +558,58 @@ namespace SA_ILP
             //return (false,double.MaxValue,-1);
         }
 
+        //Checks wheter timewindows are met, cached arrival times are correct and if the capacity constraints are not violated.
+        //Assumes starting time of planning horizon of 0 and that distance matrix is correct.
         public bool CheckRouteValidity()
         {
             //TODO: update to use loadlevels
             double arrivalTime = 0;
             bool failed = false;
             double usedCapacity = 0;
+            double load = route.Sum(x=> x.Demand);
+
+            if(load > max_capacity)
+            {
+                failed = true;
+                Console.WriteLine($"FAIL exceeded vehicle capacity {route}");
+            }
+
+
             for (int i = 0; i < route.Count - 1; i++)
             {
-                usedCapacity += route[i + 1].Demand;
-                if (usedCapacity > max_capacity)
+                var dist = CustomerDist(route[i],route[i+1], load);
+                arrivalTime += dist + route[i].ServiceTime;
+
+                if(arrivalTime < route[i+1].TWStart)
+                {
+                    arrivalTime = route[i+1].TWStart;
+                    //Do something with penalty?
+                }
+
+                if(Math.Round(arrival_times[i+1],6) != Math.Round(arrivalTime, 6))
                 {
                     failed = true;
-                    Console.WriteLine($"FAIL exceeded vehicle capacity {route}");
+                    Console.WriteLine($"FAIL arrival times did not match {arrivalTime} and {arrival_times[i+1]} for cust {route[i+1].Id} on route {route}");
                 }
-                if (arrivalTime > route[i].TWEnd)
+                if(arrivalTime > route[i + 1].TWEnd)
                 {
                     failed = true;
-                    Console.WriteLine($"FAIL did not meet customer {route[i].Id}:{route[i]} due date. Arrived on {arrivalTime} on route {route}");
+                    Console.WriteLine($"FAIL did not meet customer {route[i+1].Id}:{route[i+1]} due date. Arrived on {arrivalTime} on route {route}");
                 }
-                if (arrivalTime < route[i].TWStart)
-                    arrivalTime = route[i].TWStart;
-                if (arrivalTime < arrival_times[i] - Math.Pow(10, -9) || arrivalTime > arrival_times[i] + Math.Pow(10, -9))
-                {
-                    Console.WriteLine($"FAIL arrival times did not match {arrivalTime} and {arrival_times[i]} for cust {route[i].Id} on route {route}");
-                    failed = true;
-                }
-                arrivalTime += Math.Sqrt(Math.Pow(route[i].X - route[i + 1].X, 2) + Math.Pow(route[i].Y - route[i + 1].Y, 2)) + route[i].ServiceTime;
+                load -= route[i + 1].Demand;
+                //if (arrivalTime > route[i].TWEnd)
+                //{
+                //    failed = true;
+                //    Console.WriteLine($"FAIL did not meet customer {route[i].Id}:{route[i]} due date. Arrived on {arrivalTime} on route {route}");
+                //}
+                //if (arrivalTime < route[i].TWStart)
+                //    arrivalTime = route[i].TWStart;
+                //if (arrivalTime < arrival_times[i] - Math.Pow(10, -9) || arrivalTime > arrival_times[i] + Math.Pow(10, -9))
+                //{
+                //    Console.WriteLine($"FAIL arrival times did not match {arrivalTime} and {arrival_times[i]} for cust {route[i].Id} on route {route}");
+                //    failed = true;
+                //}
+                //arrivalTime += Math.Sqrt(Math.Pow(route[i].X - route[i + 1].X, 2) + Math.Pow(route[i].Y - route[i + 1].Y, 2)) + route[i].ServiceTime;
 
             }
             return failed;
@@ -593,7 +617,7 @@ namespace SA_ILP
 
         public Route CreateDeepCopy()
         {
-            return new Route(route.ConvertAll(i => i), arrival_times.ConvertAll(i => i), objective_matrix, used_capacity, max_capacity);
+            return new Route(route.ConvertAll(i => i), arrival_times.ConvertAll(i => i), objective_matrix, used_capacity, max_capacity,random.Next());
         }
 
         public List<int> CreateIdList()

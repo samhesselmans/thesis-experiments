@@ -75,254 +75,6 @@ namespace SA_ILP
         }
 
 
-        private (double, Action?) GreedilyMoveRandomCustomer(List<Route> routes, List<int> viableRoutes)
-        {
-            var routeIndex = viableRoutes[random.Next(viableRoutes.Count)];
-            (Customer cust, double decr) = routes[routeIndex].RandomCust();
-
-            Route bestRoute = null;
-            double bestImp = double.MinValue;
-            int bestPos = -1;
-
-            for (int i = 0; i < routes.Count; i++)
-            {
-                //Temporary. Might be nice to swap greedily within a route
-                if (i == routeIndex)
-                    continue;
-                (var pos, double increase) = routes[i].BestPossibleInsert(cust);
-                if (pos == -1)
-                    continue;
-
-                if(decr - increase > bestImp)
-                {
-                    bestImp = decr - increase;
-                    bestPos = pos;
-                    bestRoute = routes[i];
-                }
-
-            }
-            if (bestRoute != null)
-                return (bestImp, () =>
-                {
-                    routes[routeIndex].RemoveCust(cust);
-                    bestRoute.InsertCust(cust, bestPos);
-                }
-                );
-            else
-                return (bestImp, null);
-        }
-
-
-        private (double,Action?) ReverseOperator(List<Route> routes,List<int> viableRoutes)
-        {
-            int routeIndex = viableRoutes[random.Next(viableRoutes.Count)];
-
-            (_,int index1) = routes[routeIndex].RandomCustIndex();
-            (_, int index2) = routes[routeIndex].RandomCustIndex();
-
-
-            if(index1 != index2)
-            {
-                //Swap the indexes
-                if(index2 < index1)
-                {
-                    int temp = index2;
-                    index2 = index1;
-                    index1 = temp;
-                }
-
-                (bool possible,double imp, List<double> arrivalTimes) = routes[routeIndex].CanReverseSubRoute(index1, index2);
-
-                if (possible)
-                    return (imp, () => {
-                        routes[routeIndex].ReverseSubRoute(index1, index2, arrivalTimes);
-                    }
-                    );
-
-
-            }
-            //throw new Exception();
-            return (double.MinValue, null);
-
-        }
-
-        private (double,Action?) SwapRandomCustomers(List<Route> routes, List<int> viableRoutes)
-        {
-            int bestDest = -1, bestSrc = -1, bestPos1 = -1, bestPos2 = - 1;
-            Customer bestCust1 = null, bestCust2 = null;
-            double bestImp = double.MinValue;
-
-            //viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
-            var numRoutes = viableRoutes.Count;
-            for (int i = 0; i < 4; i++)
-            {
-                //Select destination
-                int dest_index = random.Next(numRoutes);
-                int dest = viableRoutes[dest_index];
-
-                //Select src excluding destination
-                //var range = Enumerable.Range(0, numRoutes).Where(i => i != dest).ToList();
-
-                //int src = random.Next(numRoutes - 1);//range[random.Next(numRoutes - 1)];
-                //if (src >= dest_index)
-                //    src += 1;
-                //src = viableRoutes[src];
-
-
-                int src = viableRoutes[random.Next(numRoutes)];
-
-
-                (var cust1, int index1) = routes[src].RandomCustIndex();
-                (var cust2, int index2) = routes[dest].RandomCustIndex();
-
-
-                if(cust1 != null && cust2 != null && cust1.Id != cust2.Id)
-                {
-                    bool possible;
-                    double imp;
-                    if(src != dest)
-                    {
-                        (bool possible1, double increase1, int pos1) = routes[src].CanSwapBetweenRoutes(cust1, cust2, index1);
-                        (bool possible2, double increase2, int pos2) = routes[dest].CanSwapBetweenRoutes(cust2, cust1, index2);
-                        possible = possible1 && possible2;
-                        imp = -(increase1 + increase2);
-
-                    }
-                    else
-                    {
-                        (bool possible1, double increase1) = routes[src].CanSwapInternally(cust1,cust2,index1,index2);
-                        possible = possible1;
-                        imp = -increase1;
-                    }
-
-
-
-                    if(possible)
-                    {
-                        //double imp = -(increase1 + increase2);
-                        if(imp > bestImp)
-                        {
-                            bestImp = imp;
-                            bestDest = dest;
-                            bestSrc = src;
-                            bestCust1 = cust1;
-                            bestCust2 = cust2;
-                            bestPos1 = index1;
-                            bestPos2 = index2;
-                        }
-                    }
-                }
-            }
-            if (bestDest != -1 && bestCust1 != null && bestCust2 != null)
-                return (bestImp, () =>
-                {
-                    //Remove old customer and insert new customer in its place
-                    
-                    routes[bestSrc].RemoveCust(bestCust1);
-
-
-                    //Remove old customer and insert new customer in its place
-                    routes[bestDest].RemoveCust(bestCust2);
-
-                    if (bestSrc == bestDest)
-                        if (bestPos2 < bestPos1)
-                            bestPos1--;
-
-
-                    routes[bestSrc].InsertCust(bestCust2, bestPos1);
-                    routes[bestDest].InsertCust(bestCust1, bestPos2);
-
-
-                }
-                );
-            else
-                return (bestImp, null);
-                
-        }
-
-        private (double, Action?) MoveRandomCustomerToRandomCustomer(List<Route> routes, List<int> viableRoutes)
-        {
-            int src_index = random.Next(viableRoutes.Count);
-            int src = viableRoutes[src_index];
-
-            //Current;ly this operator does not allow movement wihtin a route
-            int destIndex = random.Next(viableRoutes.Count-1);
-            if (destIndex >= src_index)
-                destIndex++;
-
-            int dest = viableRoutes[destIndex];
-
-            (Customer cust1, double decr1) = routes[src].RandomCust();
-            (Customer cust2, int pos) = routes[dest].RandomCustIndex();
-
-
-            if (cust1.Id != cust2.Id)
-            {
-               (bool possible,_,double objectiveIncr) =  routes[dest].CustPossibleAtPos(cust1, pos);
-
-                if (possible)
-                    return (decr1 - objectiveIncr, () => {
-                        routes[src].RemoveCust(cust1);
-                        routes[dest].InsertCust(cust1, pos);
-                    }
-                    );
-            }
-
-            return (double.MinValue,null);
-
-        }
-
-        private (double,Action?) MoveRandomCustomer(List<Route> routes,List<int> viableRoutes)
-        {
-            int bestDest = -1, bestSrc = -1, bestPos=-1;
-            double bestImp = double.MinValue;
-            Customer bestCust = null;
-
-
-            //viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
-            var numRoutes = viableRoutes.Count;
-
-            for (int i =0; i< 4; i++)
-            {
-                //Select destination from routes with customers
-                int src = viableRoutes[random.Next(numRoutes)];
-
-                //Select src excluding destination from all routes
-                //var range = Enumerable.Range(0, routes.Count).Where(i => i != src).ToList();
-                //int dest = range[random.Next(routes.Count - 1)];
-                int dest = random.Next(numRoutes - 1);
-                if (dest >= src)
-                    dest += 1;
-
-                (Customer? cust, double decrease) = routes[src].RandomCust();
-                if(cust != null)
-                {
-                    (var pos, double increase) = routes[dest].BestPossibleInsert(cust);
-                    if (pos == -1)
-                        continue;
-                    double imp = decrease - increase;
-                    if(imp > bestImp)
-                    {
-                        bestImp= imp;
-                        bestDest = dest;
-                        bestSrc = src;
-                        bestCust = cust;
-                        bestPos = pos;
-                    }
-
-                }
-            }
-            if (bestDest != -1)
-                return (bestImp, () =>
-                {
-                    routes[bestSrc].RemoveCust(bestCust);
-                    routes[bestDest].InsertCust(bestCust, bestPos);
-                }
-                );
-            else
-                return (bestImp, null);
-        }
-
         //Calculates the Solomon distance matrix
         private double[,,] CalculateDistanceMatrix(List<Customer> customers)
         {
@@ -363,7 +115,7 @@ namespace SA_ILP
             random = new Random();
         }
 
-        private void StupidShuffle(List<Customer> customers,double timesShuffle=1)
+        private void StupidShuffle(List<Customer> customers,Random random,double timesShuffle=1)
         {
             for(int i =0; i< timesShuffle * customers.Count; i++)
             {
@@ -377,21 +129,23 @@ namespace SA_ILP
 
 
         }
-        private (HashSet<RouteStore>,List<Route>,double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers,double[,,] distanceMatrix,bool printExtendedInfo=false,int numInterations=3000000,int timeLimit=30000,bool checkInitialSolution=true)
+        private (HashSet<RouteStore>,List<Route>,double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers,double[,,] distanceMatrix,int seed,bool printExtendedInfo=false,int numInterations=3000000,int timeLimit=30000,bool checkInitialSolution=true)
         {
             Console.WriteLine("Starting local search");
             //customers.Sort(1, customers.Count - 1, delegate (Customer x, Customer y) { x.TWEnd.CompareTo(y.TWEnd); });
             //var c = new TWCOmparer();
             //customers.Sort(1, customers.Count - 1, c);
 
-            StupidShuffle(customers);
+            Random localRandom = new Random(seed);
+
+            StupidShuffle(customers,localRandom);
 
             List<Route> routes = new List<Route>();
             
 
             //Generate routes
             for (int i = 0; i < numVehicles; i++)
-                routes.Add(new Route(customers[0],distanceMatrix,vehicleCapacity));
+                routes.Add(new Route(customers[0],distanceMatrix,vehicleCapacity,seed:localRandom.Next()));
 
             List<Customer> tryAgain = new List<Customer>();
 
@@ -459,17 +213,17 @@ namespace SA_ILP
 
             for (int iteration = 0; iteration < numInterations && timer.ElapsedMilliseconds <= timeLimit; iteration++)
             {
-                double p = random.NextDouble();
+                double p = localRandom.NextDouble();
                 double imp = 0;
                 Action? act = null;
                 if (p <= 0.25)
-                    (imp, act) = SwapRandomCustomers(routes, viableRoutes);
+                    (imp, act) = Operators.SwapRandomCustomers(routes, viableRoutes, localRandom);
                 else if (p <= 0.5)
-                    (imp, act) = MoveRandomCustomerToRandomCustomer(routes, viableRoutes);//MoveRandomCustomer(routes, viableRoutes);
+                    (imp, act) = Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, localRandom);//MoveRandomCustomer(routes, viableRoutes);
                 else if (p <= 0.75)
-                    (imp, act) = ReverseOperator(routes, viableRoutes);
+                    (imp, act) = Operators.ReverseOperator(routes, viableRoutes, localRandom);
                 else if (p <= 1)
-                    (imp, act) = GreedilyMoveRandomCustomer(routes, viableRoutes);
+                    (imp, act) = Operators.GreedilyMoveRandomCustomer(routes, viableRoutes, localRandom);
                 if (act != null)
                 {
                     if (currentValue > double.MaxValue - 1000000)
@@ -477,13 +231,15 @@ namespace SA_ILP
                     //Accept all improvements
                     if (imp > 0)
                     {
-//                        double expectedVal = CalcTotalDistance(routes) - imp;
-//                        var beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
+                        //double expectedVal = CalcTotalDistance(routes) - imp;
+                        //var beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
                         act();
-//                        if (Math.Round(CalcTotalDistance(routes),6) != Math.Round(expectedVal,6))
-//                            Console.WriteLine($"dit gaat mis expected {expectedVal} not equal to {CalcTotalDistance(routes)}, P: {p}");
+                        //if (Math.Round(CalcTotalDistance(routes), 6) != Math.Round(expectedVal, 6))
+                        //    Console.WriteLine($"dit gaat mis expected {expectedVal} not equal to {CalcTotalDistance(routes)}, P: {p}");
 
                         viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
+                        //Console.WriteLine(p);
+                        //routes.ForEach(route => route.CheckRouteValidity());
                         currentValue -= imp;
                         if (currentValue < bestSolValue)
                         {
@@ -517,7 +273,13 @@ namespace SA_ILP
                             //Worse solution accepted
                             amtWorse += 1;
 
+                            //double expectedVal = CalcTotalDistance(routes) - imp;
+                            //var beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
                             act();
+                            //Console.WriteLine(p);
+                            //routes.ForEach(route => route.CheckRouteValidity());
+                            //if (Math.Round(CalcTotalDistance(routes), 6) != Math.Round(expectedVal, 6))
+                            //    Console.WriteLine($"dit gaat mis expected {expectedVal} not equal to {CalcTotalDistance(routes)}, P: {p}");
                             viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                             currentValue -= imp;
 
@@ -564,7 +326,7 @@ namespace SA_ILP
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
             List<Task<(HashSet<RouteStore>, List<Route>, double)>> tasks = new List<Task<(HashSet<RouteStore>, List<Route>, double)>>();
             var distanceMatrix = CalculateDistanceMatrix(customers);
-            (var colums, var sol,var value ) = LocalSearchInstance(-1, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, numInterations: numIterations);
+            (var colums, var sol,var value ) = LocalSearchInstance(-1, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix,random.Next(), numInterations: numIterations);
             foreach (Route route in sol)
                 route.CheckRouteValidity();
 
@@ -593,11 +355,11 @@ namespace SA_ILP
             //Console.WriteLine($"Total waiting time: {totalWaitingTime} over {numViolations} customers");
         }
 
-        public double SolveVRPLTTInstance(string fileName, int numIterations = 3000000,double bikeMinMass = 150,double bikeMaxMass = 350,int numLoadLevels=10,double inputPower = 400,int timelimit = 30000)
+        public async Task<double> SolveVRPLTTInstanceAsync(string fileName, int numIterations = 3000000,double bikeMinMass = 150,double bikeMaxMass = 350,int numLoadLevels=10,double inputPower = 400,int timelimit = 30000)
         {
             (double[,] distances, List< Customer > customers) = VRPLTT.ParseVRPLTTInstance(fileName);
             double[,,] matrix = CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
-            (var colums, var sol, var value) = LocalSearchInstance(-1, "", customers.Count, bikeMaxMass-bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix, numInterations: numIterations,checkInitialSolution:false,timeLimit:timelimit);
+            (var colums, var sol,_, var value) = await LocalSearchInstancAsync("",customers.Count,bikeMaxMass-bikeMinMass,customers,matrix,4,numIterations,timelimit);//LocalSearchInstance(-1, "", customers.Count, bikeMaxMass-bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix,random.Next(), numInterations: numIterations,checkInitialSolution:true,timeLimit:timelimit,printExtendedInfo:true);
             double totalWaitingTime = 0;
             int numViolations = 0;
             foreach(Route r in sol)
@@ -619,6 +381,32 @@ namespace SA_ILP
             return value;
         }
 
+        public double SolveVRPLTTInstance(string fileName, int numIterations = 3000000, double bikeMinMass = 150, double bikeMaxMass = 350, int numLoadLevels = 10, double inputPower = 400, int timelimit = 30000)
+        {
+            (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(fileName);
+            double[,,] matrix = CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
+            (var colums, var sol, var value) = LocalSearchInstance(-1, "", customers.Count, bikeMaxMass-bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix,random.Next(), numInterations: numIterations,checkInitialSolution:true,timeLimit:timelimit,printExtendedInfo:true);
+            double totalWaitingTime = 0;
+            int numViolations = 0;
+            foreach (Route r in sol)
+            {
+                var load = r.used_capacity;
+                for (int i = 0; i < r.route.Count - 1; i++)
+                {
+                    var dist = r.CustomerDist(r.route[i], r.route[i + 1], load);
+                    load -= r.route[i + 1].Demand;
+                    if (r.arrival_times[i] + dist + r.route[i].ServiceTime < r.route[i + 1].TWStart)
+                    {
+                        totalWaitingTime += r.route[i + 1].TWStart - (r.arrival_times[i] + dist + r.route[i].ServiceTime);
+                        numViolations += 1;
+                    }
+                }
+            }
+            Console.WriteLine($"Total waiting time: {totalWaitingTime} over {numViolations} customers");
+            //(List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads, numIterations);
+            return value;
+        }
+
         public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal)> SolveSolomonInstanceAsync(string fileName, int numThreads = 1, int numIterations = 3000000)
         {
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
@@ -629,32 +417,28 @@ namespace SA_ILP
             return (failed, ilpSol, ilpVal, ilpTime, lsTime, lsVal);
         }
 
-        public async Task<( List<RouteStore> ilpSol, double ilpVal,double ilpTime,double lsTime,double lsVal)> SolveInstanceAsync(string name,int numV,double capV, List<Customer> customers, double[,,] distanceMatrix,int numThreads, int numIterations)
+        public async Task<(HashSet<RouteStore> columns, List<Route> LSSolution,double LSTime, double LSVal)> LocalSearchInstancAsync(string name, int numV, double capV, List<Customer> customers, double[,,] distanceMatrix, int numThreads, int numIterations,int timeLimit)
         {
-            //(string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
-            //var distanceMatrix = CalculateDistanceMatrix(customers);
-
             List<Task<(HashSet<RouteStore>, List<Route>, double)>> tasks = new List<Task<(HashSet<RouteStore>, List<Route>, double)>>();
-            
+
             Stopwatch watch = new Stopwatch();
             watch.Start();
-            for (int i =0; i< numThreads; i++)
+            for (int i = 0; i < numThreads; i++)
             {
                 var id = i;
-                tasks.Add(Task.Run(() => { return LocalSearchInstance(id, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, numInterations: numIterations); }));
-               
-                //Sleeping to make sure the different randoms for each route are different.
-                Thread.Sleep(100);
+                tasks.Add(Task.Run(() => { return LocalSearchInstance(id, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, random.Next(), numInterations: numIterations,timeLimit:timeLimit); }));
+
+
             }
-            
-            HashSet<RouteStore> allColumns =  new HashSet<RouteStore>();
+
+            HashSet<RouteStore> allColumns = new HashSet<RouteStore>();
             List<Route> bestSolution = new List<Route>();
             int cnt = 0;
             double bestLSVal = double.MaxValue;
-            foreach(var task in tasks)
+            foreach (var task in tasks)
             {
                 (var columns, var solution, var value) = await task;
-                if(value < bestLSVal)
+                if (value < bestLSVal)
                 {
                     bestLSVal = value;
                     bestSolution = solution;
@@ -668,10 +452,16 @@ namespace SA_ILP
             Console.WriteLine($" Sum of unique columns found per start: {cnt}");
             Console.WriteLine($" Total amount of unique column: {allColumns.Count}");
 
+            return (allColumns, bestSolution, (double)watch.ElapsedMilliseconds / 1000, bestLSVal);
+        }
+
+        public async Task<( List<RouteStore> ilpSol, double ilpVal,double ilpTime,double lsTime,double lsVal)> SolveInstanceAsync(string name,int numV,double capV, List<Customer> customers, double[,,] distanceMatrix,int numThreads, int numIterations,int timeLimit=30000)
+        {
+            (var allColumns, var bestSolution, var LSTime, var LSSCore) = await LocalSearchInstancAsync(name, numV, capV, customers, distanceMatrix, numThreads, numIterations,timeLimit);
             (var ilpSol, double ilpVal, double time) = SolveILP(allColumns, customers, numV, bestSolution);
             
 
-            return (ilpSol, ilpVal,time,(double)watch.ElapsedMilliseconds/1000,bestLSVal);
+            return (ilpSol, ilpVal,time,LSTime, LSSCore);
             
         }
 
