@@ -129,6 +129,47 @@ namespace SA_ILP
 
 
         }
+
+        private void CreateSmartInitialSolution(List<Route> routes,List<Customer> customers, Random random)
+        {
+            //Creating a copy of the array such that customer can be removed
+            customers = customers.ConvertAll(x => x);
+            Customer depot = customers[0];
+            customers.RemoveAt(0);
+
+            //var c = new TWCOmparer();
+            //customers.Sort(1, customers.Count - 1, c);
+
+            foreach(Route route in routes)
+            {
+                if (customers.Count == 0)
+                    break;
+                //customers.Sort((x, y) => x.TWEnd.CompareTo(y.TWEnd));
+
+                //The customers with the lowest remaining time will be used as seed
+                Customer? seed = customers.MinBy(x => x.TWEnd);//customers[0];
+                customers.Remove(seed);
+
+                route.InsertCust(seed,1);
+                double arrivalTime = route.CustomerDist(depot, seed, 0) + seed.ServiceTime;
+                Customer? next = customers.MinBy(x=> {
+                    double dist = route.CustomerDist(seed, x, 0);
+
+                    if (arrivalTime + dist < x.TWEnd)
+                        return dist;
+                    else return double.MaxValue;
+                
+                });
+                customers.Remove(next);
+
+
+            }
+
+
+
+
+        }
+
         private (HashSet<RouteStore>,List<Route>,double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers,double[,,] distanceMatrix,int seed,bool printExtendedInfo=false,int numInterations=3000000,int timeLimit=30000,bool checkInitialSolution=true)
         {
             Console.WriteLine("Starting local search");

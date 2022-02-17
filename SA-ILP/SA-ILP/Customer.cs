@@ -46,6 +46,15 @@ namespace SA_ILP
             this.ServiceTime = cust.ServiceTime;
         }
 
+        public override bool Equals(object? obj)
+        {
+            if (obj == null)
+                return false;
+            if (obj.GetType() != typeof(Customer))
+                return false;
+
+            return ((Customer)obj).Id.Equals( this.Id);
+        }
         public override string ToString()
         {
             return Id.ToString();
