@@ -11,7 +11,22 @@ namespace SA_ILP
         public List<Customer> route;
         public List<double> arrival_times;
         public double[,,] objective_matrix;
+        public double[] objeciveMatrix1d;
+        
+        
         public int numLoadLevels;
+        public int numX;
+        public int numY;
+
+        public double Score { get
+            {
+                if (CachedObjective != -1)
+                    return CachedObjective;
+                else
+                    return CalcObjective();
+
+            } }
+
         public double time_done;
         //public Customer lastCust;
         public double used_capacity;
@@ -20,6 +35,7 @@ namespace SA_ILP
         private double penalty = 100;
 
         private Dictionary<int,(int,double)> BestCustomerPos;
+        private Dictionary<(int, int), (bool,bool, double)> CustPossibleAtPosCache;
 
         private Random random;
 
@@ -33,7 +49,13 @@ namespace SA_ILP
             this.route = new List<Customer>() { depot, depot };
             this.arrival_times = new List<double>() { 0, 0 };
             this.objective_matrix = distanceMatrix;
+            this.numX = distanceMatrix.GetLength(0);
+            this.numY = distanceMatrix.GetLength(1);
             this.numLoadLevels = distanceMatrix.GetLength(2);
+            //this.objeciveMatrix1d = new double[numX * numY * numLoadLevels];
+            //Create1DMAtrix();
+
+
             this.time_done = 0;
             //this.lastCust = depot;
             used_capacity = 0;
@@ -43,12 +65,28 @@ namespace SA_ILP
             ResetCache();
         }
 
+
+        //private void Create1DMAtrix()
+        //{
+        //    for(int i=0; i< numX;i++)
+        //        for(int j =0;j< numY;j++)
+        //            for(int k = 0; k < numLoadLevels; k++)
+        //            {
+        //                objeciveMatrix1d[i + numX * j + (numY * numX) * k] = objective_matrix[i,j,k];
+        //            }
+        //}
+
         public  Route(List<Customer> route, List<double> arrivalTimes, double[,,] distanceMatrix, double usedCapcity, double maxCapacity,int seed)
         {
             this.route = route;
             this.arrival_times = arrivalTimes;
             this.objective_matrix = distanceMatrix;
+            this.numX = distanceMatrix.GetLength(0);
+            this.numY = distanceMatrix.GetLength(1);
             this.numLoadLevels = distanceMatrix.GetLength(2);
+            //this.objeciveMatrix1d = new double[numX * numY * numLoadLevels];
+            //Create1DMAtrix();
+
             this.time_done = 0;
             used_capacity = usedCapcity;
             this.max_capacity = maxCapacity;
@@ -92,12 +130,16 @@ namespace SA_ILP
                 loadLevel--;
 
             var val = objective_matrix[cust1.Id, cust2.Id, loadLevel];
+            //var val2 = objeciveMatrix1d[cust1.Id + cust2.Id * numX + loadLevel * numX * numY];
+            //if (val != val2)
+            //    Console.WriteLine("wops");
             return val;
         }
 
         private void ResetCache()
         {
             BestCustomerPos = new Dictionary<int, (int,double)>();
+            CustPossibleAtPosCache = new Dictionary<(int, int), (bool, bool, double)>();
             CachedObjective = -1;
         }
 
@@ -105,7 +147,7 @@ namespace SA_ILP
         {
             double newArriveTime = 0;
             
-            ResetCache();
+            
 
             int index = -1;
             Customer lastCust = null;
@@ -136,7 +178,7 @@ namespace SA_ILP
             route.RemoveAt(index);
             arrival_times.RemoveAt(index);
             //this.lastCust = lastCust;
-
+            ResetCache();
 
         }
 
@@ -192,6 +234,10 @@ namespace SA_ILP
 
         public (bool possible, bool possibleInLaterPosition, double objectiveIncrease) CustPossibleAtPos(Customer cust, int pos, int skip = 0)
         {
+
+            //if (CustPossibleAtPosCache.ContainsKey((cust.Id, pos)))
+            //    return CustPossibleAtPosCache[(cust.Id, pos)];
+
             double totalTravelTime = 0;
             double load = used_capacity + cust.Demand;
 
@@ -203,7 +249,10 @@ namespace SA_ILP
 
             //Need to check capacity, otherwise loadlevel claculation fails
             if (load > max_capacity)
+            {
+                //CustPossibleAtPosCache[(cust.Id, pos)] = (false, false, double.MinValue);
                 return (false, false, double.MinValue);
+            }
 
             double arrivalTime = 0;
             for (int i = 0; i < route.Count; i++)
@@ -211,7 +260,12 @@ namespace SA_ILP
                 if (i == pos)
                 {
                     if (arrivalTime > cust.TWEnd)
+                    {
+                        //CustPossibleAtPosCache[(cust.Id, pos)] = (false, false, double.MinValue);
                         return (false, false, double.MinValue);
+
+
+                    }
 
                     //Wait for the timewindow start
                     if (arrivalTime < cust.TWStart)
@@ -236,9 +290,16 @@ namespace SA_ILP
                 if (arrivalTime > route[i].TWEnd)
                     //If we dont meet the timewindow on the route and we have not visited the new customer, we are late because of the additional load. The customer can never fit in this route
                     if (i < pos)
+                    {
+                        //CustPossibleAtPosCache[(cust.Id,pos)] = (false, false, double.MinValue);
                         return (false, false, double.MinValue);
+
+                    }
                     else
+                    {
+                        //CustPossibleAtPosCache[(cust.Id, pos)] = (false, true, double.MinValue);
                         return (false, true, double.MinValue);
+                    }
 
                 //Wait for the timewindow start
                 if (arrivalTime < route[i].TWStart)
@@ -271,52 +332,9 @@ namespace SA_ILP
             if (objective == -1)
                 objective = CalcObjective();
 
-            //TODO: cache current objective value
+            //CustPossibleAtPosCache[(cust.Id, pos)] = (true, true, totalTravelTime - objective);
             return (true, true, totalTravelTime - objective);
 
-
-            ////Check upper timewindow of the new customer
-            //if (arrival_times[pos - 1] + route[pos - 1].ServiceTime > cust.TWEnd && skip == 0)
-            //    return (false, false, double.MinValue);
-
-            ////TODO: cache these values
-            //double delivered = 0;
-            //for(int i =0; i< pos;i++)
-            //    delivered += route[i].Demand;
-            //double currentLoad = used_capacity - delivered;
-
-
-            ////Check upper timewindow with distance
-            //double TArrivalNewCust = arrival_times[pos-1] + route[pos-1].ServiceTime + CustomerDist( route[pos-1],cust,currentLoad);
-            //if (TArrivalNewCust > cust.TWEnd)
-            //    return (false, false, double.MinValue);
-            ////Set the arrival time to the start of the timewindow if the vehicle arrives to early
-            //if (TArrivalNewCust < cust.TWStart)
-            //    TArrivalNewCust = cust.TWStart;
-
-            //currentLoad -= cust.Demand;
-
-            //double newArrivalTime = TArrivalNewCust + CustomerDist(cust,route[pos+skip],currentLoad) + cust.ServiceTime;
-            //for(int i = pos + skip; i < route.Count; i++)
-            //{
-            //    if (newArrivalTime > route[i].TWEnd)
-            //        return (false, true, double.MinValue);
-            //    if(newArrivalTime < route[i].TWStart)
-            //        newArrivalTime = route[i].TWStart;
-            //    currentLoad -= cust.Demand;
-            //    if (i != route.Count - 1)
-            //        newArrivalTime += CustomerDist(route[i], route[i + 1], currentLoad) + route[i].ServiceTime;
-            //}
-            ////Objective has to be completly recalculated...
-            //double distIncrease = CustomerDist(route[pos - 1], cust, used_capacity - delivered) + CustomerDist(cust, route[pos + skip], used_capacity - delivered + cust.Demand) - CustomerDist(route[pos - 1], route[pos], used_capacity - delivered);
-
-            ////Kan dit geen problemen veroorzaken?
-            //for(int i=0;i< skip; i++)
-            //{
-            //    distIncrease -= CustomerDist(route[pos + i],route[pos + i + 1]);
-            //}
-
-            //return (true, true, distIncrease);
         }
 
         public (int, double) BestPossibleInsert(Customer cust)
@@ -358,12 +376,12 @@ namespace SA_ILP
         {
 
             //Invalidate the cache
-            ResetCache();
+            
 
             this.arrival_times = newArrivalTimes;
 
             this.route.Reverse(index1, index2 - index1 + 1);
-
+            ResetCache();
         }
 
         public (bool possible, double improvement,List<double> newArrivalTimes) CanReverseSubRoute(int index1, int index2)
@@ -502,7 +520,7 @@ namespace SA_ILP
             used_capacity += cust.Demand;
             double load = used_capacity;
             double newCustArrivalTime = 0;
-            ResetCache();
+            
             for (int i = 0; i < route.Count; i++)
             {
                 if (i == pos)
@@ -541,7 +559,7 @@ namespace SA_ILP
             }
             arrival_times.Insert(pos, newCustArrivalTime);
             route.Insert(pos, cust);
-
+            ResetCache();
         }
 
         public (bool, double, int) CanSwapBetweenRoutes(Customer cust1, Customer cust2, int index)

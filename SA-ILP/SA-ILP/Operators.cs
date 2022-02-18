@@ -11,6 +11,8 @@ namespace SA_ILP
 
         public static (double, Action?) ReverseOperator(List<Route> routes, List<int> viableRoutes, Random random)
         {
+            if (viableRoutes.Count == 0)
+                return (double.MinValue, null);
             int routeIndex = viableRoutes[random.Next(viableRoutes.Count)];
 
             (_, int index1) = routes[routeIndex].RandomCustIndex();
@@ -44,6 +46,9 @@ namespace SA_ILP
 
        public  static (double, Action?) SwapRandomCustomers(List<Route> routes, List<int> viableRoutes,Random random)
         {
+            if (viableRoutes.Count == 0)
+                return (double.MinValue, null);
+
             int bestDest = -1, bestSrc = -1, bestPos1 = -1, bestPos2 = -1;
             Customer bestCust1 = null, bestCust2 = null;
             double bestImp = double.MinValue;
@@ -136,6 +141,68 @@ namespace SA_ILP
 
         }
 
+        public static (double, Action?) RemoveRandomCustomer(List<Route> routes, List<int> viableRoutes,Random random, List<Customer> removed,double temp)
+        {
+            if (viableRoutes.Count == 0)
+                return (double.MinValue, null);
+
+            var routeIndex = viableRoutes[random.Next(viableRoutes.Count)];
+            (Customer cust, double decr) = routes[routeIndex].RandomCust();
+
+
+            double penalty = 0;
+            double diff = Math.Pow(removed.Count + 1, Solver.BaseRemovedCustomerPenaltyPow) - Math.Pow(removed.Count, Solver.BaseRemovedCustomerPenaltyPow);
+            //TODO: calculate penalty
+            penalty = diff * Solver.BaseRemovedCustomerPenalty / temp;
+            double imp = decr - penalty; 
+
+            return (imp, () => {
+                routes[routeIndex].RemoveCust(cust);
+                removed.Add(cust);           
+            }
+            );
+
+        }
+
+        public static (double,Action?) AddRandomRemovedCustomer(List<Route> routes,List<int> viableRoutes,Random random, List<Customer> removed,double temp)
+        {
+            if (removed.Count == 0)
+                return (double.MinValue, null);
+
+            Customer cust = removed[random.Next(removed.Count)];
+
+            //Probleem dat er heel veel lege routes zijn?
+            int routeIndex = random.Next(viableRoutes.Count + 1);
+            Route route;
+            if (routeIndex == viableRoutes.Count)
+                if (viableRoutes.Count != routes.Count)
+                    route = routes.FirstOrDefault(x => x.route.Count == 2);
+                else
+                    route = routes[routeIndex - 1];
+            else
+                route = routes[viableRoutes[routeIndex]];
+                int pos = random.Next(1, route.route.Count);
+
+            //Do we want to try several positions?
+            (bool possible, _, double incr) = route.CustPossibleAtPos(cust, pos);
+
+            double penalty = 0;
+            double diff = Math.Pow(removed.Count, Solver.BaseRemovedCustomerPenaltyPow) - Math.Pow(removed.Count -1, Solver.BaseRemovedCustomerPenaltyPow); 
+            //TODO: calculate penalty
+            penalty = diff* Solver.BaseRemovedCustomerPenalty / temp;
+            if (possible)
+                return (penalty - incr, () =>
+                {
+                    removed.Remove(cust);
+                    route.InsertCust(cust, pos);
+
+                }
+                );
+            return (double.MinValue, null);
+
+
+        }
+
         public static (double, Action?) GreedilyMoveRandomCustomer(List<Route> routes, List<int> viableRoutes,Random random)
         {
             var routeIndex = viableRoutes[random.Next(viableRoutes.Count)];
@@ -175,6 +242,8 @@ namespace SA_ILP
 
         public static (double, Action?) MoveRandomCustomerToRandomCustomer(List<Route> routes, List<int> viableRoutes, Random random)
         {
+            if (viableRoutes.Count <= 1)
+                return (double.MinValue, null);
             int src_index = random.Next(viableRoutes.Count);
             int src = viableRoutes[src_index];
 
