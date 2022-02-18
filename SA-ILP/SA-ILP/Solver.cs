@@ -577,18 +577,18 @@ namespace SA_ILP
         {
             var columList = columns.ToArray();
             var bestSolStore = bestSolutionLS.ConvertAll(x => new RouteStore(x.CreateIdList(),x.Score));
-            double[] costs = new double[columList.Length];
+            //double[] costs = new double[columList.Length];
             byte[,] custInRoute = new byte[customers.Count, columList.Length];
             for (int i = 0; i < columList.Length; i++)
             {
-                double cost = 0;
+               // double cost = 0;
                 for (int j = 0; j < columList[i].Route.Count - 1; j++)
                 {
-                    cost += CalculateDistanceObjective(customers[columList[i].Route[j]], customers[columList[i].Route[j + 1]]);
+                    //cost += CalculateDistanceObjective(customers[columList[i].Route[j]], customers[columList[i].Route[j + 1]]);
                     custInRoute[columList[i].Route[j], i] = 1;
                     custInRoute[columList[i].Route[j + 1], i] = 1;
                 }
-                costs[i] = cost;
+                //costs[i] = cost;
             }
 
             //Create model
@@ -602,7 +602,7 @@ namespace SA_ILP
             //columnDecisions = model.AddVars(columList.Length, GRB.BINARY,);
             for (int i = 0; i < columList.Length; i++)
             {
-                columnDecisions[i] = model.AddVar(0, 1, costs[i], GRB.BINARY, $"X{i}");
+                columnDecisions[i] = model.AddVar(0, 1, columList[i].Value, GRB.BINARY, $"X{i}");
             }
 
             foreach (Customer cust in customers)
