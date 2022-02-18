@@ -78,7 +78,7 @@ async Task RunTestAsync()
 
     for (int i = 0; i < num; i++)
     {
-        double res = await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "sydney_full.csv"), numLoadLevels: 10, numIterations: 50000000,timelimit:45000);
+        double res = await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000,timelimit:45000);
         if (res < best)
             best = res;
         if(res > worst)
