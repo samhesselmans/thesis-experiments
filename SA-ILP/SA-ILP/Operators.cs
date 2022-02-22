@@ -205,6 +205,8 @@ namespace SA_ILP
 
         public static (double, Action?) GreedilyMoveRandomCustomer(List<Route> routes, List<int> viableRoutes,Random random)
         {
+            if (viableRoutes.Count == 0)
+                return (double.MinValue, null);
             var routeIndex = viableRoutes[random.Next(viableRoutes.Count)];
             (Customer cust, double decr) = routes[routeIndex].RandomCust();
 

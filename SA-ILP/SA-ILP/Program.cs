@@ -36,16 +36,37 @@ Stopwatch watch = new Stopwatch();
 //for(int i = 0; i < 10; i++)
 //Console.Write(10.00683123.ToString("0.000"));
 
-await RunTestAsync();
+//await RunTestAsync();
 
 
 //solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\r104.txt", numIterations: 50000000);
-//await solver.SolveSolomonInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\R1_10_10.TXT", numThreads:4, numIterations: 50000000);
+await solver.SolveSolomonInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\R1_10_1.TXT", numThreads:4, numIterations: 50000000);
+
+
+//solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 45000);
+//await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 45000);
 
 
 //var result = VRPLTT.ParseVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"));
 //Console.WriteLine(VRPLTT.CalculateTravelTime(10,10,800,350));
-//await SolveAllAsync(@"..\..\..\..\..\solomon_instances", Path.Join(@"..\..\..\..\..\solutions\solomon_instances",DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")),numThreads:1);
+//var skip = new List<String>() {"c101.txt", "c102.txt", "c103.txt", "c104.txt", "c105.txt", "c106.txt", "c107.txt", "c108.txt", "c109.txt", "c201.txt", "c202.txt", "c203.txt", "c204.txt", "c205.txt", "c206.txt", "c207.txt", "c208.txt" };
+//for( int i =1; i< 13; i++)
+//{
+//    string str = i.ToString();
+//    if (i < 10)
+//        str = "0" + str;
+//    skip.Add($"r1{str}.txt");
+//}
+
+//for (int i = 1; i < 12; i++)
+//{
+//    string str = i.ToString();
+//    if (i < 10)
+//        str = "0" + str;
+//    skip.Add($"r2{str}.txt");
+//}
+
+//await SolveAllAsync(@"..\..\..\..\..\solomon_instances", Path.Join(@"..\..\..\..\..\solutions\solomon_instances",DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")),skip,numThreads:4,numIterations:50000000);
 
 
 async Task RunTestAsync()
@@ -88,7 +109,7 @@ async Task RunTestAsync()
     Console.WriteLine($"Finsihed all. Average score: {(total / num).ToString("0.000")}, best score: {best.ToString("0.000")}, worst score: {worst.ToString("0.000")}, Total time: {(watch.ElapsedMilliseconds / 1000).ToString("0.000")}");
 }
 
-async Task SolveAllAsync(string dir,string solDir, int numThreads = 4, int numIterations = 3000000)
+async Task SolveAllAsync(string dir,string solDir,List<String> skip, int numThreads = 4, int numIterations = 3000000)
 {
     if(!Directory.Exists(solDir))
         Directory.CreateDirectory(solDir);
@@ -99,10 +120,24 @@ async Task SolveAllAsync(string dir,string solDir, int numThreads = 4, int numIt
     using (var totalWriter = new StreamWriter(Path.Join(solDir, "allSolutions.txt")))
     {
 
-
+        string fileNameStart = "";
+        double totalValue = 0.0;
+        int total = 0;
         foreach (var file in Directory.GetFiles(dir))
         {
-            (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime,double lsVal) = await solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations);
+            bool newInstance = false;
+            if (skip.Contains(Path.GetFileName(file)))
+                continue;
+
+            if (!Path.GetFileName(file).StartsWith(fileNameStart))
+            {
+                totalWriter.WriteLine($"AVERAGE {fileNameStart}: {totalValue/total}");
+                totalValue = 0;
+                total = 0;
+                fileNameStart = Path.GetFileName(file).Substring(0,2);
+            }
+
+                (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime,double lsVal) = await solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations);
             using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileName(file))))
             {
                 if (failed)
@@ -115,7 +150,12 @@ async Task SolveAllAsync(string dir,string solDir, int numThreads = 4, int numIt
             }
             if (failed)
                 totalWriter.Write("FAIL did not meet check");
-            totalWriter.WriteLine($"Instance: {Path.GetFileName(file)}, Score: {Math.Round(ilpVal,3)}, ilpTime: {Math.Round(ilpTime,3)}, lsTime: {Math.Round(lsTime,3)}, lsVal: {Math.Round(lsVal,3)}, ilpImp: {Math.Round((lsVal-ilpVal)/lsVal * 100,3)}%");
+
+
+            totalValue += ilpVal;
+            total++;
+
+            totalWriter.WriteLine($"Instance: {Path.GetFileName(file)}, Score: {Math.Round(ilpVal,3)}, Vehicles: {ilpSol.Count}, ilpTime: {Math.Round(ilpTime,3)}, lsTime: {Math.Round(lsTime,3)}, lsVal: {Math.Round(lsVal,3)}, ilpImp: {Math.Round((lsVal-ilpVal)/lsVal * 100,3)}%");
             totalWriter.Flush();
         }
     }

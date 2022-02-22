@@ -27,13 +27,20 @@ namespace SA_ILP
 
             } }
 
+
+        public bool ViolatesLowerTimeWindow { get;private set; }
+        public bool ViolatesUpperTimeWindow { get; private set; }
+
+
+        public double Temperature { get; set; }
+        public double InitialTemperature { get; set; }
         public double time_done;
         //public Customer lastCust;
         public double used_capacity;
         public double max_capacity;
         private double CachedObjective;
         private double penalty = 100;
-
+        private bool allowLateTimewindow = true;
         private Dictionary<int,(int,double)> BestCustomerPos;
         private Dictionary<(int, int), (bool,bool, double)> CustPossibleAtPosCache;
 
@@ -44,7 +51,7 @@ namespace SA_ILP
         public long bestFitCacheHit = 0;
         public long bestFitCacheMiss = 0;
 #endif
-        public Route(Customer depot, double[,,] distanceMatrix, double maxCapacity, int seed)
+        public Route(Customer depot, double[,,] distanceMatrix, double maxCapacity, int seed,double initialTemperature, double temperature)
         {
             this.route = new List<Customer>() { depot, depot };
             this.arrival_times = new List<double>() { 0, 0 };
@@ -54,7 +61,8 @@ namespace SA_ILP
             this.numLoadLevels = distanceMatrix.GetLength(2);
             //this.objeciveMatrix1d = new double[numX * numY * numLoadLevels];
             //Create1DMAtrix();
-
+            this.InitialTemperature = initialTemperature;
+            this.Temperature = temperature;
 
             this.time_done = 0;
             //this.lastCust = depot;
@@ -76,7 +84,7 @@ namespace SA_ILP
         //            }
         //}
 
-        public  Route(List<Customer> route, List<double> arrivalTimes, double[,,] distanceMatrix, double usedCapcity, double maxCapacity,int seed)
+        public  Route(List<Customer> route, List<double> arrivalTimes, double[,,] distanceMatrix, double usedCapcity, double maxCapacity,int seed,double initialTemperature, double temperature)
         {
             this.route = route;
             this.arrival_times = arrivalTimes;
@@ -86,7 +94,8 @@ namespace SA_ILP
             this.numLoadLevels = distanceMatrix.GetLength(2);
             //this.objeciveMatrix1d = new double[numX * numY * numLoadLevels];
             //Create1DMAtrix();
-
+            this.InitialTemperature = initialTemperature;
+            this.Temperature = temperature;
             this.time_done = 0;
             used_capacity = usedCapcity;
             this.max_capacity = maxCapacity;
@@ -95,9 +104,44 @@ namespace SA_ILP
             ResetCache();
         }
 
-        public double CalculatePenaltyTerm(double arrivalTime,double timewindowStart)
+        public Route(List<Customer> customers,RouteStore routeStore, Customer depot, double[,,] distanceMatrix, double maxCapacity,double initialTemperature, double temperature)
         {
-            return 100 + timewindowStart - arrivalTime;// timewindowStart - arrivalTime;
+            this.route = new List<Customer>() { depot, depot };
+            this.arrival_times = new List<double>() { 0, 0 };
+            this.objective_matrix = distanceMatrix;
+            this.numX = distanceMatrix.GetLength(0);
+            this.numY = distanceMatrix.GetLength(1);
+            this.numLoadLevels = distanceMatrix.GetLength(2);
+            //this.objeciveMatrix1d = new double[numX * numY * numLoadLevels];
+            //Create1DMAtrix();
+            this.InitialTemperature = initialTemperature;
+            this.Temperature = temperature;
+
+            this.time_done = 0;
+            //this.lastCust = depot;
+            used_capacity = 0;
+            this.max_capacity = maxCapacity;
+            random = new Random();
+
+            ResetCache();
+
+            foreach(int cust in routeStore.Route)
+            {
+                this.InsertCust(customers.First(x=>x.Id == cust),route.Count -1);
+            }
+
+        }
+
+        public double CalculateEarlyPenaltyTerm(double arrivalTime,double timewindowStart)
+        {
+            return 0;// 100 + timewindowStart - arrivalTime;// timewindowStart - arrivalTime;
+        }
+
+        public double CalculateLatePenaltyTerm(double arrivalTime, double timeWindowEnd)
+        {
+            if (arrivalTime < timeWindowEnd)
+                Console.WriteLine("Called wrong");
+            return 100/(Temperature/InitialTemperature);// + arrivalTime - timeWindowEnd;
         }
 
         public double CalcObjective()
@@ -108,10 +152,13 @@ namespace SA_ILP
             for (int i = 0; i < route.Count - 1; i++)
             {
                 total_dist += this.CustomerDist(route[i], route[i + 1], totalWeight);
-
+                var actualArrivalTime = arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime;
                 //Adding penalty for violating timewindow start
-                if (arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime < route[i + 1].TWStart)
-                    total_dist += CalculatePenaltyTerm((arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime), route[i + 1].TWStart);//route[i + 1].TWStart - (arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime);
+                if (actualArrivalTime  < route[i + 1].TWStart)
+                    total_dist += CalculateEarlyPenaltyTerm(actualArrivalTime, route[i + 1].TWStart);//route[i + 1].TWStart - (arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime);
+                if (actualArrivalTime > route[i + 1].TWEnd)
+                    total_dist += CalculateLatePenaltyTerm(actualArrivalTime, route[i + 1].TWEnd);
+                
                 totalWeight -= route[i + 1].Demand;
             }
             CachedObjective = total_dist;
@@ -146,8 +193,9 @@ namespace SA_ILP
         public void RemoveCust(Customer cust)
         {
             double newArriveTime = 0;
-            
-            
+            ViolatesUpperTimeWindow = false;
+            ViolatesLowerTimeWindow = false;
+
 
             int index = -1;
             Customer lastCust = null;
@@ -162,9 +210,16 @@ namespace SA_ILP
                     var dist = CustomerDist(previous_cust, c, load);
                     load -= c.Demand;
                     if (newArriveTime + dist < c.TWStart)
+                    {
+                        ViolatesLowerTimeWindow = true;
                         newArriveTime = c.TWStart;
+                    }
                     else
                         newArriveTime += dist;
+
+                    if (newArriveTime > c.TWEnd)
+                        ViolatesUpperTimeWindow = true;
+
                     arrival_times[i] = newArriveTime;
                     newArriveTime += c.ServiceTime;
                     lastCust = c;
@@ -205,12 +260,15 @@ namespace SA_ILP
                 else 
                     currentCust = route[i];
 
-                if (arrival_time > currentCust.TWEnd)
-                    return (false, double.MinValue);
+                //if (arrival_time > currentCust.TWEnd)
+                //    if (allowLateTimewindow)
+                //        totalTravelTime += CalculateLatePenaltyTerm(arrival_time, currentCust.TWEnd);
+                //    else
+                //        return (false, double.MinValue);
 
                 if(arrival_time < currentCust.TWStart)
                 {
-                    totalTravelTime += CalculatePenaltyTerm(arrival_time, currentCust.TWStart);
+                    totalTravelTime += CalculateEarlyPenaltyTerm(arrival_time, currentCust.TWStart);
 
                     //Wil ik dit nog doen bij de violation van een timewindow? Misschien moet ik alleen de penalty toepassen en niet de arrivaltime aanpassen
                     arrival_time = currentCust.TWStart;
@@ -221,7 +279,10 @@ namespace SA_ILP
                 arrival_time += dist + currentCust.ServiceTime;
 
                 if (arrival_time > nextCust.TWEnd)
-                    return (false, double.MinValue);
+                    if(allowLateTimewindow)
+                        totalTravelTime += CalculateLatePenaltyTerm(arrival_time, nextCust.TWEnd);
+                    else
+                        return (false, double.MinValue);
 
             }
 
@@ -257,12 +318,16 @@ namespace SA_ILP
             double arrivalTime = 0;
             for (int i = 0; i < route.Count; i++)
             {
+                //Arrived at the insert position. Include the new Customer into the check
                 if (i == pos)
                 {
                     if (arrivalTime > cust.TWEnd)
                     {
                         //CustPossibleAtPosCache[(cust.Id, pos)] = (false, false, double.MinValue);
-                        return (false, false, double.MinValue);
+                        if (allowLateTimewindow)
+                            totalTravelTime += CalculateLatePenaltyTerm(arrivalTime, cust.TWEnd);
+                        else
+                            return (false, false, double.MinValue);
 
 
                     }
@@ -270,7 +335,7 @@ namespace SA_ILP
                     //Wait for the timewindow start
                     if (arrivalTime < cust.TWStart)
                     {
-                        totalTravelTime += CalculatePenaltyTerm(arrivalTime,cust.TWStart);//cust.TWStart - arrivalTime;
+                        totalTravelTime += CalculateEarlyPenaltyTerm(arrivalTime,cust.TWStart);//cust.TWStart - arrivalTime;
                         arrivalTime = cust.TWStart;
 
                         //For testing not allowing wait
@@ -292,19 +357,25 @@ namespace SA_ILP
                     if (i < pos)
                     {
                         //CustPossibleAtPosCache[(cust.Id,pos)] = (false, false, double.MinValue);
-                        return (false, false, double.MinValue);
+                        if (allowLateTimewindow)
+                            totalTravelTime += CalculateLatePenaltyTerm(arrivalTime, route[i].TWEnd);
+                        else
+                            return (false, false, double.MinValue);
 
                     }
                     else
                     {
                         //CustPossibleAtPosCache[(cust.Id, pos)] = (false, true, double.MinValue);
-                        return (false, true, double.MinValue);
+                        if (allowLateTimewindow)
+                            totalTravelTime += CalculateLatePenaltyTerm(arrivalTime, route[i].TWEnd);
+                        else
+                            return (false, true, double.MinValue);
                     }
 
                 //Wait for the timewindow start
                 if (arrivalTime < route[i].TWStart)
                 {
-                    totalTravelTime += CalculatePenaltyTerm(arrivalTime,route[i].TWStart);//route[i].TWStart - arrivalTime;
+                    totalTravelTime += CalculateEarlyPenaltyTerm(arrivalTime,route[i].TWStart);//route[i].TWStart - arrivalTime;
                     arrivalTime = route[i].TWStart;
 
                     //For testing not allowing wait
@@ -432,7 +503,7 @@ namespace SA_ILP
 
                 if (arrival_time < nextCust.TWStart)
                 {
-                    newCost += CalculatePenaltyTerm(arrival_time, nextCust.TWStart);
+                    newCost += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);
                     arrival_time = nextCust.TWStart;
                 }
 
@@ -440,7 +511,10 @@ namespace SA_ILP
 
                 //Check the timewindow end of the next customer
                 if (arrival_time > nextCust.TWEnd)
-                    return (false, double.MinValue,newArrivalTimes);
+                    if (allowLateTimewindow)
+                        newCost += CalculateLatePenaltyTerm(arrival_time, nextCust.TWEnd);
+                    else
+                        return (false, double.MinValue,newArrivalTimes);
 
                 //After traveling to the next customer we can remove it's load
                 load -= nextCust.Demand;
@@ -488,10 +562,12 @@ namespace SA_ILP
                 arrival_time += cost + route[j].ServiceTime;
                 if (arrival_time < nextCust.TWStart)
                 {
-                    newCost += CalculatePenaltyTerm(arrival_time, nextCust.TWStart);//nextCust.TWStart- arrival_time;
+                    newCost += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);//nextCust.TWStart- arrival_time;
                     //newCost += penalty;
                     arrival_time = nextCust.TWStart;
                 }
+                if(arrival_time > nextCust.TWEnd)
+                        newCost += CalculateLatePenaltyTerm(arrival_time,nextCust.TWEnd);
                 load -= nextCust.Demand;
             }
 
@@ -520,13 +596,20 @@ namespace SA_ILP
             used_capacity += cust.Demand;
             double load = used_capacity;
             double newCustArrivalTime = 0;
+            ViolatesLowerTimeWindow = false;
+            ViolatesUpperTimeWindow  = false;
             
             for (int i = 0; i < route.Count; i++)
             {
                 if (i == pos)
                 {
                     if (newArrivalTime < cust.TWStart)
+                    {
                         newArrivalTime = cust.TWStart;
+                        ViolatesLowerTimeWindow = true;
+                    }
+                    else if (newArrivalTime > cust.TWEnd)
+                        ViolatesUpperTimeWindow = true;
 
                     newCustArrivalTime = newArrivalTime;
                     load -= cust.Demand;
@@ -540,7 +623,12 @@ namespace SA_ILP
                 //else
                 //{
                 if (newArrivalTime < route[i].TWStart)
+                {
                     newArrivalTime = route[i].TWStart;
+                    ViolatesLowerTimeWindow = true;
+                }
+                else if (newArrivalTime > route[i].TWEnd)
+                    ViolatesUpperTimeWindow = true;
                 arrival_times[i] = newArrivalTime;
                 load -= route[i].Demand;
                 if (i != route.Count - 1)
@@ -611,8 +699,12 @@ namespace SA_ILP
                 }
                 if(arrivalTime > route[i + 1].TWEnd)
                 {
-                    failed = true;
-                    Console.WriteLine($"FAIL did not meet customer {route[i+1].Id}:{route[i+1]} due date. Arrived on {arrivalTime} on route {route}");
+                    if (!allowLateTimewindow)
+                    {
+                        failed = true;
+                        Console.WriteLine($"FAIL did not meet customer {route[i + 1].Id}:{route[i + 1]} due date. Arrived on {arrivalTime} on route {route}");
+                    }
+
                 }
                 load -= route[i + 1].Demand;
                 //if (arrivalTime > route[i].TWEnd)
@@ -635,7 +727,7 @@ namespace SA_ILP
 
         public Route CreateDeepCopy()
         {
-            return new Route(route.ConvertAll(i => i), arrival_times.ConvertAll(i => i), objective_matrix, used_capacity, max_capacity,random.Next());
+            return new Route(route.ConvertAll(i => i), arrival_times.ConvertAll(i => i), objective_matrix, used_capacity, max_capacity,random.Next(),this.InitialTemperature,this.Temperature);
         }
 
         public List<int> CreateIdList()
