@@ -31,16 +31,13 @@ namespace SA_ILP
         public bool ViolatesLowerTimeWindow { get;private set; }
         public bool ViolatesUpperTimeWindow { get; private set; }
 
+        LocalSearch parent;
 
-        public double Temperature { get; set; }
-        public double InitialTemperature { get; set; }
         public double time_done;
         //public Customer lastCust;
         public double used_capacity;
         public double max_capacity;
         private double CachedObjective;
-        private double penalty = 100;
-        private bool allowLateTimewindow = true;
         private Dictionary<int,(int,double)> BestCustomerPos;
         private Dictionary<(int, int), (bool,bool, double)> CustPossibleAtPosCache;
 
@@ -51,7 +48,7 @@ namespace SA_ILP
         public long bestFitCacheHit = 0;
         public long bestFitCacheMiss = 0;
 #endif
-        public Route(Customer depot, double[,,] distanceMatrix, double maxCapacity, int seed,double initialTemperature, double temperature)
+        public Route(Customer depot, double[,,] distanceMatrix, double maxCapacity, int seed, LocalSearch parent)
         {
             this.route = new List<Customer>() { depot, depot };
             this.arrival_times = new List<double>() { 0, 0 };
@@ -61,8 +58,7 @@ namespace SA_ILP
             this.numLoadLevels = distanceMatrix.GetLength(2);
             //this.objeciveMatrix1d = new double[numX * numY * numLoadLevels];
             //Create1DMAtrix();
-            this.InitialTemperature = initialTemperature;
-            this.Temperature = temperature;
+            this.parent = parent;
 
             this.time_done = 0;
             //this.lastCust = depot;
@@ -84,7 +80,7 @@ namespace SA_ILP
         //            }
         //}
 
-        public  Route(List<Customer> route, List<double> arrivalTimes, double[,,] distanceMatrix, double usedCapcity, double maxCapacity,int seed,double initialTemperature, double temperature)
+        public  Route(List<Customer> route, List<double> arrivalTimes, double[,,] distanceMatrix, double usedCapcity, double maxCapacity,int seed,LocalSearch parent)
         {
             this.route = route;
             this.arrival_times = arrivalTimes;
@@ -94,8 +90,7 @@ namespace SA_ILP
             this.numLoadLevels = distanceMatrix.GetLength(2);
             //this.objeciveMatrix1d = new double[numX * numY * numLoadLevels];
             //Create1DMAtrix();
-            this.InitialTemperature = initialTemperature;
-            this.Temperature = temperature;
+            this.parent = parent;
             this.time_done = 0;
             used_capacity = usedCapcity;
             this.max_capacity = maxCapacity;
@@ -104,7 +99,7 @@ namespace SA_ILP
             ResetCache();
         }
 
-        public Route(List<Customer> customers,RouteStore routeStore, Customer depot, double[,,] distanceMatrix, double maxCapacity,double initialTemperature, double temperature)
+        public Route(List<Customer> customers,RouteStore routeStore, Customer depot, double[,,] distanceMatrix, double maxCapacity,LocalSearch parent)
         {
             this.route = new List<Customer>() { depot, depot };
             this.arrival_times = new List<double>() { 0, 0 };
@@ -114,8 +109,7 @@ namespace SA_ILP
             this.numLoadLevels = distanceMatrix.GetLength(2);
             //this.objeciveMatrix1d = new double[numX * numY * numLoadLevels];
             //Create1DMAtrix();
-            this.InitialTemperature = initialTemperature;
-            this.Temperature = temperature;
+            this.parent = parent;
 
             this.time_done = 0;
             //this.lastCust = depot;
@@ -134,14 +128,25 @@ namespace SA_ILP
 
         public double CalculateEarlyPenaltyTerm(double arrivalTime,double timewindowStart)
         {
-            return 0;// 100 + timewindowStart - arrivalTime;// timewindowStart - arrivalTime;
+            if(!parent.PenalizeEarlyArrival)
+                return 0;// 100 + timewindowStart - arrivalTime;// timewindowStart - arrivalTime;
+            else
+            {
+
+                //Add possibility to remove ramping based on penalty
+
+                return (parent.BaseEarlyArrivalPenalty + timewindowStart - arrivalTime);// / (parent.Temperature / parent.InitialTemperature);
+
+            }
+
         }
 
         public double CalculateLatePenaltyTerm(double arrivalTime, double timeWindowEnd)
         {
-            if (arrivalTime < timeWindowEnd)
-                Console.WriteLine("Called wrong");
-            return 100/(Temperature/InitialTemperature);// + arrivalTime - timeWindowEnd;
+            if (!parent.PenalizeLateArrival)
+                return 0;
+            else 
+                return (parent.BaseLateArrivalPenalty + arrivalTime - timeWindowEnd)/(parent.Temperature/parent.InitialTemperature);// + arrivalTime - timeWindowEnd;
         }
 
         public double CalcObjective()
@@ -279,7 +284,7 @@ namespace SA_ILP
                 arrival_time += dist + currentCust.ServiceTime;
 
                 if (arrival_time > nextCust.TWEnd)
-                    if(allowLateTimewindow)
+                    if(parent.AllowLateArrivalDuringSearch)
                         totalTravelTime += CalculateLatePenaltyTerm(arrival_time, nextCust.TWEnd);
                     else
                         return (false, double.MinValue);
@@ -324,7 +329,7 @@ namespace SA_ILP
                     if (arrivalTime > cust.TWEnd)
                     {
                         //CustPossibleAtPosCache[(cust.Id, pos)] = (false, false, double.MinValue);
-                        if (allowLateTimewindow)
+                        if (parent.AllowLateArrivalDuringSearch)
                             totalTravelTime += CalculateLatePenaltyTerm(arrivalTime, cust.TWEnd);
                         else
                             return (false, false, double.MinValue);
@@ -357,7 +362,7 @@ namespace SA_ILP
                     if (i < pos)
                     {
                         //CustPossibleAtPosCache[(cust.Id,pos)] = (false, false, double.MinValue);
-                        if (allowLateTimewindow)
+                        if (parent.AllowLateArrivalDuringSearch)
                             totalTravelTime += CalculateLatePenaltyTerm(arrivalTime, route[i].TWEnd);
                         else
                             return (false, false, double.MinValue);
@@ -366,7 +371,7 @@ namespace SA_ILP
                     else
                     {
                         //CustPossibleAtPosCache[(cust.Id, pos)] = (false, true, double.MinValue);
-                        if (allowLateTimewindow)
+                        if (parent.AllowLateArrivalDuringSearch)
                             totalTravelTime += CalculateLatePenaltyTerm(arrivalTime, route[i].TWEnd);
                         else
                             return (false, true, double.MinValue);
@@ -511,7 +516,7 @@ namespace SA_ILP
 
                 //Check the timewindow end of the next customer
                 if (arrival_time > nextCust.TWEnd)
-                    if (allowLateTimewindow)
+                    if (parent.AllowLateArrivalDuringSearch)
                         newCost += CalculateLatePenaltyTerm(arrival_time, nextCust.TWEnd);
                     else
                         return (false, double.MinValue,newArrivalTimes);
@@ -699,7 +704,7 @@ namespace SA_ILP
                 }
                 if(arrivalTime > route[i + 1].TWEnd)
                 {
-                    if (!allowLateTimewindow)
+                    if (!parent.AllowLateArrivalDuringSearch)
                     {
                         failed = true;
                         Console.WriteLine($"FAIL did not meet customer {route[i + 1].Id}:{route[i + 1]} due date. Arrived on {arrivalTime} on route {route}");
@@ -727,7 +732,7 @@ namespace SA_ILP
 
         public Route CreateDeepCopy()
         {
-            return new Route(route.ConvertAll(i => i), arrival_times.ConvertAll(i => i), objective_matrix, used_capacity, max_capacity,random.Next(),this.InitialTemperature,this.Temperature);
+            return new Route(route.ConvertAll(i => i), arrival_times.ConvertAll(i => i), objective_matrix, used_capacity, max_capacity,random.Next(),this.parent);
         }
 
         public List<int> CreateIdList()

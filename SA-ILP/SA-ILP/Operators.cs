@@ -249,18 +249,36 @@ namespace SA_ILP
             int src_index = random.Next(viableRoutes.Count);
             int src = viableRoutes[src_index];
 
-            //Current;ly this operator does not allow movement wihtin a route
-            int destIndex = random.Next(viableRoutes.Count - 1);
-            if (destIndex >= src_index)
-                destIndex++;
+            //Used to allow for moving to a not used route
+            int extra = 0;
+            if (viableRoutes.Count < routes.Count)
+                extra = 1;
+            
+            int destIndex = random.Next(viableRoutes.Count + extra );
+            //if (destIndex >= src_index)
+            //    destIndex++;
 
-            int dest = viableRoutes[destIndex];
+            int dest;
+            Customer? cust1; double decr1;
+            Customer? cust2; int pos;
+            if (destIndex < viableRoutes.Count)
+            {
+                dest = viableRoutes[destIndex];
+                (cust2, pos) = routes[dest].RandomCustIndex();
 
-            (Customer cust1, double decr1) = routes[src].RandomCust();
-            (Customer cust2, int pos) = routes[dest].RandomCustIndex();
+            }
+            else
+            {
+                //Select an empty route
+                dest = routes.FindIndex(x => x.route.Count == 2);
+                cust2 = null;
+                pos = 1;
+            }
+
+            (cust1,  decr1) = routes[src].RandomCust();
 
 
-            if (cust1.Id != cust2.Id)
+            if (cust1 != null && cust1 != cust2)
             {
                 (bool possible, _, double objectiveIncr) = routes[dest].CustPossibleAtPos(cust1, pos);
 

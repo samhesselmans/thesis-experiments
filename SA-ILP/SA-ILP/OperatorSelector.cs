@@ -1,0 +1,73 @@
+﻿global using Operator = System.Func<System.Collections.Generic.List<SA_ILP.Route>, System.Collections.Generic.List<int>, System.Random, System.Collections.Generic.List<SA_ILP.Customer>, double, (double, System.Action?)>;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace SA_ILP
+{
+    internal class OperatorSelector
+    {
+
+
+        Random random;
+        List<Operator> operators;
+        List<double> weights;
+
+        List<double> threshHolds;
+        
+        public OperatorSelector(Random random)
+        {
+            this.random = random;
+            operators = new List<Operator>();
+            weights = new List<double>();
+            threshHolds = new List<double>();
+        }
+
+
+        public void Add(Operator op, double weight)
+        {
+            operators.Add(op);
+            weights.Add(weight);
+
+            threshHolds = new List<double>();
+            double totalWeight = weights.Sum();
+
+            double cumulative = 0;
+            foreach( double w in weights)
+            {
+                cumulative += w;
+                threshHolds.Add(cumulative / totalWeight);
+            }
+
+        }
+
+        public void Add(List<Operator>operators,List<double> weights)
+        {
+            if (operators.Count != weights.Count)
+                throw new Exception("List counts must match");
+
+            for(int i =0; i< operators.Count; i++)
+                Add(operators[i], weights[i]);
+        }
+
+        public Operator Next()
+        {
+            var p = random.NextDouble();
+            for(int i=0; i< threshHolds.Count; i++)
+            {
+                if (p <= threshHolds[i])
+                    return operators[i];
+            }
+
+            throw new Exception("Threshold error");
+        }
+
+
+
+
+
+    }
+}

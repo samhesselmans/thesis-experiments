@@ -55,6 +55,20 @@ namespace SA_ILP
 
             return ((Customer)obj).Id.Equals( this.Id);
         }
+
+        public static bool operator == (Customer? cust1, Customer? cust2)
+        {
+            if(cust1 is null)
+            {
+                if (cust2 is null)
+                    return true;
+                return false;
+            }
+            return cust1.Equals(cust2);
+        }
+
+        public static bool operator !=(Customer? cust1, Customer? cust2) => !(cust1 == cust2);
+
         public override string ToString()
         {
             return Id.ToString();
