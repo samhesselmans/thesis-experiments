@@ -147,7 +147,7 @@ namespace SA_ILP
                 return (double.MinValue, null);
 
             var routeIndex = viableRoutes[random.Next(viableRoutes.Count)];
-            (Customer cust, double decr) = routes[routeIndex].RandomCust();
+            (Customer cust, double decr,int i) = routes[routeIndex].RandomCust();
 
 
             double penalty = 0;
@@ -208,11 +208,12 @@ namespace SA_ILP
             if (viableRoutes.Count == 0)
                 return (double.MinValue, null);
             var routeIndex = viableRoutes[random.Next(viableRoutes.Count)];
-            (Customer cust, double decr) = routes[routeIndex].RandomCust();
+            (Customer cust, double decr,_) = routes[routeIndex].RandomCust();
 
             Route bestRoute = null;
             double bestImp = double.MinValue;
             int bestPos = -1;
+            double bestDecr = double.MinValue, bestIncr = double.MaxValue;
 
             for (int i = 0; i < routes.Count; i++)
             {
@@ -225,6 +226,8 @@ namespace SA_ILP
 
                 if (decr - increase > bestImp)
                 {
+                    bestDecr = decr;
+                    bestIncr = increase;
                     bestImp = decr - increase;
                     bestPos = pos;
                     bestRoute = routes[i];
@@ -234,6 +237,8 @@ namespace SA_ILP
             if (bestRoute != null)
                 return (bestImp, () =>
                 {
+                    double decr = bestDecr;
+                    double incr = bestIncr;
                     routes[routeIndex].RemoveCust(cust);
                     bestRoute.InsertCust(cust, bestPos);
                 }
@@ -275,15 +280,32 @@ namespace SA_ILP
                 pos = 1;
             }
 
-            (cust1,  decr1) = routes[src].RandomCust();
+            (cust1,  decr1,int i) = routes[src].RandomCust();
 
+            //if (src == dest && i + 1 == pos)
+            //    Console.WriteLine("Wut");
 
-            if (cust1 != null && cust1 != cust2)
+            if (cust1 != null && cust1 != cust2 && pos != i+1)
             {
-                (bool possible, _, double objectiveIncr) = routes[dest].CustPossibleAtPos(cust1, pos);
+                bool possible; double objectiveIncr;
+                if(src == dest)
+                    (possible, _, objectiveIncr) = routes[dest].CustPossibleAtPos(cust1, pos,ignore:i);
+                else
+                    (possible, _, objectiveIncr) = routes[dest].CustPossibleAtPos(cust1, pos);
+
+
+                double imp;
+                if (src == dest)
+                    //Taking into account that the moved customer is counted already in the score for possible at pos
+                    imp = -objectiveIncr;
+                else imp = decr1 - objectiveIncr;
 
                 if (possible)
-                    return (decr1 - objectiveIncr, () => {
+                    return (imp, () => {
+
+                        if (src == dest && i < pos)
+                            pos--;
+                        
                         routes[src].RemoveCust(cust1);
                         routes[dest].InsertCust(cust1, pos);
                     }
@@ -299,7 +321,7 @@ namespace SA_ILP
             int bestDest = -1, bestSrc = -1, bestPos = -1;
             double bestImp = double.MinValue;
             Customer bestCust = null;
-
+            double bestDecr = double.MinValue, bestIncr = double.MaxValue;
 
             //viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
             var numRoutes = viableRoutes.Count;
@@ -316,7 +338,7 @@ namespace SA_ILP
                 if (dest >= src)
                     dest += 1;
 
-                (Customer? cust, double decrease) = routes[src].RandomCust();
+                (Customer? cust, double decrease,_) = routes[src].RandomCust();
                 if (cust != null)
                 {
                     (var pos, double increase) = routes[dest].BestPossibleInsert(cust);
@@ -325,6 +347,9 @@ namespace SA_ILP
                     double imp = decrease - increase;
                     if (imp > bestImp)
                     {
+                        bestDecr = decrease;
+                        bestIncr = increase;
+
                         bestImp = imp;
                         bestDest = dest;
                         bestSrc = src;
@@ -337,6 +362,10 @@ namespace SA_ILP
             if (bestDest != -1)
                 return (bestImp, () =>
                 {
+
+                    double decr = bestDecr;
+                    double incr = bestIncr;
+
                     routes[bestSrc].RemoveCust(bestCust);
                     routes[bestDest].InsertCust(bestCust, bestPos);
                 }

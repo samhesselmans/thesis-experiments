@@ -15,22 +15,27 @@ namespace SA_ILP
         Random random;
         List<Operator> operators;
         List<double> weights;
-
+        List<String> labels;
         List<double> threshHolds;
-        
+        private int last = -1;
+
+        public String LastOperator { get; private set; }
         public OperatorSelector(Random random)
         {
             this.random = random;
             operators = new List<Operator>();
             weights = new List<double>();
             threshHolds = new List<double>();
+            labels = new List<string>();
+            LastOperator = "none";
         }
 
 
-        public void Add(Operator op, double weight)
+        public void Add(Operator op, double weight, String label = "unnamed-operator")
         {
             operators.Add(op);
             weights.Add(weight);
+            labels.Add(label);
 
             threshHolds = new List<double>();
             double totalWeight = weights.Sum();
@@ -43,6 +48,15 @@ namespace SA_ILP
             }
 
         }
+
+
+        //public string Last()
+        //{
+        //    if (last == -1)
+        //        return "none";
+        //    else
+        //        return labels[last];
+        //}
 
         public void Add(List<Operator>operators,List<double> weights)
         {
@@ -59,7 +73,10 @@ namespace SA_ILP
             for(int i=0; i< threshHolds.Count; i++)
             {
                 if (p <= threshHolds[i])
+                {
+                    LastOperator = labels[i];
                     return operators[i];
+                }
             }
 
             throw new Exception("Threshold error");

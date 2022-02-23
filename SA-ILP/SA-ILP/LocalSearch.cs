@@ -58,13 +58,13 @@ namespace SA_ILP
             random = new Random(seed);
             OS = new OperatorSelector(random);
 
-            OS.Add(Operators.AddRandomRemovedCustomer, 1);
-            OS.Add(Operators.RemoveRandomCustomer, 1);
-            OS.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomCustomer(x, y, z), 1);
-            OS.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1);
-            OS.Add((x, y, z, w, v) => Operators.MoveRandomCustomer(x, y, z), 1);
-            OS.Add((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1);
-            OS.Add((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1);
+            //OS.Add(Operators.AddRandomRemovedCustomer, 1,"add");
+           //OS.Add(Operators.RemoveRandomCustomer, 1,"remove");
+            OS.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomCustomer(x, y, z), 1,"move");
+            OS.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1,"move_to_best");
+            OS.Add((x, y, z, w, v) => Operators.MoveRandomCustomer(x, y, z), 1,"move_to_random_route");
+            OS.Add((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1,"swap");
+            //OS.Add((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1,"reverse");
         }
         private void StupidShuffle(List<Customer> customers, double timesShuffle = 1)
         {
@@ -242,7 +242,7 @@ namespace SA_ILP
             int iteration = 0;
             for (; iteration < numInterations && timer.ElapsedMilliseconds <= timeLimit; iteration++)
             {
-                double p = random.NextDouble();
+                //double p = random.NextDouble();
                 double imp = 0;
                 Action? act = null;
                 var nextOperator = OS.Next();
@@ -255,11 +255,12 @@ namespace SA_ILP
                     //Accept all improvements
                     if (imp > 0)
                     {
-                        //double expectedVal = CalcTotalDistance(routes, removed, temp) - imp;
-                        //var beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
+                        double expectedVal = Solver.CalcTotalDistance(routes, removed, Temperature) - imp;
+                        var beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
                         act();
-                        //if (Math.Round(CalcTotalDistance(routes, removed, temp), 6) != Math.Round(expectedVal, 6))
-                        //    Console.WriteLine($"dit gaat mis expected {expectedVal} not equal to {CalcTotalDistance(routes, removed, temp)}, P: {p}");
+                        if (Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6) != Math.Round(expectedVal, 6))
+                            Solver.ErrorPrint($"{id}: ERROR expected {expectedVal} not equal to {Solver.CalcTotalDistance(routes, removed, Temperature)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, Temperature)} , OP: {OS.LastOperator}");
+                        //Console.WriteLine($"dit gaat mis expected {expectedVal} not equal to {Solver.CalcTotalDistance(routes, removed, Temperature)}, OP: {OS.LastOperator}");
 
                         viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                         //Console.WriteLine(p);
@@ -306,13 +307,13 @@ namespace SA_ILP
                             //Worse solution accepted
                             amtWorse += 1;
 
-                            //double expectedVal = CalcTotalDistance(routes,removed,temp) - imp;
-                            //var beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
+                            double expectedVal = Solver.CalcTotalDistance(routes, removed, Temperature) - imp;
+                            var beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
                             act();
                             //Console.WriteLine(p);
                             //routes.ForEach(route => route.CheckRouteValidity());
-                            //if (Math.Round(CalcTotalDistance(routes,removed,temp), 6) != Math.Round(expectedVal, 6))
-                            //    Console.WriteLine($"dit gaat mis expected {expectedVal} not equal to {CalcTotalDistance(routes,removed,temp)}, P: {p}");
+                            if (Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6) != Math.Round(expectedVal, 6))
+                                Solver.ErrorPrint($"{id}: ERROR expected {expectedVal} not equal to {Solver.CalcTotalDistance(routes, removed, Temperature)} with imp: {imp}. Diff:{expectedVal- Solver.CalcTotalDistance(routes, removed, Temperature)} , OP: {OS.LastOperator}");
 
 
                             viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
@@ -328,16 +329,16 @@ namespace SA_ILP
                 {
                     Temperature *= Alpha;
 
-                    //routes.ForEach(x => x.Temperature = Temperature);
+                    routes.ForEach(x => x.ResetCache());
                     //TOD: Seperate penalty calculation for optimization
                     currentValue = Solver.CalcTotalDistance(routes, removed, Temperature);
                 }
-                if (iteration - bestImprovedIteration > 1000000 * (Math.Pow(numRestarts * 3 + 1, 2)) && Temperature < 0.03)
+                if (iteration - bestImprovedIteration > 1000000 && Temperature < 0.03)
                 {
                     numRestarts += 1;
                     //Restart
-                    Temperature = 30;
-                    //routes.ForEach(x => x.Temperature = Temperature);
+                    Temperature = 10;
+                    routes.ForEach(x => x.ResetCache());
                     routes = BestSolution.ConvertAll(i => i.CreateDeepCopy());
                     viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                     removed = new List<Customer>();

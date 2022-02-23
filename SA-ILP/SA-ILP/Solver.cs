@@ -219,12 +219,19 @@ namespace SA_ILP
             return value;
         }
 
-        public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal)> SolveSolomonInstanceAsync(string fileName, int numThreads = 1, int numIterations = 3000000)
+        public static void ErrorPrint(string toPrint)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine(toPrint);
+            Console.ForegroundColor = ConsoleColor.White;
+        }
+
+        public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal)> SolveSolomonInstanceAsync(string fileName, int numThreads = 1, int numIterations = 3000000,int timeLimit = 100000)
         {
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
             var distanceMatrix = CalculateDistanceMatrix(customers);
 
-            (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads, numIterations,LocalSearchConfigs.VRPTW,timeLimit:100000);
+            (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads, numIterations,LocalSearchConfigs.VRPTW,timeLimit: timeLimit);
             bool failed = SolomonParser.CheckSolomonSolution(fileName, ilpSol, ilpVal);
             return (failed, ilpSol, ilpVal, ilpTime, lsTime, lsVal);
         }

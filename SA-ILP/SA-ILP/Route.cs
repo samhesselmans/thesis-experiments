@@ -70,6 +70,11 @@ namespace SA_ILP
         }
 
 
+        public override string ToString()
+        {
+            return $"({String.Join(',', CreateIdList())})";
+        }
+
         //private void Create1DMAtrix()
         //{
         //    for(int i=0; i< numX;i++)
@@ -188,7 +193,7 @@ namespace SA_ILP
             return val;
         }
 
-        private void ResetCache()
+        public void ResetCache()
         {
             BestCustomerPos = new Dictionary<int, (int,double)>();
             CustPossibleAtPosCache = new Dictionary<(int, int), (bool, bool, double)>();
@@ -298,11 +303,14 @@ namespace SA_ILP
             return (true, totalTravelTime - objective);
         }
 
-        public (bool possible, bool possibleInLaterPosition, double objectiveIncrease) CustPossibleAtPos(Customer cust, int pos, int skip = 0)
+        public (bool possible, bool possibleInLaterPosition, double objectiveIncrease) CustPossibleAtPos(Customer cust, int pos, int skip = 0, int ignore = -1)
         {
 
             //if (CustPossibleAtPosCache.ContainsKey((cust.Id, pos)))
             //    return CustPossibleAtPosCache[(cust.Id, pos)];
+
+            if (skip > 0 && ignore != -1)
+                throw new Exception("Cant use ignore and skip together");
 
             double totalTravelTime = 0;
             double load = used_capacity + cust.Demand;
@@ -312,6 +320,13 @@ namespace SA_ILP
             {
                 load -= route[pos + i].Demand;
             }
+
+            if(ignore != -1)
+                load -= route[ignore].Demand;
+
+            ////Handle the ignore if it is right after the skipped
+            //if (pos + skip == ignore)
+            //    skip += 1;
 
             //Need to check capacity, otherwise loadlevel claculation fails
             if (load > max_capacity)
@@ -323,6 +338,30 @@ namespace SA_ILP
             double arrivalTime = 0;
             for (int i = 0; i < route.Count; i++)
             {
+                //Customer currentCust;
+                //Customer? nextCust;
+                //if (i == ignore)
+                //    i += 1;
+                //if (i == pos)
+                //{
+                //    currentCust = cust;
+                //    nextCust = route[pos + skip];
+                //    i += skip;
+                //}
+                //else
+                //{
+                //    currentCust = route[i];
+                //    if (i == pos - 1)
+                //        nextCust = cust;
+                //    else if (i < route.Count)
+                //        nextCust = route[i + 1];
+                //    else
+                //        nextCust = null;
+                //}
+                
+
+
+
                 //Arrived at the insert position. Include the new Customer into the check
                 if (i == pos)
                 {
@@ -355,8 +394,10 @@ namespace SA_ILP
                     arrivalTime += time + cust.ServiceTime;
                     i += skip;
                 }
-                //else
-                //{
+
+                if (i == ignore)
+                    i += 1;
+
                 if (arrivalTime > route[i].TWEnd)
                     //If we dont meet the timewindow on the route and we have not visited the new customer, we are late because of the additional load. The customer can never fit in this route
                     if (i < pos)
@@ -396,6 +437,8 @@ namespace SA_ILP
                     //If the current customer is the customer before the potential position of the new customer update the time accordingly
                     if (i == pos - 1)
                         time = CustomerDist(route[i], cust, load);
+                    else if (i == ignore - 1)
+                        time = CustomerDist(route[i], route[i+2], load);
                     else
                         time = CustomerDist(route[i], route[i + 1], load);
                     totalTravelTime += time;
@@ -533,10 +576,10 @@ namespace SA_ILP
             return (true, objective - newCost, newArrivalTimes);
         }
 
-        public (Customer? toRemove, double objectiveDecrease) RandomCust()
+        public (Customer? toRemove, double objectiveDecrease,int index) RandomCust()
         {
             if (route.Count == 2)
-                return (null, double.MaxValue);
+                return (null, double.MaxValue,-1);
 
             var i = random.Next(1, route.Count - 1);
             double newCost = 0;
@@ -580,7 +623,10 @@ namespace SA_ILP
             if (objective == -1)
                 objective = CalcObjective();
 
-            return (route[i], objective - newCost);
+            if (route.Count == 3 && newCost != 0)
+                Solver.ErrorPrint("FOUT");
+
+            return (route[i], objective - newCost,i);
         }
 
         public (Customer?, int) RandomCustIndex()
