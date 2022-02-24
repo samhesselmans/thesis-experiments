@@ -222,7 +222,8 @@ namespace SA_ILP
                     if (newArriveTime + dist < c.TWStart)
                     {
                         ViolatesLowerTimeWindow = true;
-                        newArriveTime = c.TWStart;
+                        if(parent.AdjustEarlyArrivalToTWStart)
+                            newArriveTime = c.TWStart;
                     }
                     else
                         newArriveTime += dist;
@@ -280,8 +281,8 @@ namespace SA_ILP
                 {
                     totalTravelTime += CalculateEarlyPenaltyTerm(arrival_time, currentCust.TWStart);
 
-                    //Wil ik dit nog doen bij de violation van een timewindow? Misschien moet ik alleen de penalty toepassen en niet de arrivaltime aanpassen
-                    arrival_time = currentCust.TWStart;
+                    if(parent.AdjustEarlyArrivalToTWStart)
+                        arrival_time = currentCust.TWStart;
                 }
                 var dist = CustomerDist(currentCust, nextCust, load);
                 load -= nextCust.Demand;
@@ -296,21 +297,22 @@ namespace SA_ILP
 
             }
 
-            double objective = CachedObjective;
-            if(objective == -1)
-                objective = CalcObjective();
+            //double objective = CachedObjective;
+            //if(objective == -1)
+            //    objective = CalcObjective();
 
-            return (true, totalTravelTime - objective);
+            return (true, totalTravelTime - this.Score);
         }
 
         public (bool possible, bool possibleInLaterPosition, double objectiveIncrease) CustPossibleAtPos(Customer cust, int pos, int skip = 0, int ignore = -1)
         {
+            //Possible optimization: Cache minimal weight required for a load level change in the route. If the new load is less than that we only have to check from the start position
 
             //if (CustPossibleAtPosCache.ContainsKey((cust.Id, pos)))
             //    return CustPossibleAtPosCache[(cust.Id, pos)];
 
-            if (skip > 0 && ignore != -1)
-                throw new Exception("Cant use ignore and skip together");
+            //if (skip > 0 && ignore != -1)
+            //    throw new Exception("Cant use ignore and skip together");
 
             double totalTravelTime = 0;
             double load = used_capacity + cust.Demand;
@@ -338,29 +340,6 @@ namespace SA_ILP
             double arrivalTime = 0;
             for (int i = 0; i < route.Count; i++)
             {
-                //Customer currentCust;
-                //Customer? nextCust;
-                //if (i == ignore)
-                //    i += 1;
-                //if (i == pos)
-                //{
-                //    currentCust = cust;
-                //    nextCust = route[pos + skip];
-                //    i += skip;
-                //}
-                //else
-                //{
-                //    currentCust = route[i];
-                //    if (i == pos - 1)
-                //        nextCust = cust;
-                //    else if (i < route.Count)
-                //        nextCust = route[i + 1];
-                //    else
-                //        nextCust = null;
-                //}
-                
-
-
 
                 //Arrived at the insert position. Include the new Customer into the check
                 if (i == pos)
@@ -380,7 +359,8 @@ namespace SA_ILP
                     if (arrivalTime < cust.TWStart)
                     {
                         totalTravelTime += CalculateEarlyPenaltyTerm(arrivalTime,cust.TWStart);//cust.TWStart - arrivalTime;
-                        arrivalTime = cust.TWStart;
+                        if(parent.AdjustEarlyArrivalToTWStart)
+                            arrivalTime = cust.TWStart;
 
                         //For testing not allowing wait
                         //return (false,true,double.MinValue);
@@ -422,7 +402,8 @@ namespace SA_ILP
                 if (arrivalTime < route[i].TWStart)
                 {
                     totalTravelTime += CalculateEarlyPenaltyTerm(arrivalTime,route[i].TWStart);//route[i].TWStart - arrivalTime;
-                    arrivalTime = route[i].TWStart;
+                    if(parent.AdjustEarlyArrivalToTWStart)
+                        arrivalTime = route[i].TWStart;
 
                     //For testing not allowing wait
                     //return (false, true, double.MinValue);
@@ -447,12 +428,12 @@ namespace SA_ILP
                 }
                 //}
             }
-            double objective = CachedObjective;
-            if (objective == -1)
-                objective = CalcObjective();
+            //double objective = CachedObjective;
+            //if (objective == -1)
+            //    objective = CalcObjective();
 
             //CustPossibleAtPosCache[(cust.Id, pos)] = (true, true, totalTravelTime - objective);
-            return (true, true, totalTravelTime - objective);
+            return (true, true, totalTravelTime - this.Score);
 
         }
 
@@ -503,13 +484,65 @@ namespace SA_ILP
             ResetCache();
         }
 
+        //Using the function is quite a bit slower than using specifically made functions, but is definatly a possibility. 
+        //It can therefore be used to test new operators for example
+        public (bool possible,double improvement,List<double> newArrivalTimes) NewRoutePossible(List<Customer> newRoute,double changedCapacity)
+        {
+            double load = used_capacity + changedCapacity;
+            double arrivalTime = 0;
+            double newCost = 0;
+            List<double> newArrivalTimes = new List<double>(newRoute.Count) { 0};
+
+            for(int i = 0; i < newRoute.Count-1; i++)
+            {
+                var dist = CustomerDist(newRoute[i], newRoute[i + 1], load);
+                arrivalTime += dist + newRoute[i].ServiceTime;
+                newCost += dist;
+                if(arrivalTime < newRoute[i + 1].TWStart)
+                {
+                    if (parent.AllowEarlyArrivalDuringSearch)
+                    {
+                        //TODO: might want to make this an option in the configuration
+                        newCost += CalculateEarlyPenaltyTerm(arrivalTime, newRoute[i + 1].TWStart);
+                        if (parent.AdjustEarlyArrivalToTWStart)
+                            arrivalTime = newRoute[i+1].TWStart;
+                    }
+                    else
+                        return (false, double.MinValue, newArrivalTimes);
+
+
+                }
+                else if(arrivalTime > newRoute[i+1].TWEnd)
+                {
+                    if (parent.AllowLateArrivalDuringSearch)
+                    {
+                        newCost += CalculateLatePenaltyTerm(arrivalTime, newRoute[i+1].TWEnd);
+                    }
+                    else
+                        return(false, double.MinValue,newArrivalTimes);
+                }
+
+                load -= newRoute[i + 1].Demand;
+                newArrivalTimes.Add(arrivalTime);
+
+            }
+            return (true,this.Score - newCost,newArrivalTimes);
+        }
+
+        public void SetNewRoute(List<Customer> customers, List<double> arrivalTimes)
+        {
+            this.route = customers;
+            this.arrival_times = arrivalTimes;
+            ResetCache();
+        }
+
         public (bool possible, double improvement,List<double> newArrivalTimes) CanReverseSubRoute(int index1, int index2)
         {
             double load = used_capacity;
             double arrival_time = 0;
             double newCost = 0;
             //int[] newArrivalTimes = new int[arrival_times.Count];
-            List<double> newArrivalTimes = new List<double>() { 0};
+            List<double> newArrivalTimes = new List<double>(route.Count) { 0};
             //Check if the action would be possible and calculate the new objective score
             for(int i=0; i<route.Count - 1; i++)
             {
@@ -552,7 +585,8 @@ namespace SA_ILP
                 if (arrival_time < nextCust.TWStart)
                 {
                     newCost += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);
-                    arrival_time = nextCust.TWStart;
+                    if(parent.AdjustEarlyArrivalToTWStart)
+                        arrival_time = nextCust.TWStart;
                 }
 
                 newArrivalTimes.Add(arrival_time);
@@ -569,11 +603,11 @@ namespace SA_ILP
 
             }
 
-            double objective = CachedObjective;
-            if (objective == -1)
-                objective = CalcObjective();
+            //double objective = CachedObjective;
+            //if (objective == -1)
+            //    objective = CalcObjective();
 
-            return (true, objective - newCost, newArrivalTimes);
+            return (true, this.Score - newCost, newArrivalTimes);
         }
 
         public (Customer? toRemove, double objectiveDecrease,int index) RandomCust()
@@ -612,21 +646,22 @@ namespace SA_ILP
                 {
                     newCost += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);//nextCust.TWStart- arrival_time;
                     //newCost += penalty;
-                    arrival_time = nextCust.TWStart;
+                    if(parent.AdjustEarlyArrivalToTWStart)
+                        arrival_time = nextCust.TWStart;
                 }
                 if(arrival_time > nextCust.TWEnd)
                         newCost += CalculateLatePenaltyTerm(arrival_time,nextCust.TWEnd);
                 load -= nextCust.Demand;
             }
 
-            double objective = CachedObjective;
-            if (objective == -1)
-                objective = CalcObjective();
+            //double objective = CachedObjective;
+            //if (objective == -1)
+            //    objective = CalcObjective();
 
             if (route.Count == 3 && newCost != 0)
                 Solver.ErrorPrint("FOUT");
 
-            return (route[i], objective - newCost,i);
+            return (route[i], this.Score - newCost,i);
         }
 
         public (Customer?, int) RandomCustIndex()
@@ -656,7 +691,8 @@ namespace SA_ILP
                 {
                     if (newArrivalTime < cust.TWStart)
                     {
-                        newArrivalTime = cust.TWStart;
+                        if(parent.AdjustEarlyArrivalToTWStart)
+                            newArrivalTime = cust.TWStart;
                         ViolatesLowerTimeWindow = true;
                     }
                     else if (newArrivalTime > cust.TWEnd)
@@ -675,7 +711,8 @@ namespace SA_ILP
                 //{
                 if (newArrivalTime < route[i].TWStart)
                 {
-                    newArrivalTime = route[i].TWStart;
+                    if(parent.AdjustEarlyArrivalToTWStart)
+                        newArrivalTime = route[i].TWStart;
                     ViolatesLowerTimeWindow = true;
                 }
                 else if (newArrivalTime > route[i].TWEnd)
@@ -739,7 +776,8 @@ namespace SA_ILP
 
                 if(arrivalTime < route[i+1].TWStart)
                 {
-                    arrivalTime = route[i+1].TWStart;
+                    if(parent.AdjustEarlyArrivalToTWStart)
+                        arrivalTime = route[i+1].TWStart;
                     //Do something with penalty?
                 }
 

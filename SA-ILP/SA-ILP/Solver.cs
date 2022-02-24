@@ -78,6 +78,7 @@ namespace SA_ILP
         Random random;
         public static double CalcTotalDistance(List<Route> routes, List<Customer> removed, double temp)
         {
+            //This expclitly does not use the Score property of a route to force recalculation. This way bugs might be caught
             return routes.Sum(x => x.CalcObjective()) + Math.Pow(removed.Count, Solver.BaseRemovedCustomerPenaltyPow) * (Solver.BaseRemovedCustomerPenalty / temp);
         }
 
@@ -246,7 +247,7 @@ namespace SA_ILP
             {
                 var id = i;
                 var ls = new LocalSearch(config,random.Next());
-                tasks.Add(Task.Run(() => { return ls.LocalSearchInstance(id, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, numInterations: numIterations, timeLimit: timeLimit); }));
+                tasks.Add(Task.Run(() => { return ls.LocalSearchInstance(id, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, numInterations: numIterations, timeLimit: timeLimit,printExtendedInfo:false); }));
 
 
             }

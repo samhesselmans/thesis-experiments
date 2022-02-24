@@ -9,6 +9,79 @@ namespace SA_ILP
     static class Operators
     {
 
+        private static bool IsOrdered(List<int> list)
+        {
+            int prev = -1;
+            foreach (int i in list)
+                if (prev > i)
+                    return false;
+                else
+                    prev = i;
+            return true;
+        }
+        public static (double improvement,Action? performOperator) ScrambleSubRoute(List<Route> routes, List<int> viableRoutes,Random random)
+        {
+            //Operator cant be performed if all routes are empty
+            if (viableRoutes.Count == 0)
+                return (double.MinValue, null);
+
+            int routeIndex = viableRoutes[random.Next(viableRoutes.Count)];
+
+            (_, int index1) = routes[routeIndex].RandomCustIndex();
+            (_, int index2) = routes[routeIndex].RandomCustIndex();
+
+
+            if(index1 != index2)
+            {
+                //Swap the variables
+                if(index2 < index1)
+                {
+                    int temp = index1;
+                    index1 = index2;
+                    index2 = temp;
+                }
+
+                List<int> newIndexes = new List<int>();
+                for(int i = index1;i <= index2; i++)
+                {
+                    newIndexes.Add(i);
+                }
+
+                //Might take a lot of time?
+                while(IsOrdered(newIndexes))
+                    newIndexes = newIndexes.OrderBy(x=>random.Next()).ToList();
+                
+
+
+                List<Customer> newRoute = new List<Customer>(routes[routeIndex].route.Count);
+
+                for(int i =0; i< routes[routeIndex].route.Count; i++)
+                {
+                    Customer cust;
+                    if(i >= index1 && i <= index2)
+                        cust = routes[routeIndex].route[newIndexes[i-index1]];
+                    else
+                        cust = routes[routeIndex].route[i];
+
+                    newRoute.Add(cust);
+                }
+
+                (bool possible, double imp, List<double> newArrivalTimes) = routes[routeIndex].NewRoutePossible(newRoute, 0);
+
+                if (possible)
+                    return (imp, () =>
+                    {
+                        routes[routeIndex].SetNewRoute(newRoute, newArrivalTimes);
+                    }
+                    );
+
+
+            }
+            return (double.MinValue, null);
+            //throw new NotImplementedException();
+
+
+        }
         public static (double, Action?) ReverseOperator(List<Route> routes, List<int> viableRoutes, Random random)
         {
             if (viableRoutes.Count == 0)
@@ -29,10 +102,33 @@ namespace SA_ILP
                     index1 = temp;
                 }
 
+                //List<Customer> newRoute = new List<Customer>(routes[routeIndex].route.Count);
+
+                //for(int i =0; i< routes[routeIndex].route.Count; i++)
+                //{
+                //    Customer currentCust;
+                //    if (i >= index1 && i <= index2)
+                //    {
+                //        //In the to be reversed subroute, select in reversed order
+                //        currentCust = routes[routeIndex].route[index2 - i + index1];
+
+
+                //    }
+                //    else
+                //    {
+                //        currentCust = routes[routeIndex].route[i];
+                //    }
+                //    newRoute.Add(currentCust);
+                //}
+                //(bool posssible, double imp, List<double> arrivalTimes) = routes[routeIndex].NewRoutePossible(newRoute, 0);
+                //if (posssible)
+                //    return (imp, () => { routes[routeIndex].SetNewRoute(newRoute, arrivalTimes); }
+                //    );
                 (bool possible, double imp, List<double> arrivalTimes) = routes[routeIndex].CanReverseSubRoute(index1, index2);
 
                 if (possible)
-                    return (imp, () => {
+                    return (imp, () =>
+                    {
                         routes[routeIndex].ReverseSubRoute(index1, index2, arrivalTimes);
                     }
                     );
@@ -318,6 +414,10 @@ namespace SA_ILP
 
         public static (double, Action?) MoveRandomCustomer(List<Route> routes, List<int> viableRoutes,Random random)
         {
+
+            if(viableRoutes.Count == 0)
+                return(double.MinValue, null);
+
             int bestDest = -1, bestSrc = -1, bestPos = -1;
             double bestImp = double.MinValue;
             Customer bestCust = null;

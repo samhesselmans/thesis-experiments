@@ -19,6 +19,8 @@ namespace SA_ILP
         List<double> threshHolds;
         private int last = -1;
 
+        public List<String> OperatorList => labels.ConvertAll(x => x);
+
         public String LastOperator { get; private set; }
         public OperatorSelector(Random random)
         {
