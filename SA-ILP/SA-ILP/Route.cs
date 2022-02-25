@@ -12,7 +12,8 @@ namespace SA_ILP
         public List<double> arrival_times;
         public double[,,] objective_matrix;
         public double[] objeciveMatrix1d;
-        
+
+        double startTime = 0;
         
         public int numLoadLevels;
         public int numX;
@@ -85,7 +86,7 @@ namespace SA_ILP
         //            }
         //}
 
-        public  Route(List<Customer> route, List<double> arrivalTimes, double[,,] distanceMatrix, double usedCapcity, double maxCapacity,int seed,LocalSearch parent)
+        public  Route(List<Customer> route, List<double> arrivalTimes, double[,,] distanceMatrix, double usedCapcity, double maxCapacity,int seed,LocalSearch parent,double startTime)
         {
             this.route = route;
             this.arrival_times = arrivalTimes;
@@ -99,6 +100,7 @@ namespace SA_ILP
             this.time_done = 0;
             used_capacity = usedCapcity;
             this.max_capacity = maxCapacity;
+            this.startTime = startTime;
             random = new Random(seed);
             //BestCustomerPos = new Dictionary<int, (int, double)>();
             ResetCache();
@@ -165,7 +167,7 @@ namespace SA_ILP
                 var actualArrivalTime = arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime;
                 //Adding penalty for violating timewindow start
                 if (actualArrivalTime  < route[i + 1].TWStart)
-                    total_dist += CalculateEarlyPenaltyTerm(actualArrivalTime, route[i + 1].TWStart);//route[i + 1].TWStart - (arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime);
+                    total_dist += CalculateEarlyPenaltyTerm(actualArrivalTime, route[i + 1].TWStart);
                 if (actualArrivalTime > route[i + 1].TWEnd)
                     total_dist += CalculateLatePenaltyTerm(actualArrivalTime, route[i + 1].TWEnd);
                 
@@ -206,7 +208,8 @@ namespace SA_ILP
             ViolatesUpperTimeWindow = false;
             ViolatesLowerTimeWindow = false;
 
-
+            startTime = 0;
+            arrival_times[0] = 0;
             int index = -1;
             Customer lastCust = null;
             Customer previous_cust = route[0];
@@ -219,14 +222,24 @@ namespace SA_ILP
                 {
                     var dist = CustomerDist(previous_cust, c, load);
                     load -= c.Demand;
-                    if (newArriveTime + dist < c.TWStart)
+                    newArriveTime += dist;
+                    if (newArriveTime < c.TWStart)
                     {
-                        ViolatesLowerTimeWindow = true;
-                        if(parent.AdjustEarlyArrivalToTWStart)
+                        if (i != 1)
+                        {
+                            ViolatesLowerTimeWindow = true;
+                            if (parent.AdjustEarlyArrivalToTWStart)
+                                newArriveTime = c.TWStart;
+                        }
+                        else
+                        {
+                            startTime = c.TWStart - newArriveTime;
+                            arrival_times[0] = startTime;
                             newArriveTime = c.TWStart;
+                        }
                     }
-                    else
-                        newArriveTime += dist;
+                    
+
 
                     if (newArriveTime > c.TWEnd)
                         ViolatesUpperTimeWindow = true;
@@ -279,10 +292,17 @@ namespace SA_ILP
 
                 if(arrival_time < currentCust.TWStart)
                 {
-                    totalTravelTime += CalculateEarlyPenaltyTerm(arrival_time, currentCust.TWStart);
+                    if (i != 1)
+                    {
+                        totalTravelTime += CalculateEarlyPenaltyTerm(arrival_time, currentCust.TWStart);
 
-                    if(parent.AdjustEarlyArrivalToTWStart)
+                        if (parent.AdjustEarlyArrivalToTWStart)
+                            arrival_time = currentCust.TWStart;
+                    }
+                    else
+                    {
                         arrival_time = currentCust.TWStart;
+                    }
                 }
                 var dist = CustomerDist(currentCust, nextCust, load);
                 load -= nextCust.Demand;
@@ -306,7 +326,7 @@ namespace SA_ILP
 
         public (bool possible, bool possibleInLaterPosition, double objectiveIncrease) CustPossibleAtPos(Customer cust, int pos, int skip = 0, int ignore = -1)
         {
-            //Possible optimization: Cache minimal weight required for a load level change in the route. If the new load is less than that we only have to check from the start position
+            //Possible optimization: Cache minimal weight required for a load level change in the route. If the new load is less than that we only have to check from pos
 
             //if (CustPossibleAtPosCache.ContainsKey((cust.Id, pos)))
             //    return CustPossibleAtPosCache[(cust.Id, pos)];
@@ -337,8 +357,10 @@ namespace SA_ILP
                 return (false, false, double.MinValue);
             }
 
+            //int actualIndex = 0;
+
             double arrivalTime = 0;
-            for (int i = 0; i < route.Count; i++)
+            for (int i = 0,actualIndex=0; i < route.Count; i++,actualIndex ++)
             {
 
                 //Arrived at the insert position. Include the new Customer into the check
@@ -354,13 +376,20 @@ namespace SA_ILP
 
 
                     }
-
+                    
                     //Wait for the timewindow start
-                    if (arrivalTime < cust.TWStart)
+                    else if (arrivalTime < cust.TWStart)
                     {
-                        totalTravelTime += CalculateEarlyPenaltyTerm(arrivalTime,cust.TWStart);//cust.TWStart - arrivalTime;
-                        if(parent.AdjustEarlyArrivalToTWStart)
+                        if (actualIndex != 1)
+                        {
+                            totalTravelTime += CalculateEarlyPenaltyTerm(arrivalTime, cust.TWStart);//cust.TWStart - arrivalTime;
+                            if (parent.AdjustEarlyArrivalToTWStart)
+                                arrivalTime = cust.TWStart;
+                        }
+                        else
+                        {
                             arrivalTime = cust.TWStart;
+                        }
 
                         //For testing not allowing wait
                         //return (false,true,double.MinValue);
@@ -373,6 +402,9 @@ namespace SA_ILP
                     totalTravelTime += time;
                     arrivalTime += time + cust.ServiceTime;
                     i += skip;
+
+                    //We visited the cust so the index in the new route should be increased.
+                    actualIndex += 1;
                 }
 
                 if (i == ignore)
@@ -399,15 +431,18 @@ namespace SA_ILP
                     }
 
                 //Wait for the timewindow start
-                if (arrivalTime < route[i].TWStart)
+                else if (arrivalTime < route[i].TWStart)
                 {
-                    totalTravelTime += CalculateEarlyPenaltyTerm(arrivalTime,route[i].TWStart);//route[i].TWStart - arrivalTime;
-                    if(parent.AdjustEarlyArrivalToTWStart)
+                    if (actualIndex != 1)
+                    {
+                        totalTravelTime += CalculateEarlyPenaltyTerm(arrivalTime, route[i].TWStart);//route[i].TWStart - arrivalTime;
+                        if (parent.AdjustEarlyArrivalToTWStart)
+                            arrivalTime = route[i].TWStart;
+                    }
+                    else
+                    {
                         arrivalTime = route[i].TWStart;
-
-                    //For testing not allowing wait
-                    //return (false, true, double.MinValue);
-                    //totalTravelTime += penalty;
+                    }
 
                 }
                 load -= route[i].Demand;
@@ -500,15 +535,22 @@ namespace SA_ILP
                 newCost += dist;
                 if(arrivalTime < newRoute[i + 1].TWStart)
                 {
-                    if (parent.AllowEarlyArrivalDuringSearch)
+                    if (i != 1)
                     {
-                        //TODO: might want to make this an option in the configuration
-                        newCost += CalculateEarlyPenaltyTerm(arrivalTime, newRoute[i + 1].TWStart);
-                        if (parent.AdjustEarlyArrivalToTWStart)
-                            arrivalTime = newRoute[i+1].TWStart;
+                        if (parent.AllowEarlyArrivalDuringSearch)
+                        {
+                            //TODO: might want to make this an option in the configuration
+                            newCost += CalculateEarlyPenaltyTerm(arrivalTime, newRoute[i + 1].TWStart);
+                            if (parent.AdjustEarlyArrivalToTWStart)
+                                arrivalTime = newRoute[i + 1].TWStart;
+                        }
+                        else
+                            return (false, double.MinValue, newArrivalTimes);
                     }
                     else
-                        return (false, double.MinValue, newArrivalTimes);
+                    {
+                        arrivalTime = newRoute[i + 1].TWStart;
+                    }
 
 
                 }
@@ -584,9 +626,17 @@ namespace SA_ILP
 
                 if (arrival_time < nextCust.TWStart)
                 {
-                    newCost += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);
-                    if(parent.AdjustEarlyArrivalToTWStart)
+                    if (i != 1)
+                    {
+                        newCost += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);
+                        if (parent.AdjustEarlyArrivalToTWStart)
+                            arrival_time = nextCust.TWStart;
+                    }
+                    else
+                    {
+                        newArrivalTimes[0] = nextCust.TWStart - arrival_time;
                         arrival_time = nextCust.TWStart;
+                    }
                 }
 
                 newArrivalTimes.Add(arrival_time);
@@ -619,7 +669,8 @@ namespace SA_ILP
             double newCost = 0;
             double load = used_capacity - route[i].Demand;
             double arrival_time = 0;
-            for (int j = 0; j < route.Count - 1; j++)
+
+            for (int j = 0, actualIndex=0; j < route.Count - 1; j++,actualIndex++ )
             {
                 double time;
                 Customer nextCust;
@@ -627,6 +678,8 @@ namespace SA_ILP
                 //Skip the to be removed customer
                 if (i == j)
                 {
+                    //Skipping the removed customer should not interfere with the actual index
+                    actualIndex--;
                     continue;
                 }
 
@@ -644,12 +697,19 @@ namespace SA_ILP
                 arrival_time += cost + route[j].ServiceTime;
                 if (arrival_time < nextCust.TWStart)
                 {
-                    newCost += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);//nextCust.TWStart- arrival_time;
-                    //newCost += penalty;
-                    if(parent.AdjustEarlyArrivalToTWStart)
+                    if (actualIndex != 1)
+                    {
+                        newCost += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);//nextCust.TWStart- arrival_time;
+                                                                                             //newCost += penalty;
+                        if (parent.AdjustEarlyArrivalToTWStart)
+                            arrival_time = nextCust.TWStart;
+                    }
+                    else
+                    {
                         arrival_time = nextCust.TWStart;
+                    }
                 }
-                if(arrival_time > nextCust.TWEnd)
+                else if(arrival_time > nextCust.TWEnd)
                         newCost += CalculateLatePenaltyTerm(arrival_time,nextCust.TWEnd);
                 load -= nextCust.Demand;
             }
@@ -681,19 +741,29 @@ namespace SA_ILP
             double newArrivalTime = 0;// TArrivalNewCust + CustomerDist(route[pos], cust) + cust.ServiceTime;
             used_capacity += cust.Demand;
             double load = used_capacity;
+            startTime = 0;
             double newCustArrivalTime = 0;
             ViolatesLowerTimeWindow = false;
             ViolatesUpperTimeWindow  = false;
             
-            for (int i = 0; i < route.Count; i++)
+            for (int i = 0, actualIndex = 0; i < route.Count; i++,actualIndex++)
             {
                 if (i == pos)
                 {
                     if (newArrivalTime < cust.TWStart)
                     {
-                        if(parent.AdjustEarlyArrivalToTWStart)
+                        if (actualIndex != 1)
+                        {
+                            if (parent.AdjustEarlyArrivalToTWStart)
+                                newArrivalTime = cust.TWStart;
+                            ViolatesLowerTimeWindow = true;
+                        }
+                        else
+                        {
+                            this.startTime = cust.TWStart - newArrivalTime;
+                            arrival_times[0] = startTime;
                             newArrivalTime = cust.TWStart;
-                        ViolatesLowerTimeWindow = true;
+                        }
                     }
                     else if (newArrivalTime > cust.TWEnd)
                         ViolatesUpperTimeWindow = true;
@@ -702,6 +772,8 @@ namespace SA_ILP
                     load -= cust.Demand;
                     newArrivalTime += CustomerDist(cust, route[i], load) + cust.ServiceTime;
 
+                    //Take the new customer into account into the route length
+                    actualIndex++;
                     //if (newArrivalTime < route[i].TWStart)
                     //    newArrivalTime = route[i].TWStart;
 
@@ -711,9 +783,18 @@ namespace SA_ILP
                 //{
                 if (newArrivalTime < route[i].TWStart)
                 {
-                    if(parent.AdjustEarlyArrivalToTWStart)
+                    if (actualIndex != 1)
+                    {
+                        if (parent.AdjustEarlyArrivalToTWStart)
+                            newArrivalTime = route[i].TWStart;
+                        ViolatesLowerTimeWindow = true;
+                    }
+                    else
+                    {
+                        startTime = route[i].TWStart - newArrivalTime;
+                        arrival_times[0] = startTime;
                         newArrivalTime = route[i].TWStart;
-                    ViolatesLowerTimeWindow = true;
+                    }
                 }
                 else if (newArrivalTime > route[i].TWEnd)
                     ViolatesUpperTimeWindow = true;
@@ -756,8 +837,8 @@ namespace SA_ILP
         //Assumes starting time of planning horizon of 0 and that distance matrix is correct.
         public bool CheckRouteValidity()
         {
-            //TODO: update to use loadlevels
-            double arrivalTime = 0;
+            
+            double arrivalTime = startTime;
             bool failed = false;
             double usedCapacity = 0;
             double load = route.Sum(x=> x.Demand);
@@ -816,7 +897,7 @@ namespace SA_ILP
 
         public Route CreateDeepCopy()
         {
-            return new Route(route.ConvertAll(i => i), arrival_times.ConvertAll(i => i), objective_matrix, used_capacity, max_capacity,random.Next(),this.parent);
+            return new Route(route.ConvertAll(i => i), arrival_times.ConvertAll(i => i), objective_matrix, used_capacity, max_capacity,random.Next(),this.parent, startTime);
         }
 
         public List<int> CreateIdList()

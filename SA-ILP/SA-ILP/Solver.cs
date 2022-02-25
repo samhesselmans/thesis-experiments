@@ -183,6 +183,7 @@ namespace SA_ILP
                     load -= r.route[i + 1].Demand;
                     if (r.arrival_times[i] + dist + r.route[i].ServiceTime < r.route[i + 1].TWStart)
                     {
+                        Console.WriteLine($"Waiting for customer {r.route[i+1].Id}");
                         totalWaitingTime += r.route[i + 1].TWStart - (r.arrival_times[i] + dist + r.route[i].ServiceTime);
                         numViolations += 1;
                     }
@@ -199,6 +200,9 @@ namespace SA_ILP
             double[,,] matrix = CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
             var ls = new LocalSearch(LocalSearchConfigs.VRPLTT, random.Next());
             (var colums, var sol, var value) = ls.LocalSearchInstance(-1, "", customers.Count, bikeMaxMass - bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix, numInterations: numIterations, checkInitialSolution: true, timeLimit: timelimit, printExtendedInfo: true);
+            foreach (var route in sol)
+                Console.WriteLine(route);
+            
             double totalWaitingTime = 0;
             int numViolations = 0;
             foreach (Route r in sol)
@@ -210,6 +214,8 @@ namespace SA_ILP
                     load -= r.route[i + 1].Demand;
                     if (r.arrival_times[i] + dist + r.route[i].ServiceTime < r.route[i + 1].TWStart)
                     {
+                        Console.WriteLine($"Waiting for customer {r.route[i + 1].Id}");
+
                         totalWaitingTime += r.route[i + 1].TWStart - (r.arrival_times[i] + dist + r.route[i].ServiceTime);
                         numViolations += 1;
                     }

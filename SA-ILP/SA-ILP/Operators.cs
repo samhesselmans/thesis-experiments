@@ -412,7 +412,7 @@ namespace SA_ILP
 
         }
 
-        public static (double, Action?) MoveRandomCustomer(List<Route> routes, List<int> viableRoutes,Random random)
+        public static (double, Action?) MoveRandomCustomerToRandomRoute(List<Route> routes, List<int> viableRoutes,Random random)
         {
 
             if(viableRoutes.Count == 0)

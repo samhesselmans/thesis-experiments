@@ -39,6 +39,11 @@ namespace SA_ILP
 
         public bool AdjustEarlyArrivalToTWStart { get; private set; }
 
+        public bool CheckOperatorScores { get; private set; }
+
+        public bool SaveRoutesBeforeOperator { get; private set; }
+
+
         private Random random;
 
         private OperatorSelector OS;
@@ -58,6 +63,8 @@ namespace SA_ILP
             PenalizeLateArrival = config.PenalizeLateArrival;
             PenalizeEarlyArrival = config.PenalizeEarlyArrival;
             AdjustEarlyArrivalToTWStart = config.AdjustEarlyArrivalToTWStart;
+            CheckOperatorScores = config.CheckOperatorScores;
+            SaveRoutesBeforeOperator = config.SaveRoutesBeforeOperator;
             Alpha = config.Alpha;
             random = new Random(seed);
             OS = new OperatorSelector(random);
@@ -66,7 +73,7 @@ namespace SA_ILP
             //OS.Add(Operators.RemoveRandomCustomer, 1, "remove");
             OS.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move");
             OS.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best");
-            OS.Add((x, y, z, w, v) => Operators.MoveRandomCustomer(x, y, z), 1, "move_to_random_route");
+            OS.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route");
             OS.Add((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap");
             OS.Add((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse");
             OS.Add((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble");
@@ -190,6 +197,22 @@ namespace SA_ILP
             return (!route.ViolatesUpperTimeWindow || AllowLateArrival) && (!route.ViolatesLowerTimeWindow || AllowEarlyArrival);
         }
 
+        private void RunAndCheckOperator(int id, List<Route> routes, List<Customer> removed, double imp, Action op)
+        {
+            double expectedVal = 0;
+            List<Route>? beforeCopy = null;
+            if (CheckOperatorScores)
+                expectedVal = Solver.CalcTotalDistance(routes, removed, Temperature) - imp;
+            if (SaveRoutesBeforeOperator)
+            {
+                beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
+            }
+
+            op();
+            if (CheckOperatorScores)
+                if (Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6) != Math.Round(expectedVal, 6))
+                    Solver.ErrorPrint($"{id}: ERROR expected {Math.Round(expectedVal, 6)} not equal to {Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, Temperature)} , OP: {OS.LastOperator}");
+        }
         public (HashSet<RouteStore>, List<Route>, double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers, double[,,] distanceMatrix, bool printExtendedInfo = false, int numInterations = 3000000, int timeLimit = 30000, bool checkInitialSolution = true)
         {
             Console.WriteLine("Starting local search");
@@ -255,7 +278,7 @@ namespace SA_ILP
                 OPBestImprovement[op] = 0;
                 OPAcceptedWorseTotal[op] = 0;
                 OPAcceptedWorseCount[op] = 0;
-                OPNotPossible[op] = 0;  
+                OPNotPossible[op] = 0;
             }
 
 
@@ -280,7 +303,7 @@ namespace SA_ILP
                     //Accept all improvements
                     if (imp > 0)
                     {
-                        double expectedVal = Solver.CalcTotalDistance(routes, removed, Temperature) - imp;
+                        //double expectedVal = Solver.CalcTotalDistance(routes, removed, Temperature) - imp;
                         //var beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
 
 
@@ -290,10 +313,10 @@ namespace SA_ILP
                         if (imp > OPBestImprovement[OS.LastOperator])
                             OPBestImprovement[OS.LastOperator] = imp;
 
-
-                        act();
-                        if (Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6) != Math.Round(expectedVal, 6))
-                            Solver.ErrorPrint($"{id}: ERROR expected {Math.Round(expectedVal, 6)} not equal to {Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, Temperature)} , OP: {OS.LastOperator}");
+                        RunAndCheckOperator(id, routes, removed, imp, act);
+                        ////act();
+                        //if (Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6) != Math.Round(expectedVal, 6))
+                        //    Solver.ErrorPrint($"{id}: ERROR expected {Math.Round(expectedVal, 6)} not equal to {Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, Temperature)} , OP: {OS.LastOperator}");
                         //Console.WriteLine($"dit gaat mis expected {expectedVal} not equal to {Solver.CalcTotalDistance(routes, removed, Temperature)}, OP: {OS.LastOperator}");
 
                         viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
@@ -348,14 +371,15 @@ namespace SA_ILP
                             OPAcceptedWorseTotal[OS.LastOperator] += imp;
 
 
-                            double expectedVal = Solver.CalcTotalDistance(routes, removed, Temperature) - imp;
-                            //var beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
-                            act();
-                            //Console.WriteLine(p);
-                            //routes.ForEach(route => route.CheckRouteValidity());
-                            if (Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6) != Math.Round(expectedVal, 6))
-                                Solver.ErrorPrint($"{id}: ERROR expected {Math.Round(expectedVal, 6)} not equal to {Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, Temperature)} , OP: {OS.LastOperator}");
+                            //double expectedVal = Solver.CalcTotalDistance(routes, removed, Temperature) - imp;
+                            ////var beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
+                            //act();
+                            ////Console.WriteLine(p);
+                            ////routes.ForEach(route => route.CheckRouteValidity());
+                            //if (Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6) != Math.Round(expectedVal, 6))
+                            //    Solver.ErrorPrint($"{id}: ERROR expected {Math.Round(expectedVal, 6)} not equal to {Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, Temperature)} , OP: {OS.LastOperator}");
 
+                            RunAndCheckOperator(id, routes, removed, imp, act);
 
                             viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                             currentValue -= imp;
@@ -426,7 +450,7 @@ namespace SA_ILP
                         string spaces = "";
                         if (op.Length < 20)
                             spaces = new string(' ', 20 - op.Length);
-                        Console.WriteLine($"\t{op}:{spaces} ICnt: {OPImprovementCount[op]}, AI: {(OPImprovementTotal[op] / OPImprovementCount[op]).ToString("0.00000")}, B: {(OPBestImprovement[op]).ToString("0.00000")}, WCnt: {OPAcceptedWorseCount[op]}, AW: {(OPAcceptedWorseTotal[op]/OPAcceptedWorseCount[op]).ToString("0.00000")}, NP : {OPNotPossible[op]} ");
+                        Console.WriteLine($"\t{op}:{spaces} ICnt: {OPImprovementCount[op]}, AI: {(OPImprovementTotal[op] / OPImprovementCount[op]).ToString("0.00000")}, B: {(OPBestImprovement[op]).ToString("0.00000")}, WCnt: {OPAcceptedWorseCount[op]}, AW: {(OPAcceptedWorseTotal[op] / OPAcceptedWorseCount[op]).ToString("0.00000")}, NP : {OPNotPossible[op]} ");
                     }
                 }
 
@@ -459,6 +483,12 @@ namespace SA_ILP
         public bool PenalizeLateArrival { get; set; }
 
         public bool AdjustEarlyArrivalToTWStart { get; set; }
+
+
+        public bool CheckOperatorScores { get; set; }
+
+        public bool SaveRoutesBeforeOperator { get; set; }
+
     }
 
     public static class LocalSearchConfigs
@@ -478,7 +508,9 @@ namespace SA_ILP
             SaveColumnsDuringLocalSearch = false,
             PenalizeEarlyArrival = true,
             PenalizeLateArrival = true,
-            AdjustEarlyArrivalToTWStart = true
+            AdjustEarlyArrivalToTWStart = true,
+            CheckOperatorScores = true,
+            SaveRoutesBeforeOperator = true
         };
 
         public static LocalSearchConfiguration VRPTW => new LocalSearchConfiguration
@@ -496,7 +528,9 @@ namespace SA_ILP
             SaveColumnsDuringLocalSearch = false,
             PenalizeEarlyArrival = false,
             PenalizeLateArrival = true,
-            AdjustEarlyArrivalToTWStart = true
+            AdjustEarlyArrivalToTWStart = true,
+            CheckOperatorScores = true,
+            SaveRoutesBeforeOperator = false
         };
 
 
