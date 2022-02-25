@@ -19,6 +19,8 @@ namespace SA_ILP
         List<double> threshHolds;
         private int last = -1;
 
+        List<String> operatorHistory;
+
         public List<String> OperatorList => labels.ConvertAll(x => x);
 
         public String LastOperator { get; private set; }
@@ -30,6 +32,7 @@ namespace SA_ILP
             threshHolds = new List<double>();
             labels = new List<string>();
             LastOperator = "none";
+            operatorHistory = new List<string>();
         }
 
 
@@ -77,6 +80,7 @@ namespace SA_ILP
                 if (p <= threshHolds[i])
                 {
                     LastOperator = labels[i];
+                    operatorHistory.Add(labels[i]);
                     return operators[i];
                 }
             }

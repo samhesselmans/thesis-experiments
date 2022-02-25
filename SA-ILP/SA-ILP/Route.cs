@@ -128,7 +128,9 @@ namespace SA_ILP
 
             foreach(int cust in routeStore.Route)
             {
-                this.InsertCust(customers.First(x=>x.Id == cust),route.Count -1);
+                //DO Not insert the depot's
+                if(cust != 0)
+                    this.InsertCust(customers.First(x=>x.Id == cust),route.Count -1);
             }
 
         }
@@ -215,7 +217,7 @@ namespace SA_ILP
             Customer previous_cust = route[0];
             this.used_capacity -= cust.Demand;
             double load = used_capacity;
-            for (int i = 1; i < route.Count; i++)
+            for (int i = 1, actualIndex=1; i < route.Count; i++,actualIndex++)
             {
                 var c = route[i];
                 if (c.Id != cust.Id)
@@ -225,7 +227,7 @@ namespace SA_ILP
                     newArriveTime += dist;
                     if (newArriveTime < c.TWStart)
                     {
-                        if (i != 1)
+                        if (actualIndex != 1)
                         {
                             ViolatesLowerTimeWindow = true;
                             if (parent.AdjustEarlyArrivalToTWStart)
@@ -238,7 +240,7 @@ namespace SA_ILP
                             newArriveTime = c.TWStart;
                         }
                     }
-                    
+
 
 
                     if (newArriveTime > c.TWEnd)
@@ -250,7 +252,10 @@ namespace SA_ILP
                     previous_cust = c;
                 }
                 else
+                {
+                    actualIndex--;
                     index = i;
+                }
             }
             if (index == -1)
                 Console.WriteLine("Helpt");
@@ -535,7 +540,7 @@ namespace SA_ILP
                 newCost += dist;
                 if(arrivalTime < newRoute[i + 1].TWStart)
                 {
-                    if (i != 1)
+                    if (i != 0)
                     {
                         if (parent.AllowEarlyArrivalDuringSearch)
                         {
@@ -549,6 +554,7 @@ namespace SA_ILP
                     }
                     else
                     {
+                        newArrivalTimes[0] = newRoute[i + 1].TWStart - arrivalTime;
                         arrivalTime = newRoute[i + 1].TWStart;
                     }
 
@@ -626,7 +632,7 @@ namespace SA_ILP
 
                 if (arrival_time < nextCust.TWStart)
                 {
-                    if (i != 1)
+                    if (i != 0)
                     {
                         newCost += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);
                         if (parent.AdjustEarlyArrivalToTWStart)
@@ -656,7 +662,8 @@ namespace SA_ILP
             //double objective = CachedObjective;
             //if (objective == -1)
             //    objective = CalcObjective();
-
+            //if (newArrivalTimes[0] != arrival_times[0])
+            //    Console.WriteLine("Maybe problemo");
             return (true, this.Score - newCost, newArrivalTimes);
         }
 
@@ -697,7 +704,7 @@ namespace SA_ILP
                 arrival_time += cost + route[j].ServiceTime;
                 if (arrival_time < nextCust.TWStart)
                 {
-                    if (actualIndex != 1)
+                    if (actualIndex != 0)
                     {
                         newCost += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);//nextCust.TWStart- arrival_time;
                                                                                              //newCost += penalty;

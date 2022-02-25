@@ -177,6 +177,7 @@ namespace SA_ILP
                 var ls = new LocalSearch(LocalSearchConfigs.VRPLTT,random.Next());
                 Route r = new Route(customers,rs,customers[0],matrix, bikeMaxMass - bikeMinMass,ls);
                 var load = r.used_capacity;
+                Console.WriteLine(r);
                 for (int i = 0; i < r.route.Count - 1; i++)
                 {
                     var dist = r.CustomerDist(r.route[i], r.route[i + 1], load);
