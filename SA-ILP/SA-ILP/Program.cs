@@ -42,9 +42,10 @@ Stopwatch watch = new Stopwatch();
 //solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\r104.txt", numIterations: 50000000);
 //await solver.SolveSolomonInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\R1_10_1.TXT", numThreads:1, numIterations: 500000000,timeLimit:45000);
 
+//await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
 
 //solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 45000);
-await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "fukuoka_full.csv"), numLoadLevels: 10, numIterations: 500000000, timelimit: 30000);
+await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "sydney_full.csv"), numLoadLevels: 10, numIterations: 500000000, timelimit: 45000);
 
 
 //var result = VRPLTT.ParseVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"));

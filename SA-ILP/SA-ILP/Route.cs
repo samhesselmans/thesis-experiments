@@ -160,26 +160,58 @@ namespace SA_ILP
 
         public double CalcObjective()
         {
-            var total_dist = 0.0;
-            double total_time_waited = 0;
-            var totalWeight = used_capacity;
-            for (int i = 0; i < route.Count - 1; i++)
+            //var total_dist = 0.0;
+            //double total_time_waited = 0;
+            //var totalWeight = used_capacity;
+            //for (int i = 0; i < route.Count - 1; i++)
+            //{
+            //    total_dist += this.CustomerDist(route[i], route[i + 1], totalWeight);
+            //    var actualArrivalTime = arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime;
+            //    //Adding penalty for violating timewindow start
+            //    if (actualArrivalTime  < route[i + 1].TWStart)
+            //        total_dist += CalculateEarlyPenaltyTerm(actualArrivalTime, route[i + 1].TWStart);
+            //    if (actualArrivalTime > route[i + 1].TWEnd)
+            //        total_dist += CalculateLatePenaltyTerm(actualArrivalTime, route[i + 1].TWEnd);
+
+            //    totalWeight -= route[i + 1].Demand;
+            //}
+            //CachedObjective = total_dist;
+            //return total_dist;
+
+            double totalDist = 0;
+            double totalWeight = route.Sum(x => x.Demand);
+            double arrivalTime = 0;
+            for(int i =0; i< route.Count - 1; i++)
             {
-                total_dist += this.CustomerDist(route[i], route[i + 1], totalWeight);
-                var actualArrivalTime = arrival_times[i] + CustomerDist(route[i], route[i + 1], totalWeight) + route[i].ServiceTime;
-                //Adding penalty for violating timewindow start
-                if (actualArrivalTime  < route[i + 1].TWStart)
-                    total_dist += CalculateEarlyPenaltyTerm(actualArrivalTime, route[i + 1].TWStart);
-                if (actualArrivalTime > route[i + 1].TWEnd)
-                    total_dist += CalculateLatePenaltyTerm(actualArrivalTime, route[i + 1].TWEnd);
-                
+                double dist = this.CustomerDist(route[i], route[i + 1], totalWeight);
+                totalDist += dist;
+                arrivalTime += dist + route[i].ServiceTime;
+
+                if(arrivalTime < route[i + 1].TWStart)
+                {
+                    if(i != 0)
+                    {
+                        totalDist += CalculateEarlyPenaltyTerm(arrivalTime, route[i + 1].TWStart);
+                        if (parent.AdjustEarlyArrivalToTWStart)
+                            arrivalTime = route[i + 1].TWStart;
+                    }
+                    else
+                    {
+                        arrivalTime = route[i + 1].TWStart;
+                    }
+                }
+                else if(arrivalTime > route[i + 1].TWEnd)
+                {
+                    totalDist += CalculateLatePenaltyTerm(arrivalTime,route[i + 1].TWEnd);
+                }
+
                 totalWeight -= route[i + 1].Demand;
             }
-            CachedObjective = total_dist;
-            return total_dist;
+            CachedObjective = totalDist;
+            return totalDist;
         }
 
-        public double CustomerDist(Customer cust1, Customer cust2, double weight)
+        public double CustomerDist(Customer start, Customer finish, double weight)
         {
 #if DEBUG
             numReference += 1;
@@ -190,7 +222,7 @@ namespace SA_ILP
             if (loadLevel == numLoadLevels)
                 loadLevel--;
 
-            var val = objective_matrix[cust1.Id, cust2.Id, loadLevel];
+            var val = objective_matrix[start.Id, finish.Id, loadLevel];
             //var val2 = objeciveMatrix1d[cust1.Id + cust2.Id * numX + loadLevel * numX * numY];
             //if (val != val2)
             //    Console.WriteLine("wops");
@@ -864,6 +896,12 @@ namespace SA_ILP
 
                 if(arrivalTime < route[i+1].TWStart)
                 {
+                    if (!parent.AllowEarlyArrival && i != 0)
+                    {
+                        failed = true;
+                        Console.WriteLine("FAIL arrived to early at customer");
+                    }
+
                     if(parent.AdjustEarlyArrivalToTWStart)
                         arrivalTime = route[i+1].TWStart;
                     //Do something with penalty?
@@ -876,7 +914,7 @@ namespace SA_ILP
                 }
                 if(arrivalTime > route[i + 1].TWEnd)
                 {
-                    if (!parent.AllowLateArrivalDuringSearch)
+                    if (!parent.AllowLateArrival)
                     {
                         failed = true;
                         Console.WriteLine($"FAIL did not meet customer {route[i + 1].Id}:{route[i + 1]} due date. Arrived on {arrivalTime} on route {route}");

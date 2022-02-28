@@ -12,7 +12,8 @@ namespace SA_ILP
         private static double CalculateSpeed(double heightDiff, double length, double vehicleMass,double powerInput)
         {
             double speed = 25;
-            double slope = Math.Atan(heightDiff / length) * Math.PI / 180;
+            //double slope = Math.Atan(heightDiff / length) * Math.PI / 180;
+            double slope = Math.Asin(heightDiff / length) * Math.PI / 180;
             double requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope);
             double orignalPow = requiredPow;
             if (powerInput >= requiredPow)
@@ -32,19 +33,18 @@ namespace SA_ILP
                 requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope);
             }
             return 0;
-
-
         }
 
         public static double CalculateTravelTime(double heightDiff, double length, double vehicleMass, double powerInput)
         {
             if (length == 0)
                 return 0;
+            length *= 1000;
             //Speed in m/s
             double speed = CalculateSpeed(heightDiff, length, vehicleMass, powerInput)/3.6;
 
             //Return travel time in minutes
-            return length * 1000  / speed /60;
+            return length  / speed /60;
         }
 
         public static (double[,] distances,List<Customer> customers) ParseVRPLTTInstance(string file)

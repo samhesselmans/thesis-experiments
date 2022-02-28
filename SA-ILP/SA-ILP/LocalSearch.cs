@@ -220,7 +220,7 @@ namespace SA_ILP
                 if (Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6) != Math.Round(expectedVal, 6))
                     Solver.ErrorPrint($"{id}: ERROR expected {Math.Round(expectedVal, 6)} not equal to {Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, Temperature)} , OP: {OS.LastOperator}");
         }
-        public (HashSet<RouteStore>, List<Route>, double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers, double[,,] distanceMatrix, bool printExtendedInfo = false, int numInterations = 3000000, int timeLimit = 30000, bool checkInitialSolution = true)
+        public (HashSet<RouteStore>, List<Route>, double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers, double[,,] distanceMatrix, bool printExtendedInfo = false, int numInterations = 3000000, int timeLimit = 30000, bool checkInitialSolution = false)
         {
             Console.WriteLine("Starting local search");
             //customers.Sort(1, customers.Count - 1, delegate (Customer x, Customer y) { x.TWEnd.CompareTo(y.TWEnd); });
@@ -515,7 +515,7 @@ namespace SA_ILP
             InitialTemperature = 20,
             AllowEarlyArrivalDuringSearch = true,
             AllowLateArrivalDuringSearch = true,
-            AllowEarlyArrival = true,
+            AllowEarlyArrival = false,
             AllowLateArrival = false,
             BaseEarlyArrivalPenalty = 100,
             BaseLateArrivalPenalty = 100,
@@ -529,7 +529,7 @@ namespace SA_ILP
             CheckOperatorScores = true,
             SaveRoutesBeforeOperator = false,
             SaveColumnsAfterWorse = true,
-            SaveColumnThreshold = 0.1
+            SaveColumnThreshold = 0.01
         };
 
         public static LocalSearchConfiguration VRPTW => new LocalSearchConfiguration
