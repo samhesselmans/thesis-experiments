@@ -179,7 +179,7 @@ namespace SA_ILP
             //return total_dist;
 
             double totalDist = 0;
-            double totalWeight = route.Sum(x => x.Demand);
+            double totalWeight = used_capacity;// route.Sum(x => x.Demand);
             double arrivalTime = 0;
             for(int i =0; i< route.Count - 1; i++)
             {

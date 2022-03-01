@@ -218,7 +218,7 @@ namespace SA_ILP
             op();
             if (CheckOperatorScores)
                 if (Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6) != Math.Round(expectedVal, 6))
-                    Solver.ErrorPrint($"{id}: ERROR expected {Math.Round(expectedVal, 6)} not equal to {Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, Temperature)} , OP: {OS.LastOperator}");
+                    Solver.ErrorPrint($"{id}: ERROR expected {expectedVal} not equal to {Solver.CalcTotalDistance(routes, removed, Temperature)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, Temperature)} , OP: {OS.LastOperator}");
         }
         public (HashSet<RouteStore>, List<Route>, double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers, double[,,] distanceMatrix, bool printExtendedInfo = false, int numInterations = 3000000, int timeLimit = 30000, bool checkInitialSolution = false)
         {
@@ -344,23 +344,23 @@ namespace SA_ILP
 
                             //Now we know all customers are used
                             BestSolutionRemoved = new List<Customer>();
-                            foreach (Route route in routes)
-                            {
-                                if (IsValidRoute(route))
-                                    Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
+                            //foreach (Route route in routes)
+                            //{
+                            //    if (IsValidRoute(route))
+                            //        Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
 
-                            }
+                            //}
 
                         }
 
                         //Add columns
-                        if (SaveColumnsAfterAllImprovements && Temperature < InitialTemperature * SaveColumnThreshold)
-                            foreach (Route route in routes)
-                            {
-                                if (IsValidRoute(route))
-                                    Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
+                        //if (SaveColumnsAfterAllImprovements && Temperature < InitialTemperature * SaveColumnThreshold)
+                        //    foreach (Route route in routes)
+                        //    {
+                        //        if (IsValidRoute(route))
+                        //            Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
 
-                            }
+                        //    }
 
 
                         amtImp += 1;
@@ -385,13 +385,13 @@ namespace SA_ILP
                             RunAndCheckOperator(id, routes, removed, imp, act);
 
 
-                            if (SaveColumnsAfterWorse && Temperature < InitialTemperature * SaveColumnThreshold)
-                                foreach (Route route in routes)
-                                {
-                                    if (IsValidRoute(route))
-                                        Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
+                            //if (SaveColumnsAfterWorse && Temperature < InitialTemperature * SaveColumnThreshold)
+                            //    foreach (Route route in routes)
+                            //    {
+                            //        if (IsValidRoute(route))
+                            //            Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
 
-                                }
+                            //    }
 
                             viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                             currentValue -= imp;
@@ -512,7 +512,7 @@ namespace SA_ILP
     {
         public static LocalSearchConfiguration VRPLTT => new LocalSearchConfiguration
         {
-            InitialTemperature = 20,
+            InitialTemperature = 10,
             AllowEarlyArrivalDuringSearch = true,
             AllowLateArrivalDuringSearch = true,
             AllowEarlyArrival = false,
@@ -521,12 +521,12 @@ namespace SA_ILP
             BaseLateArrivalPenalty = 100,
             BaseRemovedCustomerPenalty = 150,
             BaseRemovedCustomerPenaltyPow = 1.5,
-            Alpha = 0.95,
+            Alpha = 0.98,
             SaveColumnsAfterAllImprovements = true,
             PenalizeEarlyArrival = true,
             PenalizeLateArrival = true,
             AdjustEarlyArrivalToTWStart = true,
-            CheckOperatorScores = true,
+            CheckOperatorScores = false,
             SaveRoutesBeforeOperator = false,
             SaveColumnsAfterWorse = true,
             SaveColumnThreshold = 0.01
@@ -534,7 +534,7 @@ namespace SA_ILP
 
         public static LocalSearchConfiguration VRPTW => new LocalSearchConfiguration
         {
-            InitialTemperature = 30,
+            InitialTemperature = 15,
             AllowEarlyArrivalDuringSearch = true,
             AllowLateArrivalDuringSearch = true,
             AllowEarlyArrival = true,
