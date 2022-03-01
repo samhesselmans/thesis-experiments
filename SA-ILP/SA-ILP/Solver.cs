@@ -338,6 +338,8 @@ namespace SA_ILP
         public async Task<(List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal)> SolveInstanceAsync(string name, int numV, double capV, List<Customer> customers, double[,,] distanceMatrix, int numThreads,int numStarts, int numIterations, LocalSearchConfiguration configuration, int timeLimit = 30000)
         {
             (var allColumns, var bestSolution, var LSTime, var LSSCore) = await LocalSearchInstancAsync(name, numV, capV, customers, distanceMatrix, numThreads, numStarts, numIterations, timeLimit, configuration);
+            bestSolution.ForEach(x => Console.WriteLine(x));
+            
             (var ilpSol, double ilpVal, double time) = SolveILP(allColumns, customers, numV, bestSolution);
 
 

@@ -76,8 +76,8 @@ namespace SA_ILP
             random = new Random(seed);
             OS = new OperatorSelector(random);
 
-            //OS.Add(Operators.AddRandomRemovedCustomer, 1, "add");
-            //OS.Add(Operators.RemoveRandomCustomer, 1, "remove");
+            OS.Add(Operators.AddRandomRemovedCustomer, 1, "add");
+            OS.Add(Operators.RemoveRandomCustomer, 1, "remove");
             OS.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move");
             OS.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best");
             OS.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route");
@@ -344,23 +344,23 @@ namespace SA_ILP
 
                             //Now we know all customers are used
                             BestSolutionRemoved = new List<Customer>();
-                            //foreach (Route route in routes)
-                            //{
-                            //    if (IsValidRoute(route))
-                            //        Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
+                            foreach (Route route in routes)
+                            {
+                                if (IsValidRoute(route))
+                                    Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
 
-                            //}
+                            }
 
                         }
 
                         //Add columns
-                        //if (SaveColumnsAfterAllImprovements && Temperature < InitialTemperature * SaveColumnThreshold)
-                        //    foreach (Route route in routes)
-                        //    {
-                        //        if (IsValidRoute(route))
-                        //            Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
+                        if (SaveColumnsAfterAllImprovements && Temperature < InitialTemperature * SaveColumnThreshold)
+                            foreach (Route route in routes)
+                            {
+                                if (IsValidRoute(route))
+                                    Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
 
-                        //    }
+                            }
 
 
                         amtImp += 1;
@@ -385,13 +385,13 @@ namespace SA_ILP
                             RunAndCheckOperator(id, routes, removed, imp, act);
 
 
-                            //if (SaveColumnsAfterWorse && Temperature < InitialTemperature * SaveColumnThreshold)
-                            //    foreach (Route route in routes)
-                            //    {
-                            //        if (IsValidRoute(route))
-                            //            Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
+                            if (SaveColumnsAfterWorse && Temperature < InitialTemperature * SaveColumnThreshold)
+                                foreach (Route route in routes)
+                                {
+                                    if (IsValidRoute(route))
+                                        Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
 
-                            //    }
+                                }
 
                             viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                             currentValue -= imp;
@@ -414,7 +414,7 @@ namespace SA_ILP
                     currentValue = Solver.CalcTotalDistance(routes, removed, Temperature);
                     bestSolValue = Solver.CalcTotalDistance(BestSolution, BestSolutionRemoved, Temperature);
                 }
-                if (iteration - restartPreventionIteration > 1000000 && Temperature < 0.03)
+                if (iteration - restartPreventionIteration > 1000000 && Temperature < 0.03 && iteration - lastChangeExceptedOnIt > 500)
                 {
                     numRestarts += 1;
                     restartPreventionIteration = iteration;
@@ -512,16 +512,16 @@ namespace SA_ILP
     {
         public static LocalSearchConfiguration VRPLTT => new LocalSearchConfiguration
         {
-            InitialTemperature = 10,
+            InitialTemperature = 30,
             AllowEarlyArrivalDuringSearch = true,
             AllowLateArrivalDuringSearch = true,
             AllowEarlyArrival = false,
             AllowLateArrival = false,
             BaseEarlyArrivalPenalty = 100,
             BaseLateArrivalPenalty = 100,
-            BaseRemovedCustomerPenalty = 150,
-            BaseRemovedCustomerPenaltyPow = 1.5,
-            Alpha = 0.98,
+            BaseRemovedCustomerPenalty = 50,
+            BaseRemovedCustomerPenaltyPow = 1,
+            Alpha = 0.95,
             SaveColumnsAfterAllImprovements = true,
             PenalizeEarlyArrival = true,
             PenalizeLateArrival = true,
