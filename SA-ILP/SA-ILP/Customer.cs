@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SA_ILP
 {
-    public class Customer
+    public struct Customer
     {
         public int Id { get; private set; }
         public double X { get; private set; }
@@ -44,6 +44,7 @@ namespace SA_ILP
             this.TWEnd = cust.TWEnd;
             this.TWStart = cust.TWStart;
             this.ServiceTime = cust.ServiceTime;
+            this.Elevation = cust.Elevation;
         }
 
         public override bool Equals(object? obj)

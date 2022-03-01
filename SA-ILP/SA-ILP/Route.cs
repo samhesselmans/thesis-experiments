@@ -245,7 +245,7 @@ namespace SA_ILP
             startTime = 0;
             arrival_times[0] = 0;
             int index = -1;
-            Customer lastCust = null;
+            Customer lastCust;
             Customer previous_cust = route[0];
             this.used_capacity -= cust.Demand;
             double load = used_capacity;

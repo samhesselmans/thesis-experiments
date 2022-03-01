@@ -109,7 +109,7 @@ namespace SA_ILP
 
             //var c = new TWCOmparer();
             //customers.Sort(1, customers.Count - 1, c);
-            Customer? seed = customers.MinBy(x => x.TWEnd);//customers[0];
+            Customer seed = customers.MinBy(x => x.TWEnd);//customers[0];
 
 
             List<Customer> inserted = new List<Customer>();
@@ -140,7 +140,7 @@ namespace SA_ILP
 
 
 
-                    Customer? next = customers.MinBy(x =>
+                    Customer next = customers.MinBy(x =>
                     {
                         double dist = route.CustomerDist(seed, x, route.max_capacity);
 
@@ -170,8 +170,8 @@ namespace SA_ILP
                     route.InsertCust(seed, route.route.Count - 1);
                     customers.Remove(seed);
                     inserted.Add(seed);
-                    if (customers.Count == 0)
-                        seed = null;
+                    //if (customers.Count == 0)
+                    //    seed = null;
 
                 }
                 //route.InsertCust(next, route.route.Count-1);
