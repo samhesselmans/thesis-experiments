@@ -82,6 +82,7 @@ namespace SA_ILP
             OS.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best");
             OS.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route");
             OS.Add((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap");
+            OS.Add((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route");
             OS.Add((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse");
             OS.Add((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble");
         }
@@ -148,7 +149,7 @@ namespace SA_ILP
                             if (arrivalTime + dist < x.TWStart)
                                 return dist + route.CalculateEarlyPenaltyTerm(arrivalTime + dist, x.TWStart);
                             else
-                                return dist;
+                                return dist + random.NextDouble() * 5;
                         else return double.MaxValue;
 
                     });
@@ -159,9 +160,6 @@ namespace SA_ILP
                         break;
                     }
                     arrivalTime += route.CustomerDist(seed, next, route.max_capacity);// + next.ServiceTime;
-
-                    if (inserted.Contains(next))
-                        Console.WriteLine("Gaat fout binnen while");
 
                     seed = next;
 
@@ -288,6 +286,7 @@ namespace SA_ILP
                 OPNotPossible[op] = 0;
             }
 
+            routes.ForEach(x => { if (x.route.Count != 2) Console.WriteLine(x); });
 
             double bestSolValue = Solver.CalcTotalDistance(BestSolution, removed, Temperature);
             double currentValue = bestSolValue;
@@ -414,12 +413,12 @@ namespace SA_ILP
                     currentValue = Solver.CalcTotalDistance(routes, removed, Temperature);
                     bestSolValue = Solver.CalcTotalDistance(BestSolution, BestSolutionRemoved, Temperature);
                 }
-                if (iteration - restartPreventionIteration > 1000000 && Temperature < 0.03 && iteration - lastChangeExceptedOnIt > 500)
+                if (iteration - restartPreventionIteration > 300000 && Temperature < 0.5 && iteration - lastChangeExceptedOnIt > 500)
                 {
                     numRestarts += 1;
                     restartPreventionIteration = iteration;
                     //Restart
-                    Temperature += InitialTemperature / 3;
+                    Temperature += InitialTemperature;
                     routes.ForEach(x => x.ResetCache());
                     routes = BestSolution.ConvertAll(i => i.CreateDeepCopy());
                     viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
@@ -428,7 +427,7 @@ namespace SA_ILP
                     bestSolValue = Solver.CalcTotalDistance(BestSolution, new List<Customer>(), Temperature);
                     Console.WriteLine($"{id}:Best solution changed to long ago. Restarting from best solution with T: {Temperature}");
                 }
-                if (printTimer.ElapsedMilliseconds > 3 * 1000)
+                if (printTimer.ElapsedMilliseconds > 1 * 1000)
                 {
                     var elapsed = printTimer.ElapsedMilliseconds;
                     printTimer.Restart();
@@ -512,7 +511,7 @@ namespace SA_ILP
     {
         public static LocalSearchConfiguration VRPLTT => new LocalSearchConfiguration
         {
-            InitialTemperature = 30,
+            InitialTemperature = 1,
             AllowEarlyArrivalDuringSearch = true,
             AllowLateArrivalDuringSearch = true,
             AllowEarlyArrival = false,
@@ -521,7 +520,7 @@ namespace SA_ILP
             BaseLateArrivalPenalty = 100,
             BaseRemovedCustomerPenalty = 50,
             BaseRemovedCustomerPenaltyPow = 1,
-            Alpha = 0.95,
+            Alpha = 0.992,
             SaveColumnsAfterAllImprovements = true,
             PenalizeEarlyArrival = true,
             PenalizeLateArrival = true,
@@ -529,21 +528,21 @@ namespace SA_ILP
             CheckOperatorScores = false,
             SaveRoutesBeforeOperator = false,
             SaveColumnsAfterWorse = true,
-            SaveColumnThreshold = 0.01
+            SaveColumnThreshold = 0.2
         };
 
         public static LocalSearchConfiguration VRPTW => new LocalSearchConfiguration
         {
-            InitialTemperature = 15,
+            InitialTemperature = 1,
             AllowEarlyArrivalDuringSearch = true,
-            AllowLateArrivalDuringSearch = true,
+            AllowLateArrivalDuringSearch = false,
             AllowEarlyArrival = true,
             AllowLateArrival = false,
             BaseEarlyArrivalPenalty = 100,
             BaseLateArrivalPenalty = 100,
-            BaseRemovedCustomerPenalty = 150,
+            BaseRemovedCustomerPenalty = 400,
             BaseRemovedCustomerPenaltyPow = 1.5,
-            Alpha = 0.98,
+            Alpha = 0.992,
             SaveColumnsAfterAllImprovements = false,
             PenalizeEarlyArrival = false,
             PenalizeLateArrival = true,

@@ -86,7 +86,8 @@ namespace SA_ILP
         //Calculates the Solomon distance matrix
         private double[,,] CalculateDistanceMatrix(List<Customer> customers)
         {
-            double[,,] matrix = new double[customers.Count, customers.Count, 1];
+            int size = customers.Max(x => x.Id) + 1;
+            double[,,] matrix = new double[size , size, 1];
             for (int i = 0; i < customers.Count; i++)
                 for (int j = 0; j < customers.Count; j++)
                     matrix[i, j, 0] = CalculateDistanceObjective(customers[i], customers[j]);//Math.Sqrt(Math.Pow(customers[i].X - customers[j].X,2) + Math.Pow(customers[i].Y - customers[j].Y,2));
@@ -446,7 +447,7 @@ namespace SA_ILP
                 {
                     line = line.Replace("\n", "");
                     lineSplit = reg.Replace(line, " ").Split(' ');
-                    customers.Add(new Customer(int.Parse(lineSplit[1]), int.Parse(lineSplit[2]), int.Parse(lineSplit[3]), int.Parse(lineSplit[4]), int.Parse(lineSplit[5]), int.Parse(lineSplit[6]), int.Parse(lineSplit[7])));
+                        customers.Add(new Customer(int.Parse(lineSplit[1]), int.Parse(lineSplit[2]), int.Parse(lineSplit[3]), int.Parse(lineSplit[4]), int.Parse(lineSplit[5]), int.Parse(lineSplit[6]), int.Parse(lineSplit[7])));
                 }
                 return (name, numV, capV, customers);
             }

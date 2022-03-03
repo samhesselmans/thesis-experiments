@@ -12,7 +12,7 @@ namespace SA_ILP
         private static double CalculateSpeed(double heightDiff, double length, double vehicleMass,double powerInput)
         {
             double speed = 25;
-            //double slope = Math.Atan(heightDiff / length) * Math.PI / 180;
+            //double slope = Math.Atan(heightDiff / length);// * Math.PI / 180;
             double slope = Math.Asin(heightDiff / length);// * Math.PI / 180;
             double requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope);
             double orignalPow = requiredPow;

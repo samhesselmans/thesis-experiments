@@ -39,13 +39,13 @@ Stopwatch watch = new Stopwatch();
 //await RunTestAsync();
 
 
-//solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\r104.txt", numIterations: 50000000);
-//await solver.SolveSolomonInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\R1_10_1.TXT", numThreads:5, numIterations: 500000000,timeLimit:45000);
+//solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\tsp_instances\lin318.tsp", numIterations: 50000000,timeLimit: 45 * 1000);
+await solver.SolveSolomonInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\c107.txt", numThreads:4, numIterations: 500000000,timeLimit:1800 * 1000);
 
 //await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
 
-//solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "fukuoka_full.csv"), numLoadLevels: 150, numIterations: 50000000, timelimit: 45000,bikeMinMass:140,bikeMaxMass:290,inputPower:350);
-await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "seattle_full.csv"), numLoadLevels: 150, numIterations: 500000000, timelimit: 45000,numThreads:6,numStarts:6,bikeMinMass:140,bikeMaxMass:290,inputPower:350);
+//solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "fukuoka_full.csv"), numLoadLevels: 150, numIterations: 50000000, timelimit: 90000,bikeMinMass:140,bikeMaxMass:290,inputPower:350);
+//await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "fukuoka_full.csv"), numLoadLevels: 150, numIterations: 500000000, timelimit: 60 * 1000, numThreads: 4, numStarts: 12, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
 
 
 //var result = VRPLTT.ParseVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"));
@@ -66,8 +66,8 @@ await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large
 //        str = "0" + str;
 //    skip.Add($"r2{str}.txt");
 //}
-
-//await SolveAllAsync(@"..\..\..\..\..\solomon_instances", Path.Join(@"..\..\..\..\..\solutions\solomon_instances",DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")),skip,numThreads:4,numIterations:50000000);
+var skip = new List<String>();
+await SolveAllAsync(@"..\..\..\..\..\solomon_instances", Path.Join(@"..\..\..\..\..\solutions\solomon_instances",DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")),skip,numThreads:4,numIterations:50000000);
 
 
 async Task RunTestAsync()
@@ -100,7 +100,7 @@ async Task RunTestAsync()
 
     for (int i = 0; i < num; i++)
     {
-        double res = await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000,timelimit:45000);
+        double res = await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000,timelimit:30000);
         if (res < best)
             best = res;
         if(res > worst)
@@ -138,7 +138,7 @@ async Task SolveAllAsync(string dir,string solDir,List<String> skip, int numThre
                 fileNameStart = Path.GetFileName(file).Substring(0,2);
             }
 
-                (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime,double lsVal) = await solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations);
+                (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime,double lsVal) = await solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations,timeLimit:30*1000);
             using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileName(file))))
             {
                 if (failed)
