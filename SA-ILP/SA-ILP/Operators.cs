@@ -328,9 +328,9 @@ namespace SA_ILP
 
 
             double penalty = 0;
-            double diff = Math.Pow(removed.Count + 1, Solver.BaseRemovedCustomerPenaltyPow) - Math.Pow(removed.Count, Solver.BaseRemovedCustomerPenaltyPow);
+            //double diff = Math.Pow(removed.Count + 1, Solver.BaseRemovedCustomerPenaltyPow) - Math.Pow(removed.Count, Solver.BaseRemovedCustomerPenaltyPow);
             //TODO: calculate penalty
-            penalty = diff * Solver.BaseRemovedCustomerPenalty / temp;
+            penalty = Solver.CalcRemovedPenalty(removed.Count + 1, temp) - Solver.CalcRemovedPenalty(removed.Count, temp); //diff * Solver.BaseRemovedCustomerPenalty / temp;
             double imp = decr - penalty;
 
             return (imp, () =>
@@ -365,9 +365,9 @@ namespace SA_ILP
             (bool possible, _, double incr) = route.CustPossibleAtPos(cust, pos);
 
             double penalty = 0;
-            double diff = Math.Pow(removed.Count, Solver.BaseRemovedCustomerPenaltyPow) - Math.Pow(removed.Count - 1, Solver.BaseRemovedCustomerPenaltyPow);
+            //double diff = Math.Pow(removed.Count, Solver.BaseRemovedCustomerPenaltyPow) - Math.Pow(removed.Count - 1, Solver.BaseRemovedCustomerPenaltyPow);
             //TODO: calculate penalty
-            penalty = diff * Solver.BaseRemovedCustomerPenalty / temp;
+            penalty = Solver.CalcRemovedPenalty(removed.Count, temp) - Solver.CalcRemovedPenalty(removed.Count - 1, temp); // diff * Solver.BaseRemovedCustomerPenalty / temp;
             if (possible)
                 return (penalty - incr, () =>
                 {
@@ -495,6 +495,67 @@ namespace SA_ILP
 
         }
 
+        public static (double, Action?) SwapRandomTails(List<Route> routes, List<int> viableRoutes, Random random)
+        {
+            if (viableRoutes.Count == 0)
+                return (double.MinValue, null);
+
+            int srcIndex = random.Next(viableRoutes.Count);
+            int src = viableRoutes[srcIndex];
+
+            int destIndex = random.Next(viableRoutes.Count - 1);
+            if (destIndex >= srcIndex)
+                destIndex += 1;
+            int dest = viableRoutes[destIndex];
+
+            (_, int index1) = routes[src].RandomCustIndex();
+            (_, int index2) = routes[dest].RandomCustIndex();
+
+            List<Customer> newSrcRoute = new List<Customer>();
+            List<Customer> newDestRouteTail = new List<Customer>();
+            List<Customer> newDestRoute = new List<Customer>();
+            for (int i = 0; i < routes[src].route.Count; i++)
+            {
+                if (i < index1)
+                    newSrcRoute.Add(routes[src].route[i]);
+
+                else
+                {
+                    newDestRouteTail.Add(routes[src].route[i]);
+                    //newSrcRoute.Add(routes[dest].route[index2 + i - index1]);
+                }
+
+            }
+            for (int i = 0; i < routes[dest].route.Count; i++)
+            {
+                if (i < index2)
+                {
+                    newDestRoute.Add(routes[dest].route[i]);
+                }
+                else
+                {
+                    newSrcRoute.Add(routes[dest].route[i]);
+                }
+            }
+
+            newDestRoute.AddRange(newDestRouteTail);
+
+            (bool possible, double improvement, var newArrivalTimes) = routes[src].NewRoutePossible(newSrcRoute, newSrcRoute.Sum(x => x.Demand) - routes[src].used_capacity);
+            (bool possible2, double improvement2, var newArrivalTimes2) = routes[dest].NewRoutePossible(newDestRoute, newDestRoute.Sum(x => x.Demand) - routes[dest].used_capacity);
+
+            if (possible2 && possible)
+            {
+                return (improvement + improvement2, () =>
+                {
+                    routes[src].SetNewRoute(newSrcRoute, newArrivalTimes);
+                    routes[dest].SetNewRoute(newDestRoute, newArrivalTimes2);
+                }
+                );
+            }
+
+            return (double.MinValue, null);
+
+        }
         public static (double, Action?) MoveRandomCustomerToRandomRoute(List<Route> routes, List<int> viableRoutes, Random random)
         {
 

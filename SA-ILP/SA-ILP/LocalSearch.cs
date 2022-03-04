@@ -85,6 +85,7 @@ namespace SA_ILP
             OS.Add((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route");
             OS.Add((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse");
             OS.Add((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble");
+            OS.Add((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails");
         }
         public static void StupidShuffle(List<Customer> customers, Random random, double timesShuffle = 1)
         {
@@ -404,7 +405,7 @@ namespace SA_ILP
                     OPNotPossible[OS.LastOperator] += 1;
                     amtNotDone += 1;
                 }
-                if (iteration % 10000 == 0 && iteration != 0)
+                if (iteration % 20000 == 0 && iteration != 0)
                 {
                     Temperature *= Alpha;
 
@@ -413,12 +414,12 @@ namespace SA_ILP
                     currentValue = Solver.CalcTotalDistance(routes, removed, Temperature);
                     bestSolValue = Solver.CalcTotalDistance(BestSolution, BestSolutionRemoved, Temperature);
                 }
-                if (iteration - restartPreventionIteration > 300000 && Temperature < 0.5 && iteration - lastChangeExceptedOnIt > 500)
+                if (iteration - restartPreventionIteration > 300000 && Temperature < 0.5 && iteration - lastChangeExceptedOnIt > 5000)
                 {
                     numRestarts += 1;
                     restartPreventionIteration = iteration;
                     //Restart
-                    Temperature += InitialTemperature;
+                    Temperature += InitialTemperature/2;
                     routes.ForEach(x => x.ResetCache());
                     routes = BestSolution.ConvertAll(i => i.CreateDeepCopy());
                     viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
@@ -520,7 +521,7 @@ namespace SA_ILP
             BaseLateArrivalPenalty = 100,
             BaseRemovedCustomerPenalty = 50,
             BaseRemovedCustomerPenaltyPow = 1,
-            Alpha = 0.992,
+            Alpha = 0.995,
             SaveColumnsAfterAllImprovements = true,
             PenalizeEarlyArrival = true,
             PenalizeLateArrival = true,

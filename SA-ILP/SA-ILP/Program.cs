@@ -40,11 +40,11 @@ Stopwatch watch = new Stopwatch();
 
 
 //solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\tsp_instances\lin318.tsp", numIterations: 50000000,timeLimit: 45 * 1000);
-await solver.SolveSolomonInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\c107.txt", numThreads:4, numIterations: 500000000,timeLimit:1800 * 1000);
+//await solver.SolveSolomonInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\c107.txt", numThreads:4, numIterations: 500000000,timeLimit:45 * 1000);
 
 //await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
 
-//solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "fukuoka_full.csv"), numLoadLevels: 150, numIterations: 50000000, timelimit: 90000,bikeMinMass:140,bikeMaxMass:290,inputPower:350);
+solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "fukuoka_full.csv"), numLoadLevels: 150, numIterations: 50000000, timelimit: 90000,bikeMinMass:140,bikeMaxMass:290,inputPower:350);
 //await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "fukuoka_full.csv"), numLoadLevels: 150, numIterations: 500000000, timelimit: 60 * 1000, numThreads: 4, numStarts: 12, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
 
 
@@ -67,7 +67,7 @@ await solver.SolveSolomonInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-
 //    skip.Add($"r2{str}.txt");
 //}
 var skip = new List<String>();
-await SolveAllAsync(@"..\..\..\..\..\solomon_instances", Path.Join(@"..\..\..\..\..\solutions\solomon_instances",DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")),skip,numThreads:4,numIterations:50000000);
+//await SolveAllAsync(@"..\..\..\..\..\solomon_instances", Path.Join(@"..\..\..\..\..\solutions\solomon_instances",DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")),skip,numThreads:4,numIterations:50000000);
 
 
 async Task RunTestAsync()

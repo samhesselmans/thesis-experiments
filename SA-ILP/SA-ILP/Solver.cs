@@ -79,7 +79,12 @@ namespace SA_ILP
         public static double CalcTotalDistance(List<Route> routes, List<Customer> removed, double temp)
         {
             //This expclitly does not use the Score property of a route to force recalculation. This way bugs might be caught
-            return routes.Sum(x => x.CalcObjective()) + Math.Pow(removed.Count, Solver.BaseRemovedCustomerPenaltyPow) * (Solver.BaseRemovedCustomerPenalty / temp);
+            return routes.Sum(x => x.CalcObjective()) + CalcRemovedPenalty(removed.Count,temp);
+        }
+
+        public static double CalcRemovedPenalty(int removedCount,double temp)
+        {
+            return Math.Pow(removedCount, Solver.BaseRemovedCustomerPenaltyPow) * (Solver.BaseRemovedCustomerPenalty / Math.Pow(temp,2));
         }
 
 
@@ -209,7 +214,8 @@ namespace SA_ILP
                 totalRouteLength += r.arrival_times[r.arrival_times.Count - 1] - r.route.Sum(x => x.ServiceTime);
                 numCustomers += r.route.Count - 2;
                 var load = r.used_capacity;
-                Console.WriteLine(r);
+                if(r.route.Count != 2)
+                    Console.WriteLine(r);
                 r.CheckRouteValidity();
                 for (int i = 0; i < r.route.Count - 1; i++)
                 {
@@ -239,7 +245,8 @@ namespace SA_ILP
             var ls = new LocalSearch(LocalSearchConfigs.VRPLTT, random.Next());
             (var colums, var sol, var value) = ls.LocalSearchInstance(-1, "", customers.Count, bikeMaxMass - bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix, numInterations: numIterations, checkInitialSolution: false, timeLimit: timelimit, printExtendedInfo: true);
             foreach (var route in sol)
-                Console.WriteLine(route);
+                if(route.route.Count != 2)
+                    Console.WriteLine(route);
 
             double totalWaitingTime = 0;
             int numViolations = 0;

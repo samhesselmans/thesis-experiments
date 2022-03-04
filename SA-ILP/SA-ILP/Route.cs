@@ -561,6 +561,10 @@ namespace SA_ILP
         public (bool possible,double improvement,List<double> newArrivalTimes) NewRoutePossible(List<Customer> newRoute,double changedCapacity)
         {
             double load = used_capacity + changedCapacity;
+
+            if (load > max_capacity)
+                return (false, double.MinValue, null);
+
             double arrivalTime = 0;
             double newCost = 0;
             List<double> newArrivalTimes = new List<double>(newRoute.Count) { 0};
@@ -613,6 +617,7 @@ namespace SA_ILP
         {
             this.route = customers;
             this.arrival_times = arrivalTimes;
+            this.used_capacity = customers.Sum(x => x.Demand);
             ResetCache();
         }
 
