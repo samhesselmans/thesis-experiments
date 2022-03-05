@@ -208,7 +208,7 @@ namespace SA_ILP
             double expectedVal = 0;
             List<Route>? beforeCopy = null;
             if (CheckOperatorScores)
-                expectedVal = Solver.CalcTotalDistance(routes, removed, Temperature) - imp;
+                expectedVal = Solver.CalcTotalDistance(routes, removed, this) - imp;
             if (SaveRoutesBeforeOperator)
             {
                 beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
@@ -216,8 +216,8 @@ namespace SA_ILP
 
             op();
             if (CheckOperatorScores)
-                if (Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6) != Math.Round(expectedVal, 6))
-                    Solver.ErrorPrint($"{id}: ERROR expected {expectedVal} not equal to {Solver.CalcTotalDistance(routes, removed, Temperature)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, Temperature)} , OP: {OS.LastOperator}");
+                if (Math.Round(Solver.CalcTotalDistance(routes, removed, this), 6) != Math.Round(expectedVal, 6))
+                    Solver.ErrorPrint($"{id}: ERROR expected {expectedVal} not equal to {Solver.CalcTotalDistance(routes, removed, this)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, this)} , OP: {OS.LastOperator}");
         }
         public (HashSet<RouteStore>, List<Route>, double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers, double[,,] distanceMatrix, bool printExtendedInfo = false, int numInterations = 3000000, int timeLimit = 30000, bool checkInitialSolution = false)
         {
@@ -289,7 +289,7 @@ namespace SA_ILP
 
             routes.ForEach(x => { if (x.route.Count != 2) Console.WriteLine(x); });
 
-            double bestSolValue = Solver.CalcTotalDistance(BestSolution, removed, Temperature);
+            double bestSolValue = Solver.CalcTotalDistance(BestSolution, removed, this);
             double currentValue = bestSolValue;
             int bestImprovedIteration = 0;
             int restartPreventionIteration = 0;
@@ -305,7 +305,7 @@ namespace SA_ILP
                 double imp = 0;
                 Action? act = null;
                 var nextOperator = OS.Next();
-                (imp, act) = nextOperator(routes, viableRoutes, random, removed, Temperature);
+                (imp, act) = nextOperator(routes, viableRoutes, random, removed, this);
 
                 if (act != null)
                 {
@@ -405,16 +405,16 @@ namespace SA_ILP
                     OPNotPossible[OS.LastOperator] += 1;
                     amtNotDone += 1;
                 }
-                if (iteration % 20000 == 0 && iteration != 0)
+                if (iteration % 10000 == 0 && iteration != 0)
                 {
                     Temperature *= Alpha;
 
                     routes.ForEach(x => x.ResetCache());
                     //TOD: Seperate penalty calculation for optimization
-                    currentValue = Solver.CalcTotalDistance(routes, removed, Temperature);
-                    bestSolValue = Solver.CalcTotalDistance(BestSolution, BestSolutionRemoved, Temperature);
+                    currentValue = Solver.CalcTotalDistance(routes, removed, this);
+                    bestSolValue = Solver.CalcTotalDistance(BestSolution, BestSolutionRemoved, this);
                 }
-                if (iteration - restartPreventionIteration > 300000 && Temperature < 0.5 && iteration - lastChangeExceptedOnIt > 5000)
+                if (iteration - restartPreventionIteration > 300000 && Temperature < 0.5 && iteration - lastChangeExceptedOnIt > 1000)
                 {
                     numRestarts += 1;
                     restartPreventionIteration = iteration;
@@ -424,18 +424,18 @@ namespace SA_ILP
                     routes = BestSolution.ConvertAll(i => i.CreateDeepCopy());
                     viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                     removed = BestSolutionRemoved.ConvertAll(x => x);
-                    currentValue = Solver.CalcTotalDistance(routes, removed, Temperature);
-                    bestSolValue = Solver.CalcTotalDistance(BestSolution, new List<Customer>(), Temperature);
+                    currentValue = Solver.CalcTotalDistance(routes, removed, this);
+                    bestSolValue = Solver.CalcTotalDistance(BestSolution, new List<Customer>(), this);
                     Console.WriteLine($"{id}:Best solution changed to long ago. Restarting from best solution with T: {Temperature}");
                 }
-                if (printTimer.ElapsedMilliseconds > 1 * 1000)
+                if (printTimer.ElapsedMilliseconds > 3 * 1000)
                 {
                     var elapsed = printTimer.ElapsedMilliseconds;
                     printTimer.Restart();
                     double itsPerSecond = (iteration - previousUpdateIteration) / ((double)elapsed / 1000);
                     previousUpdateIteration = iteration;
                     int cnt = routes.Count(x => x.route.Count > 2);
-                    Console.WriteLine($"{id}: T: {Temperature.ToString("0.000")}, S: {Solver.CalcTotalDistance(routes, removed, Temperature).ToString("0.000")}, TS: {currentValue.ToString("0.000")}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeExceptedOnIt}, B: {bestSolValue.ToString("0.000")}, BI: {bestImprovedIteration}, IT/s: {itsPerSecond.ToString("0.00")}/s");
+                    Console.WriteLine($"{id}: T: {Temperature.ToString("0.000")}, S: {Solver.CalcTotalDistance(routes, removed, this).ToString("0.000")}, TS: {currentValue.ToString("0.000")}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeExceptedOnIt}, B: {bestSolValue.ToString("0.000")}, BI: {bestImprovedIteration}, IT/s: {itsPerSecond.ToString("0.00")}/s");
                 }
             }
 
@@ -448,7 +448,7 @@ namespace SA_ILP
             }
 
 
-            Console.WriteLine($"DONE {id}: {name}, Score: {Solver.CalcTotalDistance(BestSolution, new List<Customer>(), Temperature)}, Columns: {Columns.Count}. Completed {iteration} iterations in {Math.Round((double)timer.ElapsedMilliseconds / 1000, 3)}s");
+            Console.WriteLine($"DONE {id}: {name}, Score: {Solver.CalcTotalDistance(BestSolution, new List<Customer>(), this)}, Columns: {Columns.Count}. Completed {iteration} iterations in {Math.Round((double)timer.ElapsedMilliseconds / 1000, 3)}s");
 #if DEBUG
             Console.WriteLine(routes.Sum(x => x.numReference));
 #endif
@@ -469,7 +469,7 @@ namespace SA_ILP
 
             }
 
-            return (Columns, BestSolution, Solver.CalcTotalDistance(BestSolution, removed, Temperature));
+            return (Columns, BestSolution, Solver.CalcTotalDistance(BestSolution, removed, this));
         }
     }
 
@@ -519,7 +519,8 @@ namespace SA_ILP
             AllowLateArrival = false,
             BaseEarlyArrivalPenalty = 100,
             BaseLateArrivalPenalty = 100,
-            BaseRemovedCustomerPenalty = 50,
+
+            BaseRemovedCustomerPenalty = 25,
             BaseRemovedCustomerPenaltyPow = 1,
             Alpha = 0.995,
             SaveColumnsAfterAllImprovements = true,
@@ -541,7 +542,9 @@ namespace SA_ILP
             AllowLateArrival = false,
             BaseEarlyArrivalPenalty = 100,
             BaseLateArrivalPenalty = 100,
+
             BaseRemovedCustomerPenalty = 400,
+
             BaseRemovedCustomerPenaltyPow = 1.5,
             Alpha = 0.992,
             SaveColumnsAfterAllImprovements = false,

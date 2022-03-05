@@ -76,15 +76,15 @@ namespace SA_ILP
         public static readonly double BaseRemovedCustomerPenaltyPow = 1.5;
 
         Random random;
-        public static double CalcTotalDistance(List<Route> routes, List<Customer> removed, double temp)
+        public static double CalcTotalDistance(List<Route> routes, List<Customer> removed, LocalSearch ls)
         {
             //This expclitly does not use the Score property of a route to force recalculation. This way bugs might be caught
-            return routes.Sum(x => x.CalcObjective()) + CalcRemovedPenalty(removed.Count,temp);
+            return routes.Sum(x => x.CalcObjective()) + CalcRemovedPenalty(removed.Count,ls);
         }
 
-        public static double CalcRemovedPenalty(int removedCount,double temp)
+        public static double CalcRemovedPenalty(int removedCount,LocalSearch ls)
         {
-            return Math.Pow(removedCount, Solver.BaseRemovedCustomerPenaltyPow) * (Solver.BaseRemovedCustomerPenalty / Math.Pow(temp,2));
+            return Math.Pow(removedCount, ls.BaseRemovedCustomerPenaltyPow) * (ls.BaseRemovedCustomerPenalty / Math.Pow(ls.Temperature,2));
         }
 
 

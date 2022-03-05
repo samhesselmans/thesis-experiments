@@ -1,4 +1,4 @@
-﻿global using Operator = System.Func<System.Collections.Generic.List<SA_ILP.Route>, System.Collections.Generic.List<int>, System.Random, System.Collections.Generic.List<SA_ILP.Customer>, double, (double, System.Action?)>;
+﻿global using Operator = System.Func<System.Collections.Generic.List<SA_ILP.Route>, System.Collections.Generic.List<int>, System.Random, System.Collections.Generic.List<SA_ILP.Customer>, SA_ILP.LocalSearch, (double, System.Action?)>;
 
 using System;
 using System.Collections.Generic;

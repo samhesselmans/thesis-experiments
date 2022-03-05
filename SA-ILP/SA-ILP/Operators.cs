@@ -318,7 +318,7 @@ namespace SA_ILP
 
         }
 
-        public static (double, Action?) RemoveRandomCustomer(List<Route> routes, List<int> viableRoutes, Random random, List<Customer> removed, double temp)
+        public static (double, Action?) RemoveRandomCustomer(List<Route> routes, List<int> viableRoutes, Random random, List<Customer> removed, LocalSearch ls)
         {
             if (viableRoutes.Count == 0)
                 return (double.MinValue, null);
@@ -330,7 +330,7 @@ namespace SA_ILP
             double penalty = 0;
             //double diff = Math.Pow(removed.Count + 1, Solver.BaseRemovedCustomerPenaltyPow) - Math.Pow(removed.Count, Solver.BaseRemovedCustomerPenaltyPow);
             //TODO: calculate penalty
-            penalty = Solver.CalcRemovedPenalty(removed.Count + 1, temp) - Solver.CalcRemovedPenalty(removed.Count, temp); //diff * Solver.BaseRemovedCustomerPenalty / temp;
+            penalty = Solver.CalcRemovedPenalty(removed.Count + 1, ls) - Solver.CalcRemovedPenalty(removed.Count, ls); //diff * Solver.BaseRemovedCustomerPenalty / temp;
             double imp = decr - penalty;
 
             return (imp, () =>
@@ -342,7 +342,7 @@ namespace SA_ILP
 
         }
 
-        public static (double, Action?) AddRandomRemovedCustomer(List<Route> routes, List<int> viableRoutes, Random random, List<Customer> removed, double temp)
+        public static (double, Action?) AddRandomRemovedCustomer(List<Route> routes, List<int> viableRoutes, Random random, List<Customer> removed, LocalSearch ls)
         {
             if (removed.Count == 0)
                 return (double.MinValue, null);
@@ -367,7 +367,7 @@ namespace SA_ILP
             double penalty = 0;
             //double diff = Math.Pow(removed.Count, Solver.BaseRemovedCustomerPenaltyPow) - Math.Pow(removed.Count - 1, Solver.BaseRemovedCustomerPenaltyPow);
             //TODO: calculate penalty
-            penalty = Solver.CalcRemovedPenalty(removed.Count, temp) - Solver.CalcRemovedPenalty(removed.Count - 1, temp); // diff * Solver.BaseRemovedCustomerPenalty / temp;
+            penalty = Solver.CalcRemovedPenalty(removed.Count, ls) - Solver.CalcRemovedPenalty(removed.Count - 1, ls); // diff * Solver.BaseRemovedCustomerPenalty / temp;
             if (possible)
                 return (penalty - incr, () =>
                 {
@@ -432,7 +432,7 @@ namespace SA_ILP
             int src_index = random.Next(viableRoutes.Count);
             int src = viableRoutes[src_index];
 
-            //Used to allow for moving to a not used route
+            //Used to allow for moving to an empty route
             int extra = 0;
             if (viableRoutes.Count < routes.Count)
                 extra = 1;
