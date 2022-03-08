@@ -47,6 +47,7 @@ namespace SA_ILP
 
         public bool SaveRoutesBeforeOperator { get; private set; }
 
+        public bool PrintExtendedInfo { get;private set; }
 
         private Random random;
 
@@ -72,6 +73,7 @@ namespace SA_ILP
             SaveColumnsAfterAllImprovements = config.SaveColumnsAfterAllImprovements;
             SaveColumnsAfterWorse = config.SaveColumnsAfterWorse;
             SaveColumnThreshold = config.SaveColumnThreshold;
+            PrintExtendedInfo = config.PrintExtendedInfo;
             Alpha = config.Alpha;
             random = new Random(seed);
             OS = new OperatorSelector(random);
@@ -190,6 +192,7 @@ namespace SA_ILP
 
         private bool IsValidSolution(List<Route> routes, List<Customer> removed)
         {
+            //Always require all customers to be served for a route to be valid
             if (removed.Count != 0)
                 return false;
             bool upperViolations = routes.Exists(x => x.ViolatesUpperTimeWindow);
@@ -219,7 +222,7 @@ namespace SA_ILP
                 if (Math.Round(Solver.CalcTotalDistance(routes, removed, this), 6) != Math.Round(expectedVal, 6))
                     Solver.ErrorPrint($"{id}: ERROR expected {expectedVal} not equal to {Solver.CalcTotalDistance(routes, removed, this)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, this)} , OP: {OS.LastOperator}");
         }
-        public (HashSet<RouteStore>, List<Route>, double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers, double[,,] distanceMatrix, bool printExtendedInfo = false, int numInterations = 3000000, int timeLimit = 30000, bool checkInitialSolution = false)
+        public (HashSet<RouteStore>, List<Route>, double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers, double[,,] distanceMatrix, int numInterations = 3000000, int timeLimit = 30000, bool checkInitialSolution = false)
         {
             Console.WriteLine("Starting local search");
             //customers.Sort(1, customers.Count - 1, delegate (Customer x, Customer y) { x.TWEnd.CompareTo(y.TWEnd); });
@@ -398,6 +401,10 @@ namespace SA_ILP
 
                             lastChangeExceptedOnIt = iteration;
                         }
+                        //else if (OS.LastOperator == "remove")
+                        //{
+                        //    Console.WriteLine(imp);
+                        //}
                     }
                 }
                 else
@@ -452,7 +459,7 @@ namespace SA_ILP
 #if DEBUG
             Console.WriteLine(routes.Sum(x => x.numReference));
 #endif
-            if (printExtendedInfo)
+            if (PrintExtendedInfo)
             {
                 lock (ConsoleWriterLock)
                 {
@@ -505,6 +512,7 @@ namespace SA_ILP
         public bool SaveColumnsAfterWorse { get; set; }
 
         public double SaveColumnThreshold { get; set; }
+        public bool PrintExtendedInfo { get; set; }
 
     }
 
@@ -517,10 +525,10 @@ namespace SA_ILP
             AllowLateArrivalDuringSearch = true,
             AllowEarlyArrival = false,
             AllowLateArrival = false,
-            BaseEarlyArrivalPenalty = 100,
-            BaseLateArrivalPenalty = 100,
+            BaseEarlyArrivalPenalty = 5,
+            BaseLateArrivalPenalty = 5,
 
-            BaseRemovedCustomerPenalty = 25,
+            BaseRemovedCustomerPenalty = 5,
             BaseRemovedCustomerPenaltyPow = 1,
             Alpha = 0.995,
             SaveColumnsAfterAllImprovements = true,
@@ -530,7 +538,8 @@ namespace SA_ILP
             CheckOperatorScores = false,
             SaveRoutesBeforeOperator = false,
             SaveColumnsAfterWorse = true,
-            SaveColumnThreshold = 0.2
+            SaveColumnThreshold = 0.2,
+            PrintExtendedInfo = true
         };
 
         public static LocalSearchConfiguration VRPTW => new LocalSearchConfiguration

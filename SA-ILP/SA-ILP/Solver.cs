@@ -243,7 +243,7 @@ namespace SA_ILP
             (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(fileName);
             double[,,] matrix = CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
             var ls = new LocalSearch(LocalSearchConfigs.VRPLTT, random.Next());
-            (var colums, var sol, var value) = ls.LocalSearchInstance(-1, "", customers.Count, bikeMaxMass - bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix, numInterations: numIterations, checkInitialSolution: false, timeLimit: timelimit, printExtendedInfo: true);
+            (var colums, var sol, var value) = ls.LocalSearchInstance(-1, "", customers.Count, bikeMaxMass - bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix, numInterations: numIterations, checkInitialSolution: false, timeLimit: timelimit);
             foreach (var route in sol)
                 if(route.route.Count != 2)
                     Console.WriteLine(route);
@@ -276,6 +276,13 @@ namespace SA_ILP
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine(toPrint);
             Console.ForegroundColor = ConsoleColor.White;
+        }
+
+        public static void PrintRoutes(List<Route> routes)
+        {
+            foreach (Route route in routes)
+                if (route.route.Count != 2)
+                    Console.WriteLine(route);
         }
 
         public async Task DoTest(string fileName, int numThreads = 1, int numIterations = 3000000, int timeLimit = 100000)
@@ -314,7 +321,7 @@ namespace SA_ILP
                 {
                     var id = i;
                     var ls = new LocalSearch(config, random.Next());
-                    tasks.Add(Task.Run(() => { return ls.LocalSearchInstance(id, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix.Clone() as double[,,], numInterations: numIterations, timeLimit: timeLimit, printExtendedInfo: false); }));
+                    tasks.Add(Task.Run(() => { return ls.LocalSearchInstance(id, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix.Clone() as double[,,], numInterations: numIterations, timeLimit: timeLimit); }));
                     
 
                 }
@@ -346,8 +353,8 @@ namespace SA_ILP
         public async Task<(List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal)> SolveInstanceAsync(string name, int numV, double capV, List<Customer> customers, double[,,] distanceMatrix, int numThreads,int numStarts, int numIterations, LocalSearchConfiguration configuration, int timeLimit = 30000)
         {
             (var allColumns, var bestSolution, var LSTime, var LSSCore) = await LocalSearchInstancAsync(name, numV, capV, customers, distanceMatrix, numThreads, numStarts, numIterations, timeLimit, configuration);
-            bestSolution.ForEach(x => Console.WriteLine(x));
-            
+            //bestSolution.ForEach(x => Console.WriteLine(x));
+            PrintRoutes(bestSolution);
             (var ilpSol, double ilpVal, double time) = SolveILP(allColumns, customers, numV, bestSolution);
 
 

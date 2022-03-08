@@ -144,7 +144,7 @@ namespace SA_ILP
 
                 //Add possibility to remove ramping based on penalty
 
-                return (parent.BaseEarlyArrivalPenalty + timewindowStart - arrivalTime);// / (parent.Temperature / parent.InitialTemperature);
+                return (parent.BaseEarlyArrivalPenalty + timewindowStart - arrivalTime)/ (parent.Temperature / parent.InitialTemperature);
 
             }
 
@@ -544,30 +544,37 @@ namespace SA_ILP
             return (bestIndex, bestDistIncr);
         }
 
-        public void ReverseSubRoute(int index1, int index2, List<double> newArrivalTimes)
+        public void ReverseSubRoute(int index1, int index2, List<double> newArrivalTimes, bool violatesLowerTimewindow, bool violatesUpperTimeWindow)
         {
 
             //Invalidate the cache
             
 
             this.arrival_times = newArrivalTimes;
-
+            this.ViolatesLowerTimeWindow = violatesLowerTimewindow;
+            this.ViolatesUpperTimeWindow = violatesUpperTimeWindow;
             this.route.Reverse(index1, index2 - index1 + 1);
             ResetCache();
         }
 
         //Using the function is quite a bit slower than using specifically made functions, but is definatly a possibility. 
         //It can therefore be used to test new operators for example
-        public (bool possible,double improvement,List<double> newArrivalTimes) NewRoutePossible(List<Customer> newRoute,double changedCapacity)
+        public (bool possible,double improvement,List<double> newArrivalTimes,bool,bool) NewRoutePossible(List<Customer> newRoute,double changedCapacity)
         {
             double load = used_capacity + changedCapacity;
 
             if (load > max_capacity)
-                return (false, double.MinValue, null);
+                return (false, double.MinValue, null,false,false);
 
             double arrivalTime = 0;
             double newCost = 0;
+            bool violatesLowerTimeWindow = false;
+            bool violatesUpperTimeWindow = false;
             List<double> newArrivalTimes = new List<double>(newRoute.Count) { 0};
+
+
+            double startTimeLowerBound = 0;
+            double startTImeUpperBound = double.MaxValue;
 
             for(int i = 0; i < newRoute.Count-1; i++)
             {
@@ -584,9 +591,10 @@ namespace SA_ILP
                             newCost += CalculateEarlyPenaltyTerm(arrivalTime, newRoute[i + 1].TWStart);
                             if (parent.AdjustEarlyArrivalToTWStart)
                                 arrivalTime = newRoute[i + 1].TWStart;
+                            violatesLowerTimeWindow = true;
                         }
                         else
-                            return (false, double.MinValue, newArrivalTimes);
+                            return (false, double.MinValue, newArrivalTimes,false,false);
                     }
                     else
                     {
@@ -601,31 +609,38 @@ namespace SA_ILP
                     if (parent.AllowLateArrivalDuringSearch)
                     {
                         newCost += CalculateLatePenaltyTerm(arrivalTime, newRoute[i+1].TWEnd);
+                        violatesUpperTimeWindow = true;
                     }
                     else
-                        return(false, double.MinValue,newArrivalTimes);
+                        return(false, double.MinValue,newArrivalTimes,false,false);
                 }
 
                 load -= newRoute[i + 1].Demand;
                 newArrivalTimes.Add(arrivalTime);
 
             }
-            return (true,this.Score - newCost,newArrivalTimes);
+            return (true,this.Score - newCost,newArrivalTimes,violatesLowerTimeWindow,violatesUpperTimeWindow);
         }
 
-        public void SetNewRoute(List<Customer> customers, List<double> arrivalTimes)
+        public void SetNewRoute(List<Customer> customers, List<double> arrivalTimes, bool violatesLowerTimeWindow, bool violatesUpperTimeWindow)
         {
             this.route = customers;
             this.arrival_times = arrivalTimes;
+            this.ViolatesLowerTimeWindow = violatesLowerTimeWindow;
+            this.ViolatesUpperTimeWindow = violatesUpperTimeWindow;
             this.used_capacity = customers.Sum(x => x.Demand);
             ResetCache();
         }
 
-        public (bool possible, double improvement,List<double> newArrivalTimes) CanReverseSubRoute(int index1, int index2)
+        public (bool possible, double improvement,List<double> newArrivalTimes, bool violatesLowerTimeWindow, bool violatesUpperTimeWindow) CanReverseSubRoute(int index1, int index2)
         {
             double load = used_capacity;
             double arrival_time = 0;
             double newCost = 0;
+
+            bool violatesLowerTimeWindow = false;
+            bool violatesUpperTimeWindow = false;
+
             //int[] newArrivalTimes = new int[arrival_times.Count];
             List<double> newArrivalTimes = new List<double>(route.Count) { 0};
             //Check if the action would be possible and calculate the new objective score
@@ -674,6 +689,7 @@ namespace SA_ILP
                         newCost += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);
                         if (parent.AdjustEarlyArrivalToTWStart)
                             arrival_time = nextCust.TWStart;
+                        violatesLowerTimeWindow = true;
                     }
                     else
                     {
@@ -687,9 +703,12 @@ namespace SA_ILP
                 //Check the timewindow end of the next customer
                 if (arrival_time > nextCust.TWEnd)
                     if (parent.AllowLateArrivalDuringSearch)
+                    {
+                        violatesUpperTimeWindow = true;
                         newCost += CalculateLatePenaltyTerm(arrival_time, nextCust.TWEnd);
+                    }
                     else
-                        return (false, double.MinValue,newArrivalTimes);
+                        return (false, double.MinValue, newArrivalTimes, violatesLowerTimeWindow, false);
 
                 //After traveling to the next customer we can remove it's load
                 load -= nextCust.Demand;
@@ -701,7 +720,7 @@ namespace SA_ILP
             //    objective = CalcObjective();
             //if (newArrivalTimes[0] != arrival_times[0])
             //    Console.WriteLine("Maybe problemo");
-            return (true, this.Score - newCost, newArrivalTimes);
+            return (true, this.Score - newCost, newArrivalTimes,violatesLowerTimeWindow,violatesUpperTimeWindow);
         }
 
         public (Customer? toRemove, double objectiveDecrease,int index) RandomCust()

@@ -30,6 +30,8 @@ namespace SA_ILP
             List<Customer>? bestScramble = null;
             List<double>? bestArrivalTimes = null;
             double bestImp = double.MinValue;
+            bool bestVLTW = false;
+            bool bestVUTW = false;
 
             for (int j = 0; j < 1; j++)
             {
@@ -74,7 +76,7 @@ namespace SA_ILP
                         newRoute.Add(cust);
                     }
 
-                    (bool possible, double imp, List<double> newArrivalTimes) = routes[routeIndex].NewRoutePossible(newRoute, 0);
+                    (bool possible, double imp, List<double> newArrivalTimes,bool violatesLowerTimeWindow, bool violatesUpperTimeWindow) = routes[routeIndex].NewRoutePossible(newRoute, 0);
 
                     if (possible && imp > bestImp)
                     {
@@ -82,6 +84,8 @@ namespace SA_ILP
                         bestRoute = routeIndex;
                         bestScramble = newRoute;
                         bestArrivalTimes = newArrivalTimes;
+                        bestVLTW = violatesLowerTimeWindow;
+                        bestVUTW = violatesUpperTimeWindow;
                     }
                     //return (imp, () =>
                     //{
@@ -96,7 +100,7 @@ namespace SA_ILP
             {
                 return (bestImp, () =>
                 {
-                    routes[bestRoute].SetNewRoute(bestScramble, bestArrivalTimes);
+                    routes[bestRoute].SetNewRoute(bestScramble, bestArrivalTimes,bestVLTW,bestVUTW);
                 }
                 );
             }
@@ -116,6 +120,7 @@ namespace SA_ILP
             int bestIndex2 = -1;
             double bestImp = double.MinValue;
             List<double>? bestArrivalTimes = null;
+            bool bvltw = false, bvutw = false;
 
             for (int i = 0; i < 1; i++)
             {
@@ -134,7 +139,7 @@ namespace SA_ILP
                         index2 = index1;
                         index1 = temp;
                     }
-                    (bool possible, double imp, List<double> arrivalTimes) = routes[routeIndex].CanReverseSubRoute(index1, index2);
+                    (bool possible, double imp, List<double> arrivalTimes, bool vltw, bool vutw) = routes[routeIndex].CanReverseSubRoute(index1, index2);
 
                     if (possible && imp > bestImp)
                     {
@@ -143,6 +148,8 @@ namespace SA_ILP
                         bestRoute = routeIndex;
                         bestArrivalTimes = arrivalTimes;
                         bestImp = imp;
+                        bvltw = vltw;
+                        bvutw = vutw;
                     }
                     //return (imp, () =>
                     //{
@@ -155,7 +162,7 @@ namespace SA_ILP
             {
                 return (bestImp, () =>
                 {
-                    routes[bestRoute].ReverseSubRoute(bestIndex1, bestIndex2, bestArrivalTimes);
+                    routes[bestRoute].ReverseSubRoute(bestIndex1, bestIndex2, bestArrivalTimes,bvltw,bvutw);
                 }
                 );
             }
@@ -497,7 +504,8 @@ namespace SA_ILP
 
         public static (double, Action?) SwapRandomTails(List<Route> routes, List<int> viableRoutes, Random random)
         {
-            if (viableRoutes.Count == 0)
+            //We need two viable routes
+            if (viableRoutes.Count <= 1)
                 return (double.MinValue, null);
 
             int srcIndex = random.Next(viableRoutes.Count);
@@ -540,15 +548,15 @@ namespace SA_ILP
 
             newDestRoute.AddRange(newDestRouteTail);
 
-            (bool possible, double improvement, var newArrivalTimes) = routes[src].NewRoutePossible(newSrcRoute, newSrcRoute.Sum(x => x.Demand) - routes[src].used_capacity);
-            (bool possible2, double improvement2, var newArrivalTimes2) = routes[dest].NewRoutePossible(newDestRoute, newDestRoute.Sum(x => x.Demand) - routes[dest].used_capacity);
+            (bool possible, double improvement, var newArrivalTimes, bool violatesLowerTimeWindow1, bool violatesUpperTimeWindow1) = routes[src].NewRoutePossible(newSrcRoute, newSrcRoute.Sum(x => x.Demand) - routes[src].used_capacity);
+            (bool possible2, double improvement2, var newArrivalTimes2, bool violatesLowerTimeWindow2, bool violatesUpperTimeWindow2) = routes[dest].NewRoutePossible(newDestRoute, newDestRoute.Sum(x => x.Demand) - routes[dest].used_capacity);
 
             if (possible2 && possible)
             {
                 return (improvement + improvement2, () =>
                 {
-                    routes[src].SetNewRoute(newSrcRoute, newArrivalTimes);
-                    routes[dest].SetNewRoute(newDestRoute, newArrivalTimes2);
+                    routes[src].SetNewRoute(newSrcRoute, newArrivalTimes, violatesLowerTimeWindow1, violatesUpperTimeWindow1);
+                    routes[dest].SetNewRoute(newDestRoute, newArrivalTimes2, violatesLowerTimeWindow2, violatesUpperTimeWindow2);
                 }
                 );
             }
