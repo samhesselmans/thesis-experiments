@@ -78,13 +78,13 @@ namespace SA_ILP
             random = new Random(seed);
             OS = new OperatorSelector(random);
 
-            OS.Add(Operators.AddRandomRemovedCustomer, 1, "add");
-            OS.Add(Operators.RemoveRandomCustomer, 1, "remove");
-            OS.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move");
-            OS.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best");
-            OS.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route");
-            OS.Add((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap");
-            OS.Add((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route");
+            //OS.Add(Operators.AddRandomRemovedCustomer, 1, "add");
+            //OS.Add(Operators.RemoveRandomCustomer, 1, "remove");
+            //OS.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move");
+            //OS.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best");
+            //OS.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route");
+            //OS.Add((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap");
+            //OS.Add((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route");
             OS.Add((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse");
             OS.Add((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble");
             OS.Add((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails");
@@ -480,107 +480,5 @@ namespace SA_ILP
         }
     }
 
-    public struct LocalSearchConfiguration
-    {
-        public double InitialTemperature { get; set; }
-
-        public bool AllowLateArrivalDuringSearch { get; set; }
-        public bool AllowEarlyArrivalDuringSearch { get; set; }
-
-        public bool AllowLateArrival { get; set; }
-        public bool AllowEarlyArrival { get; set; }
-
-        public double BaseRemovedCustomerPenalty { get; set; }
-        public double BaseRemovedCustomerPenaltyPow { get; set; }
-        public double BaseEarlyArrivalPenalty { get; set; }
-        public double BaseLateArrivalPenalty { get; set; }
-
-        public double Alpha { get; set; }
-
-        public bool SaveColumnsAfterAllImprovements { get; set; }
-
-        public bool PenalizeEarlyArrival { get; set; }
-        public bool PenalizeLateArrival { get; set; }
-
-        public bool AdjustEarlyArrivalToTWStart { get; set; }
-
-
-        public bool CheckOperatorScores { get; set; }
-
-        public bool SaveRoutesBeforeOperator { get; set; }
-
-        public bool SaveColumnsAfterWorse { get; set; }
-
-        public double SaveColumnThreshold { get; set; }
-        public bool PrintExtendedInfo { get; set; }
-
-    }
-
-    public static class LocalSearchConfigs
-    {
-        public static LocalSearchConfiguration VRPLTT => new LocalSearchConfiguration
-        {
-            InitialTemperature = 1,
-            AllowEarlyArrivalDuringSearch = true,
-            AllowLateArrivalDuringSearch = true,
-            AllowEarlyArrival = false,
-            AllowLateArrival = false,
-            BaseEarlyArrivalPenalty = 5,
-            BaseLateArrivalPenalty = 5,
-
-            BaseRemovedCustomerPenalty = 5,
-            BaseRemovedCustomerPenaltyPow = 1,
-            Alpha = 0.995,
-            SaveColumnsAfterAllImprovements = true,
-            PenalizeEarlyArrival = true,
-            PenalizeLateArrival = true,
-            AdjustEarlyArrivalToTWStart = true,
-            CheckOperatorScores = false,
-            SaveRoutesBeforeOperator = false,
-            SaveColumnsAfterWorse = true,
-            SaveColumnThreshold = 0.2,
-            PrintExtendedInfo = true
-        };
-
-        public static LocalSearchConfiguration VRPTW => new LocalSearchConfiguration
-        {
-            InitialTemperature = 1,
-            AllowEarlyArrivalDuringSearch = true,
-            AllowLateArrivalDuringSearch = false,
-            AllowEarlyArrival = true,
-            AllowLateArrival = false,
-            BaseEarlyArrivalPenalty = 100,
-            BaseLateArrivalPenalty = 100,
-
-            BaseRemovedCustomerPenalty = 400,
-
-            BaseRemovedCustomerPenaltyPow = 1.5,
-            Alpha = 0.992,
-            SaveColumnsAfterAllImprovements = false,
-            PenalizeEarlyArrival = false,
-            PenalizeLateArrival = true,
-            AdjustEarlyArrivalToTWStart = true,
-            CheckOperatorScores = true,
-            SaveRoutesBeforeOperator = false,
-            SaveColumnsAfterWorse = true,
-            SaveColumnThreshold = 0.1
-        };
-
-
-        //public static List<Operator> SimpleOperators => new List<Func<List<Route>, List<int>, Random, List<Customer>, double, (double, Action?)>>() {Operators.AddRandomRemovedCustomer,Operators. };
-
-        //public static (List<Operator>, List<double>) SimpleOperators
-        //{
-        //    get
-        //    {
-        //        return CreateSimpleOperators();
-        //    }
-        //}
-
-        //private static (List<Operator>, List<double>) CreateSimpleOperators()
-        //{
-
-        //}
-
-    }
+ 
 }

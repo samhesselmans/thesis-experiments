@@ -246,7 +246,7 @@ namespace SA_ILP
             (var colums, var sol, var value) = ls.LocalSearchInstance(-1, "", customers.Count, bikeMaxMass - bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix, numInterations: numIterations, checkInitialSolution: false, timeLimit: timelimit);
             foreach (var route in sol)
                 if(route.route.Count != 2)
-                    Console.WriteLine(route);
+                    Console.WriteLine($"{route}; ST {route.startTime} ; SST {route.route[1].TWStart - route.CustomerDist(route.route[0], route.route[1],route.used_capacity)}");
 
             double totalWaitingTime = 0;
             int numViolations = 0;

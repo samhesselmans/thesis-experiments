@@ -13,7 +13,7 @@ namespace SA_ILP
         public double[,,] objective_matrix;
         public double[] objeciveMatrix1d;
 
-        double startTime = 0;
+        public double startTime = 0;
         
         public int numLoadLevels;
         public int numX;
@@ -180,7 +180,7 @@ namespace SA_ILP
 
             double totalDist = 0;
             double totalWeight = used_capacity;// route.Sum(x => x.Demand);
-            double arrivalTime = 0;
+            double arrivalTime = startTime;
             for(int i =0; i< route.Count - 1; i++)
             {
                 double dist = this.CustomerDist(route[i], route[i + 1], totalWeight);
@@ -548,14 +548,15 @@ namespace SA_ILP
         {
 
             //Invalidate the cache
-            
 
+            this.startTime = newArrivalTimes[0];
             this.arrival_times = newArrivalTimes;
             this.ViolatesLowerTimeWindow = violatesLowerTimewindow;
             this.ViolatesUpperTimeWindow = violatesUpperTimeWindow;
             this.route.Reverse(index1, index2 - index1 + 1);
             ResetCache();
         }
+
 
         //Using the function is quite a bit slower than using specifically made functions, but is definatly a possibility. 
         //It can therefore be used to test new operators for example
@@ -570,18 +571,43 @@ namespace SA_ILP
             double newCost = 0;
             bool violatesLowerTimeWindow = false;
             bool violatesUpperTimeWindow = false;
-            List<double> newArrivalTimes = new List<double>(newRoute.Count) { 0};
-
-
+            List<double> newArrivalTimes = new List<double>(newRoute.Count) {};
+            //List<double> systemOfEquationsLower = new List<double>(newRoute.Count);
+            //List<double> systemOfEquationsUpper = new List<double>(newRoute.Count);
             double startTimeLowerBound = 0;
-            double startTImeUpperBound = double.MaxValue;
+            double startTimeUpperBound = double.MaxValue;
 
-            for(int i = 0; i < newRoute.Count-1; i++)
+            double val = 0;
+            double l = load;
+            for (int i = 0; i < newRoute.Count; i++)
+            {
+                if (newRoute[i].TWStart - val > startTimeLowerBound)
+                    startTimeLowerBound = newRoute[i].TWStart - val;
+                if (newRoute[i].TWEnd - val < startTimeUpperBound)
+                    startTimeUpperBound = newRoute[i].TWEnd - val;
+                //systemOfEquationsLower.Add(newRoute[i].TWStart - val);
+                //systemOfEquationsUpper.Add(newRoute[i].TWEnd - val);
+                l -= newRoute[i].Demand;
+
+                if (i < newRoute.Count - 1)
+                    val += CustomerDist(newRoute[i], newRoute[i + 1], l) + newRoute[i].ServiceTime;
+            }
+            double epsilon = 0.0000001;
+
+            if (startTimeLowerBound != 0 && startTimeLowerBound + epsilon <= startTimeUpperBound)
+            {
+                arrivalTime = startTimeLowerBound + epsilon;
+            }
+
+
+            //Adding the arrival time for the depot. This is used for setting the start time of the route.
+            newArrivalTimes.Add(arrivalTime);
+            for (int i = 0; i < newRoute.Count - 1; i++)
             {
                 var dist = CustomerDist(newRoute[i], newRoute[i + 1], load);
                 arrivalTime += dist + newRoute[i].ServiceTime;
                 newCost += dist;
-                if(arrivalTime < newRoute[i + 1].TWStart)
+                if (arrivalTime < newRoute[i + 1].TWStart)
                 {
                     if (i != 0)
                     {
@@ -594,7 +620,7 @@ namespace SA_ILP
                             violatesLowerTimeWindow = true;
                         }
                         else
-                            return (false, double.MinValue, newArrivalTimes,false,false);
+                            return (false, double.MinValue, newArrivalTimes, false, false);
                     }
                     else
                     {
@@ -604,15 +630,15 @@ namespace SA_ILP
 
 
                 }
-                else if(arrivalTime > newRoute[i+1].TWEnd)
+                else if (arrivalTime > newRoute[i + 1].TWEnd)
                 {
                     if (parent.AllowLateArrivalDuringSearch)
                     {
-                        newCost += CalculateLatePenaltyTerm(arrivalTime, newRoute[i+1].TWEnd);
+                        newCost += CalculateLatePenaltyTerm(arrivalTime, newRoute[i + 1].TWEnd);
                         violatesUpperTimeWindow = true;
                     }
                     else
-                        return(false, double.MinValue,newArrivalTimes,false,false);
+                        return (false, double.MinValue, newArrivalTimes, false, false);
                 }
 
                 load -= newRoute[i + 1].Demand;
@@ -626,6 +652,7 @@ namespace SA_ILP
         {
             this.route = customers;
             this.arrival_times = arrivalTimes;
+            this.startTime = arrivalTimes[0];
             this.ViolatesLowerTimeWindow = violatesLowerTimeWindow;
             this.ViolatesUpperTimeWindow = violatesUpperTimeWindow;
             this.used_capacity = customers.Sum(x => x.Demand);
