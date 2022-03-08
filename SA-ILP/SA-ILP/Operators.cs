@@ -465,6 +465,60 @@ namespace SA_ILP
                 pos = 1;
             }
 
+            //List<Customer> newRouteSrc; List<Customer>? newRouteDest = null;
+
+            //(cust1, int pos1) = routes[src].RandomCustIndex();
+            //newRouteSrc = new List<Customer>();
+            //if (src != dest)
+            //    newRouteDest = new List<Customer>();
+
+            //for (int i = 0; i < routes[src].route.Count; i++)
+            //{
+            //    if (i != pos1)
+            //        newRouteSrc.Add(routes[src].route[i]);
+            //}
+            //if (src != dest) routes[dest].route.ForEach(x => newRouteDest.Add(x));
+
+            //var toInsert = newRouteSrc;
+            //if (newRouteDest != null)
+            //    toInsert = newRouteDest;
+
+            //if (src == dest && pos1 < pos)
+            //    pos--;
+
+            //toInsert.Insert(pos, routes[src].route[pos1]);
+
+            //if (newRouteDest != null)
+            //{
+            //    (bool possible, double imp, var newArrTimes, bool lv, bool uv) = routes[dest].NewRoutePossible(newRouteDest, routes[src].route[pos1].Demand);
+            //    (bool possible2, double imp2, var newArrTimes2, bool lv2, bool uv2) = routes[src].NewRoutePossible(newRouteSrc, -routes[src].route[pos1].Demand);
+
+            //    if (possible && possible2)
+            //    {
+            //        return (imp + imp2, () =>
+            //        {
+            //            routes[dest].SetNewRoute(newRouteDest, newArrTimes, lv, uv);
+            //            routes[src].SetNewRoute(newRouteSrc, newArrTimes2, lv2, uv2);
+
+            //        }
+            //        );
+            //    }
+
+            //}
+            //else
+            //{
+            //    (bool possible2, double imp2, var newArrTimes2, bool lv2, bool uv2) = routes[src].NewRoutePossible(newRouteSrc, 0);
+            //    if (possible2)
+            //    {
+            //        return (imp2, () =>
+            //        {
+            //            routes[src].SetNewRoute(newRouteSrc, newArrTimes2, lv2, uv2);
+
+            //        }
+            //        );
+            //    }
+            //}
+
             (cust1, decr1, int i) = routes[src].RandomCust();
 
             //if (src == dest && i + 1 == pos)

@@ -238,17 +238,19 @@ namespace SA_ILP
 
         public void RemoveCust(Customer cust)
         {
-            double newArriveTime = 0;
+            
             ViolatesUpperTimeWindow = false;
             ViolatesLowerTimeWindow = false;
 
-            startTime = 0;
             arrival_times[0] = 0;
             int index = -1;
             Customer lastCust = null;
             Customer previous_cust = route[0];
             this.used_capacity -= cust.Demand;
+            double newArriveTime = OptimizeStartTime(route,used_capacity,toRemove: cust);
+            startTime = newArriveTime;
             double load = used_capacity;
+            arrival_times[0] = newArriveTime;
             for (int i = 1, actualIndex=1; i < route.Count; i++,actualIndex++)
             {
                 var c = route[i];
@@ -301,8 +303,8 @@ namespace SA_ILP
         public (bool possible, double decrease) CanSwapInternally(Customer cust1, Customer cust2, int index1, int index2)
         {
             double load = used_capacity;
-            double arrival_time = 0;
-            double totalTravelTime = 0;
+            double arrival_time = OptimizeStartTime(route, load, swapIndex1: index1, swapIndex2: index2);
+            double totalTravelTime = 0; 
             for(int i=0; i<route.Count - 1; i++)
             {
                 Customer currentCust;
@@ -396,7 +398,7 @@ namespace SA_ILP
 
             //int actualIndex = 0;
 
-            double arrivalTime = 0;
+            double arrivalTime = OptimizeStartTime(route,load,toAdd:cust,pos:pos,skip:skip,ignore:ignore);
             for (int i = 0,actualIndex=0; i < route.Count; i++,actualIndex ++)
             {
 
@@ -557,6 +559,89 @@ namespace SA_ILP
             ResetCache();
         }
 
+        //WARNING DO NOT USE DIFFERENT COMBINATIONS OF PARAMETERS. SOME COMBINATIONS ARE NOT SUPPORTED AND NOT CHECKED
+        public double OptimizeStartTime(List<Customer> toOptimizeOver,double load,Customer? toRemove=null,int skip = 0,Customer? toAdd = null, int pos=-1, int ignore=-1, int swapIndex1 =-1, int swapIndex2 = -1, int reverseIndex1 = -1, int reverseIndex2 = -1)
+        {
+
+            //return 0;
+
+            double startTimeLowerBound = 0;
+            double startTimeUpperBound = double.MaxValue;
+            double arrivalTime = 0;
+            double val = 0;
+            double l = load;
+
+            Customer currentCust;// = toOptimizeOver[0];
+            Customer nextCust;
+
+            for (int i = 0; i < toOptimizeOver.Count; i++)
+            {
+                //if (currentCust == toRemove)
+                //    i += 1 + skip;
+                if (i == ignore)
+                    i++;
+                currentCust = toOptimizeOver[i];
+                if (currentCust == toRemove)
+                {
+                    i += 1;
+                    currentCust = toOptimizeOver[i];
+                }
+                if (i == pos && toAdd != null)
+                {
+                    currentCust = toOptimizeOver[i + skip];
+                    i += skip;
+                    if (toAdd.TWStart - val > startTimeLowerBound)
+                        startTimeLowerBound = toAdd.TWStart - val;
+                    if (toAdd.TWEnd - val < startTimeUpperBound)
+                        startTimeUpperBound = toAdd.TWEnd - val;
+                    l -= toAdd.Demand;
+                    val += CustomerDist(toAdd, currentCust, l) + toAdd.ServiceTime;
+                }
+                else if (i == swapIndex1)
+                    currentCust = toOptimizeOver[swapIndex2];
+                else if (i == swapIndex2)
+                    currentCust = toOptimizeOver[swapIndex1];
+                else if( i>= reverseIndex1 && i <= reverseIndex2)
+                    currentCust = toOptimizeOver[reverseIndex2 - i + reverseIndex1];
+
+
+                if (currentCust.TWStart - val > startTimeLowerBound)
+                    startTimeLowerBound = currentCust.TWStart - val;
+                if (currentCust.TWEnd - val < startTimeUpperBound)
+                    startTimeUpperBound = currentCust.TWEnd - val;
+                //systemOfEquationsLower.Add(newRoute[i].TWStart - val);
+                //systemOfEquationsUpper.Add(newRoute[i].TWEnd - val);
+                l -= currentCust.Demand;
+
+                if (i < toOptimizeOver.Count - 1)
+                {
+                    nextCust = toOptimizeOver[i + 1];
+                    if (nextCust == toRemove)
+                        nextCust = toOptimizeOver[i + 2 + skip];
+
+                    //If the next customer is in the position of the new customer, set next to new.
+                    else if (i == pos - 1 && toAdd != null)
+                        nextCust = toAdd;
+                    else if (i == ignore - 1)
+                        nextCust = toOptimizeOver[i + 2];
+                    else if (i == swapIndex1 - 1)
+                        nextCust = toOptimizeOver[swapIndex2];
+                    else if (i == swapIndex2 - 1)
+                        nextCust = toOptimizeOver[swapIndex1];
+                    else if( i >= reverseIndex1 - 1 && i < reverseIndex2)
+                        nextCust = toOptimizeOver[reverseIndex2 - i + reverseIndex1 - 1];
+                    val += CustomerDist(currentCust, nextCust, l) + currentCust.ServiceTime;
+                }
+            }
+            double epsilon = 0.0000001;
+
+            if (startTimeLowerBound != 0 && startTimeLowerBound + epsilon <= startTimeUpperBound)
+            {
+                arrivalTime = startTimeLowerBound + epsilon;
+            }
+            return arrivalTime;
+        }
+
 
         //Using the function is quite a bit slower than using specifically made functions, but is definatly a possibility. 
         //It can therefore be used to test new operators for example
@@ -574,31 +659,8 @@ namespace SA_ILP
             List<double> newArrivalTimes = new List<double>(newRoute.Count) {};
             //List<double> systemOfEquationsLower = new List<double>(newRoute.Count);
             //List<double> systemOfEquationsUpper = new List<double>(newRoute.Count);
-            double startTimeLowerBound = 0;
-            double startTimeUpperBound = double.MaxValue;
 
-            double val = 0;
-            double l = load;
-            for (int i = 0; i < newRoute.Count; i++)
-            {
-                if (newRoute[i].TWStart - val > startTimeLowerBound)
-                    startTimeLowerBound = newRoute[i].TWStart - val;
-                if (newRoute[i].TWEnd - val < startTimeUpperBound)
-                    startTimeUpperBound = newRoute[i].TWEnd - val;
-                //systemOfEquationsLower.Add(newRoute[i].TWStart - val);
-                //systemOfEquationsUpper.Add(newRoute[i].TWEnd - val);
-                l -= newRoute[i].Demand;
-
-                if (i < newRoute.Count - 1)
-                    val += CustomerDist(newRoute[i], newRoute[i + 1], l) + newRoute[i].ServiceTime;
-            }
-            double epsilon = 0.0000001;
-
-            if (startTimeLowerBound != 0 && startTimeLowerBound + epsilon <= startTimeUpperBound)
-            {
-                arrivalTime = startTimeLowerBound + epsilon;
-            }
-
+            arrivalTime = OptimizeStartTime(newRoute, load);
 
             //Adding the arrival time for the depot. This is used for setting the start time of the route.
             newArrivalTimes.Add(arrivalTime);
@@ -662,14 +724,14 @@ namespace SA_ILP
         public (bool possible, double improvement,List<double> newArrivalTimes, bool violatesLowerTimeWindow, bool violatesUpperTimeWindow) CanReverseSubRoute(int index1, int index2)
         {
             double load = used_capacity;
-            double arrival_time = 0;
+            double arrival_time = OptimizeStartTime(route,load,reverseIndex1:index1,reverseIndex2: index2);
             double newCost = 0;
 
             bool violatesLowerTimeWindow = false;
             bool violatesUpperTimeWindow = false;
 
             //int[] newArrivalTimes = new int[arrival_times.Count];
-            List<double> newArrivalTimes = new List<double>(route.Count) { 0};
+            List<double> newArrivalTimes = new List<double>(route.Count) { arrival_time};
             //Check if the action would be possible and calculate the new objective score
             for(int i=0; i<route.Count - 1; i++)
             {
@@ -758,7 +820,7 @@ namespace SA_ILP
             var i = random.Next(1, route.Count - 1);
             double newCost = 0;
             double load = used_capacity - route[i].Demand;
-            double arrival_time = 0;
+            double arrival_time = OptimizeStartTime(route,load,toRemove: route[i]);
 
             for (int j = 0, actualIndex=0; j < route.Count - 1; j++,actualIndex++ )
             {
@@ -828,14 +890,14 @@ namespace SA_ILP
             //double TArrivalNewCust = arrival_times[pos - 1] + route[pos - 1].ServiceTime + CustomerDist(cust, route[pos - 1]);
             //if(TArrivalNewCust < cust.TWStart)
             //    TArrivalNewCust = cust.TWStart;
-            double newArrivalTime = 0;// TArrivalNewCust + CustomerDist(route[pos], cust) + cust.ServiceTime;
+            // TArrivalNewCust + CustomerDist(route[pos], cust) + cust.ServiceTime;
             used_capacity += cust.Demand;
             double load = used_capacity;
-            startTime = 0;
             double newCustArrivalTime = 0;
             ViolatesLowerTimeWindow = false;
             ViolatesUpperTimeWindow  = false;
-            
+            double newArrivalTime = OptimizeStartTime(route,used_capacity,toAdd:cust,pos:pos);
+            startTime = newArrivalTime;
             for (int i = 0, actualIndex = 0; i < route.Count; i++,actualIndex++)
             {
                 if (i == pos)

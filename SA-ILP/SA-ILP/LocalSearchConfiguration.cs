@@ -70,7 +70,7 @@ namespace SA_ILP
 
         public static LocalSearchConfiguration VRPTW => new LocalSearchConfiguration
         {
-            InitialTemperature = 1,
+            InitialTemperature = 10,
             AllowEarlyArrivalDuringSearch = true,
             AllowLateArrivalDuringSearch = false,
             AllowEarlyArrival = true,
