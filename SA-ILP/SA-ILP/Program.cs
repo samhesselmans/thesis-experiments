@@ -2,6 +2,9 @@
 using SA_ILP;
 using System.Diagnostics;
 using Gurobi;
+using CommandLine;
+
+
 
 
 string baseDir = "../../../../../";
@@ -11,6 +14,50 @@ Stopwatch watch = new Stopwatch();
 
 //PROBLEM might not want to create new routes it seems like
 
+//var arguments = Environment.GetCommandLineArgs();
+
+if (args.Length >= 1)
+{
+    //string mode = args[0];
+    //string instance = args[1];
+    //int timeLimit = 60;
+    Options? opts = null;
+
+    Parser.Default.ParseArguments<Options>(args)
+      .WithParsed<Options>(o => 
+       {
+           opts = o;
+       });
+    if (opts == null)
+        return;
+
+    if (opts.Mode == "vrpltt")
+    {
+        solver.SolveVRPLTTInstance(opts.Instance, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower);
+
+    }
+    else if (opts.Mode == "vrptw")
+    {
+        solver.SolveSolomonInstance(opts.Instance, numIterations: opts.Iterations, timeLimit: opts.TimeLimitLS * 1000);
+
+    }
+    else if (opts.Mode == "vrplttmt")
+    {
+        await solver.SolveVRPLTTInstanceAsync(opts.Instance, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads);
+    }
+    else if (opts.Mode == "vrptwmt")
+    {
+        await solver.SolveSolomonInstanceAsync(opts.Instance, numIterations: opts.Iterations, timeLimit: opts.TimeLimitLS * 1000, numStarts: opts.NumStarts, numThreads: opts.NumThreads);
+
+    }
+    else
+    {
+        Console.WriteLine("Enter correct mode");
+        return;
+    }
+
+    return;
+}
 
 //double[,,] test = new double[1000,1000,10];
 //double[] test2 = new double[1000 * 1000 * 10];
@@ -39,13 +86,13 @@ Stopwatch watch = new Stopwatch();
 //await RunTestAsync();
 
 
-solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\R1_10_1.TXT", numIterations: 50000000,timeLimit: 45 * 1000);
+//solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\R1_10_1.TXT", numIterations: 50000000,timeLimit: 45 * 1000);
 //await solver.SolveSolomonInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\c107.txt", numThreads:4, numIterations: 500000000,timeLimit:45 * 1000);
 
 //await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
 
-//solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "fukuoka_full.csv"), numLoadLevels: 150, numIterations: 50000000, timelimit: 120 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350);
-//await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "seattle_full.csv"), numLoadLevels: 150, numIterations: 500000000, timelimit: 60 * 1000, numThreads: 4, numStarts: 12, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
+solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "fukuoka_full.csv"), numLoadLevels: 150, numIterations: 50000000, timelimit: 45 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350);
+//await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "fukuoka_full.csv"), numLoadLevels: 150, numIterations: 500000000, timelimit: 60 * 1000, numThreads: 4, numStarts: 4, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
 
 
 //var result = VRPLTT.ParseVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"));
@@ -110,6 +157,8 @@ async Task RunTestAsync()
     Console.WriteLine($"Finsihed all. Average score: {(total / num).ToString("0.000")}, best score: {best.ToString("0.000")}, worst score: {worst.ToString("0.000")}, Total time: {(watch.ElapsedMilliseconds / 1000).ToString("0.000")}");
 }
 
+
+
 async Task SolveAllAsync(string dir,string solDir,List<String> skip, int numThreads = 4, int numIterations = 3000000)
 {
     if(!Directory.Exists(solDir))
@@ -164,4 +213,56 @@ async Task SolveAllAsync(string dir,string solDir,List<String> skip, int numThre
 
 
 
+}
+
+class Options
+{
+    //[Option('r', "read", Required = true, HelpText = "Input files to be processed.")]
+    //public IEnumerable<string> InputFiles { get; set; }
+
+    //// Omitting long name, defaults to name of property, ie "--verbose"
+    //[Option(
+    //  Default = false,
+    //  HelpText = "Prints all messages to standard output.")]
+    //public bool Verbose { get; set; }
+
+    //[Option("stdin",
+    //  Default = false,
+    //  HelpText = "Read from stdin")]
+    //public bool stdin { get; set; }
+
+    //[Value(0, MetaName = "offset", HelpText = "File offset.")]
+    //public long? Offset { get; set; }
+
+    [Value(0, MetaName = "mode", HelpText = "Program mode.")]
+    public string Mode { get; set; }
+
+    [Value(1,MetaName = "instance", HelpText ="Path to isnstance")]
+    public string Instance { get; set; }
+
+    [Option("iterations", Default = 50000000, HelpText = "LS timelimit.")]
+    public int Iterations { get; set; }
+
+    [Option("threads", Default = 4, HelpText = "Number of threads in multithreaded modes.")]
+    public int NumThreads { get; set; }
+
+    [Option("starts", Default = 4, HelpText = "Number of starts in multithreaded modes.")]
+    public int NumStarts { get; set; }
+
+    [Option("lstl", Default =60, HelpText = "LS timelimit.")]
+    public int TimeLimitLS { get; set; }
+
+    [Option("ilptl", Default = 3600, HelpText = "ILP timelimit.")]
+    public int TimeLimitILP { get; set; }
+
+    [Option("power", Default = 350, HelpText = "Input power.")]
+    public int BikePower { get; set; }
+    [Option("minweight", Default = 140, HelpText = "Min bikeweight in vrpltt.")]
+    public int BikeMinWeight { get; set; }
+
+    [Option("maxweight", Default = 290, HelpText = "Max bikeweight in vrpltt.")]
+    public int BikeMaxWeight { get; set; }
+
+    [Option("loadlevels", Default = 150, HelpText = "Number of loadlevels in vrpltt.")]
+    public int NumLoadLevels { get; set; }
 }

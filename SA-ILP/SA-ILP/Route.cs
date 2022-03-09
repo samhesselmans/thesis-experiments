@@ -45,7 +45,6 @@ namespace SA_ILP
         private Random random;
 
 #if DEBUG
-        public long numReference = 0;
         public long bestFitCacheHit = 0;
         public long bestFitCacheMiss = 0;
 #endif
@@ -53,7 +52,7 @@ namespace SA_ILP
         {
             this.route = new List<Customer>() { depot, depot };
             this.arrival_times = new List<double>() { 0, 0 };
-            this.objective_matrix = distanceMatrix;
+            objective_matrix = distanceMatrix;
             this.numX = distanceMatrix.GetLength(0);
             this.numY = distanceMatrix.GetLength(1);
             this.numLoadLevels = distanceMatrix.GetLength(2);
@@ -90,7 +89,7 @@ namespace SA_ILP
         {
             this.route = route;
             this.arrival_times = arrivalTimes;
-            this.objective_matrix = distanceMatrix;
+            objective_matrix = distanceMatrix;
             this.numX = distanceMatrix.GetLength(0);
             this.numY = distanceMatrix.GetLength(1);
             this.numLoadLevels = distanceMatrix.GetLength(2);
@@ -110,7 +109,7 @@ namespace SA_ILP
         {
             this.route = new List<Customer>() { depot, depot };
             this.arrival_times = new List<double>() { 0, 0 };
-            this.objective_matrix = distanceMatrix;
+            objective_matrix = distanceMatrix;
             this.numX = distanceMatrix.GetLength(0);
             this.numY = distanceMatrix.GetLength(1);
             this.numLoadLevels = distanceMatrix.GetLength(2);
@@ -213,9 +212,6 @@ namespace SA_ILP
 
         public double CustomerDist(Customer start, Customer finish, double weight)
         {
-#if DEBUG
-            numReference += 1;
-#endif
             int loadLevel = (int)((weight / max_capacity) * numLoadLevels);
 
             //This happens if the vehicle is fully loaded. It wants to check the next loadlevel
@@ -587,7 +583,7 @@ namespace SA_ILP
                     i += 1;
                     currentCust = toOptimizeOver[i];
                 }
-                if (i == pos && toAdd != null)
+                else if (i == pos && toAdd != null)
                 {
                     currentCust = toOptimizeOver[i + skip];
                     i += skip;

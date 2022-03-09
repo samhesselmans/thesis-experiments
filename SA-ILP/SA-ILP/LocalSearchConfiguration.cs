@@ -47,26 +47,32 @@ namespace SA_ILP
         public static LocalSearchConfiguration VRPLTT => new LocalSearchConfiguration
         {
             InitialTemperature = 1,
+
+            //THESE OPTIONS ARE NOT YET CORRECTLY IMPLEMENTED
             AllowEarlyArrivalDuringSearch = true,
             AllowLateArrivalDuringSearch = true,
+
+
             AllowEarlyArrival = false,
             AllowLateArrival = false,
-            BaseEarlyArrivalPenalty = 5,
-            BaseLateArrivalPenalty = 5,
+            BaseEarlyArrivalPenalty = 0,
+            BaseLateArrivalPenalty = 0,
 
             BaseRemovedCustomerPenalty = 5,
             BaseRemovedCustomerPenaltyPow = 1,
-            Alpha = 0.995,
+            Alpha = 0.99,
             SaveColumnsAfterAllImprovements = true,
             PenalizeEarlyArrival = true,
             PenalizeLateArrival = true,
             AdjustEarlyArrivalToTWStart = true,
-            CheckOperatorScores = true,
+            CheckOperatorScores = false,
             SaveRoutesBeforeOperator = false,
             SaveColumnsAfterWorse = true,
             SaveColumnThreshold = 0.2,
-            PrintExtendedInfo = true
+            PrintExtendedInfo = false
         };
+
+        public static LocalSearchConfiguration VRPLTTDebug { get { var config = VRPLTT; config.PrintExtendedInfo = true; return config; } }
 
         public static LocalSearchConfiguration VRPTW => new LocalSearchConfiguration
         {

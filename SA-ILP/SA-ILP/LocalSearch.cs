@@ -253,7 +253,7 @@ namespace SA_ILP
                         throw new Exception();
                     }
 
-            Console.WriteLine("Finished making initial solution");
+            Console.WriteLine($"Finished making initial solution with value {Solver.CalcTotalDistance(routes,removed,this).ToString("0.000")}");
 
             int amtImp = 0, amtWorse = 0, amtNotDone = 0;
             //double temp = initialTemp;
@@ -290,7 +290,7 @@ namespace SA_ILP
                 OPNotPossible[op] = 0;
             }
 
-            routes.ForEach(x => { if (x.route.Count != 2) Console.WriteLine(x); });
+            //routes.ForEach(x => { if (x.route.Count != 2) Console.WriteLine(x); });
 
             double bestSolValue = Solver.CalcTotalDistance(BestSolution, removed, this);
             double currentValue = bestSolValue;
@@ -456,9 +456,7 @@ namespace SA_ILP
 
 
             Console.WriteLine($"DONE {id}: {name}, Score: {Solver.CalcTotalDistance(BestSolution, new List<Customer>(), this)}, Columns: {Columns.Count}. Completed {iteration} iterations in {Math.Round((double)timer.ElapsedMilliseconds / 1000, 3)}s");
-#if DEBUG
-            Console.WriteLine(routes.Sum(x => x.numReference));
-#endif
+
             if (PrintExtendedInfo)
             {
                 lock (ConsoleWriterLock)
