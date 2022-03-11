@@ -248,6 +248,9 @@ namespace SA_ILP
                 if(route.route.Count != 2)
                     Console.WriteLine($"{route}; ST {route.startTime} ; SST {route.route[1].TWStart - route.CustomerDist(route.route[0], route.route[1],route.used_capacity)}");
 
+
+            CheckRouteQualityVRPLTT(sol, matrix, bikeMaxMass - bikeMinMass);
+
             double totalWaitingTime = 0;
             int numViolations = 0;
             foreach (Route r in sol)
@@ -362,53 +365,188 @@ namespace SA_ILP
 
         }
 
-        private void CheckRouteQuality(List<Route> routes, double[,,] distanceMatrix)
+        private void CheckRouteQualityVRPLTT(List<Route> routes, double[,,] distanceMatrix,double maxLoad)
         {
-            if (distanceMatrix.GetLength(2) > 1)
-                throw new Exception("Only works for vrptw instances");
+            //if (distanceMatrix.GetLength(2) > 1)
+            //    throw new Exception("Only works for vrptw instances");
+
+
             foreach (var route in routes)
             {
+                Console.WriteLine(route.Score);
                 GRBEnv env = new GRBEnv();
                 GRBModel model = new GRBModel(env);
 
+                int numCust = route.route.Count - 1;
+
                 GRBVar[,] edgeX = new GRBVar[route.route.Count - 1,route.route.Count - 1];
-                GRBVar[] arrivalX = new GRBVar[edgeX.Length];
-                GRBVar startTime = model.AddVar(0, double.MaxValue, 0, GRB.CONTINUOUS, "start_time");
+                GRBVar[] arrivalX = new GRBVar[numCust];
+                GRBVar[,] vehicleWeight = new GRBVar[route.route.Count - 1, route.route.Count - 1];
+                GRBVar[,,] loadLevelEdgeX = new GRBVar[route.route.Count -1, route.route.Count - 1,distanceMatrix.GetLength(2)];
+                //GRBVar startTime = model.AddVar(0, double.MaxValue, 0, GRB.CONTINUOUS, "start_time");
+
+                double llWidth = maxLoad / distanceMatrix.GetLength(2);
+                double load = route.route.Sum(x => x.Demand);
+                //double[] llLowerBound = new double[distanceMatrix.GetLength(2)];
+                //double[] llUpperBound = new double[distanceMatrix.GetLength(2)];
                 for (int i = 0; i < route.route.Count - 1; i++)
                 {
-                    for(int j =0; j < route.route.Count - 1; j++)
-                    {
-                        edgeX[i,j] = model.AddVar(0,1,distanceMatrix[i,j,0],GRB.BINARY, $"X{i}_{j}"); //(0, 1, GRB.BINARY, $"X{i}_{j}"
+                    arrivalX[i] = model.AddVar(0, 1000, 0, GRB.CONTINUOUS, $"y_{i}");
+                    arrivalX[i].Start = route.arrival_times[i];
 
+                    int loadLevel = (int)((load / maxLoad) * distanceMatrix.GetLength(2));
+                    load -= route.route[i].Demand;
+
+
+                    if (loadLevel == distanceMatrix.GetLength(2))
+                        loadLevel--;
+
+                    for (int j =0; j < route.route.Count - 1; j++)
+                    {
+                        edgeX[i,j] = model.AddVar(0,1,0,GRB.BINARY, $"X{i}_{j}"); //(0, 1, GRB.BINARY, $"X{i}_{j}"
+                        
+                        vehicleWeight[i, j] = model.AddVar(0, maxLoad, 0, GRB.CONTINUOUS, $"F{i}_{j}"); 
+                        for(int l =0 ; l < distanceMatrix.GetLength(2); l++)
+                        {
+                            loadLevelEdgeX[i, j, l] = model.AddVar(0, 1, distanceMatrix[route.route[i].Id, route.route[j].Id, l], GRB.BINARY, $"z{i}_{j}_{l}");
+
+
+                            //llLowerBound[l] = 
+
+                        }
+                    }
+
+                    //Warm start
+                    if (i != numCust - 1)
+                    {
+                        edgeX[i, i + 1].Start = 1;
+                        loadLevelEdgeX[i, i + 1, loadLevel].Start = 1;
+                    }
+                    else
+                    {
+                        edgeX[i, 0].Start = 1;
+                        loadLevelEdgeX[i,0, loadLevel].Start = 1;
                     }
                 }
-                //Incoming edges
-                for(int i = 0; i < edgeX.Length; i++)
-                {
-                    GRBLinExpr custTotal = 0;
 
-                    for (int j = 0; j < edgeX.Length; j++)
-                        custTotal.AddTerm(1, edgeX[i,j]);
-                    model.AddConstr(custTotal == 1, $"Cust{route.route[i].Id}");
+                for(int i = 0;i < numCust; i++)
+                {
+
+                    //model.AddConstr(route.route[i].TWStart <= arrivalX[i], "lowerTimewindowConstraint");
+                    //model.AddConstr(route.route[i].TWEnd >= arrivalX[i], "upperTimewindowConstraint");
+
+                    GRBLinExpr weightMatch = 0;
+                    for(int j =0; j< numCust; j++)
+                    {
+
+                        weightMatch.AddTerm(1, vehicleWeight[j, i]);
+                        weightMatch.AddTerm(-1, vehicleWeight[i, j]);
+
+                        GRBLinExpr totalLLToEdge = 0;
+
+                        GRBLinExpr llLowerBound = 0;
+                        GRBLinExpr llUpperBound = 0;
+
+                        GRBLinExpr llTravelTime = 0;
+                        for (int l = 0; l < distanceMatrix.GetLength(2); l++)
+                        {
+                            totalLLToEdge.AddTerm(1, loadLevelEdgeX[i, j, l]);
+
+
+                            llLowerBound.AddTerm(l * llWidth,loadLevelEdgeX[i,j,l]);
+                            llUpperBound.AddTerm((l+1) * llWidth, loadLevelEdgeX[i, j, l]);
+
+                            llTravelTime.AddTerm(distanceMatrix[route.route[i].Id,route.route[j].Id,l],loadLevelEdgeX[i,j,l]);
+
+                        }
+
+
+                        double Mij = Math.Max(0,route.route[i].TWEnd + route.route[i].ServiceTime + distanceMatrix[route.route[i].Id, route.route[j].Id, distanceMatrix.GetLength(2)-1] - route.route[j].TWStart);
+
+                        //Constraint 14
+                        if(i != j && j != 0)
+                            model.AddConstr(arrivalX[i] - arrivalX[j] + route.route[i].ServiceTime + llTravelTime <= Mij * (1 - edgeX[i, j]), $"Updating traveltimes ({i},{j})");
+
+                        //Constraint 12
+                        model.AddConstr(totalLLToEdge == edgeX[i,j], $"loadLevelXMatchesEdgeX ({i},{j})");
+
+                        //Constraint 13
+                        model.AddConstr(llLowerBound <= vehicleWeight[i, j], $"weight constraint l ({i},{j})");
+                        model.AddConstr(llUpperBound >= vehicleWeight[i, j], $"weight constraint u ({i},{j})");
+
+                        //Constraint 11
+                        model.AddConstr(route.route[j].Demand * edgeX[i, j] <= vehicleWeight[i, j], $"VehiclecapConst ({i},{j})");
+                        model.AddConstr(vehicleWeight[i, j] <= (maxLoad-route.route[i].Demand) * edgeX[i,j], $"VehiclecapConstUp ({i},{j})");
+                    }
+                    //Constraint 10
+                    if(i != 0)
+                        model.AddConstr(weightMatch == route.route[i].Demand,"Match weight");
                 }
 
                 //Outgoing edges
-                for (int i = 0; i < edgeX.Length; i++)
+                for (int i = 0; i < numCust; i++)
                 {
-                    GRBLinExpr custTotal = 0;
+                    GRBLinExpr custTotalOut = 0;
+                    GRBLinExpr custTotalIn = 0;
+                    for (int j = 0; j < numCust; j++)
+                    {
+                        custTotalOut.AddTerm(1, edgeX[i, j]);
+                        custTotalIn.AddTerm(1, edgeX[j, i]);
+                    }
 
-                    for (int j = 0; j < edgeX.Length; j++)
-                        custTotal.AddTerm(1, edgeX[j, i]);
-                    model.AddConstr(custTotal == 1, $"Cust{route.route[i].Id}");
+                    //Constraint 9 
+                    model.AddConstr(custTotalOut == 1, $"CustIn{route.route[i].Id}");
+                    //Constraint 8
+                    model.AddConstr(custTotalIn == 1, $"CustOut{route.route[i].Id}");
+
                 }
 
+                ////Incomming edges
+                //for (int i = 0; i < numCust; i++)
+                //{
+                //    GRBLinExpr custTotal = 0;
+
+                //    for (int j = 0; j < numCust; j++)
+                //        custTotal.AddTerm(1, edgeX[j, i]);
+                //    model.AddConstr(custTotal == 1, $"CustOut{route.route[i].Id}");
+                //}
+
                 //timeWindows
-                for(int i =0; i< arrivalX.Length; i++)
+                for(int i =1; i< arrivalX.Length; i++)
                 {
+                    //Constraint 15
                     model.AddConstr(arrivalX[i] <= route.route[i].TWEnd, $"u{route.route[i].Id}");
                     model.AddConstr(route.route[i].TWStart <= arrivalX[i], $"l{route.route[i].Id}");
                 }
 
+
+                model.ModelSense = GRB.MINIMIZE;
+
+                //model.Feasibility();
+
+                model.Optimize();
+
+                List<(int, int, double,int)> r = new List<(int, int, double,int)>();
+
+                for (int i =0;i< numCust; i++)
+                {
+                    for(int j =0; j< numCust; j++)
+                    {
+                        if (edgeX[i, j].X == 1)
+                        {
+                            int loadLevel = -1;
+                            for (int l = 0; l < distanceMatrix.GetLength(2); l++)
+                                if (loadLevelEdgeX[i, j, l].X == 1)
+                                    loadLevel = l;
+                            r.Add((route.route[i].Id, route.route[j].Id, vehicleWeight[i, j].X,loadLevel));
+                        }
+
+                            //Console.WriteLine($"Taking edge ({route.route[i].Id},{route.route[j].Id}) with weight ${vehicleWeight[i,j].X}");
+                    }
+                }
+                r.Sort((x, y) => x.Item3.CompareTo(y.Item3));
+
+                Console.WriteLine($"({String.Join(',', r.ConvertAll(x => $"{x.Item1}"))})");
 
             }
         }

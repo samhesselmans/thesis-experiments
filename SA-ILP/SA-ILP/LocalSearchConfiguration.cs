@@ -58,7 +58,7 @@ namespace SA_ILP
             BaseEarlyArrivalPenalty = 0,
             BaseLateArrivalPenalty = 0,
 
-            BaseRemovedCustomerPenalty = 0.1    ,
+            BaseRemovedCustomerPenalty = 0.1,
             BaseRemovedCustomerPenaltyPow = 5,
             Alpha = 0.99,
             SaveColumnsAfterAllImprovements = true,
