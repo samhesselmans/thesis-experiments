@@ -362,6 +362,57 @@ namespace SA_ILP
 
         }
 
+        private void CheckRouteQuality(List<Route> routes, double[,,] distanceMatrix)
+        {
+            if (distanceMatrix.GetLength(2) > 1)
+                throw new Exception("Only works for vrptw instances");
+            foreach (var route in routes)
+            {
+                GRBEnv env = new GRBEnv();
+                GRBModel model = new GRBModel(env);
+
+                GRBVar[,] edgeX = new GRBVar[route.route.Count - 1,route.route.Count - 1];
+                GRBVar[] arrivalX = new GRBVar[edgeX.Length];
+                GRBVar startTime = model.AddVar(0, double.MaxValue, 0, GRB.CONTINUOUS, "start_time");
+                for (int i = 0; i < route.route.Count - 1; i++)
+                {
+                    for(int j =0; j < route.route.Count - 1; j++)
+                    {
+                        edgeX[i,j] = model.AddVar(0,1,distanceMatrix[i,j,0],GRB.BINARY, $"X{i}_{j}"); //(0, 1, GRB.BINARY, $"X{i}_{j}"
+
+                    }
+                }
+                //Incoming edges
+                for(int i = 0; i < edgeX.Length; i++)
+                {
+                    GRBLinExpr custTotal = 0;
+
+                    for (int j = 0; j < edgeX.Length; j++)
+                        custTotal.AddTerm(1, edgeX[i,j]);
+                    model.AddConstr(custTotal == 1, $"Cust{route.route[i].Id}");
+                }
+
+                //Outgoing edges
+                for (int i = 0; i < edgeX.Length; i++)
+                {
+                    GRBLinExpr custTotal = 0;
+
+                    for (int j = 0; j < edgeX.Length; j++)
+                        custTotal.AddTerm(1, edgeX[j, i]);
+                    model.AddConstr(custTotal == 1, $"Cust{route.route[i].Id}");
+                }
+
+                //timeWindows
+                for(int i =0; i< arrivalX.Length; i++)
+                {
+                    model.AddConstr(arrivalX[i] <= route.route[i].TWEnd, $"u{route.route[i].Id}");
+                    model.AddConstr(route.route[i].TWStart <= arrivalX[i], $"l{route.route[i].Id}");
+                }
+
+
+            }
+        }
+
         private (List<RouteStore>, double, double) SolveILP(HashSet<RouteStore> columns, List<Customer> customers, int numVehicles, List<Route> bestSolutionLS)
         {
             var columList = columns.ToArray();

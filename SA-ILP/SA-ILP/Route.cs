@@ -636,6 +636,8 @@ namespace SA_ILP
             {
                 arrivalTime = startTimeLowerBound + epsilon;
             }
+            else if (startTimeUpperBound >= 0)
+                arrivalTime = startTimeUpperBound;
             return arrivalTime;
         }
 
