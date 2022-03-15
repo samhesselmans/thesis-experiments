@@ -421,20 +421,23 @@ namespace SA_ILP
                     currentValue = Solver.CalcTotalDistance(routes, removed, this);
                     bestSolValue = Solver.CalcTotalDistance(BestSolution, BestSolutionRemoved, this);
                 }
-                if (iteration - restartPreventionIteration > 300000 && Temperature < 0.5 && iteration - lastChangeExceptedOnIt > 1000)
+                if (iteration - restartPreventionIteration > 600000 && Temperature < 0.02 && numRestarts < 7) //&& iteration - lastChangeExceptedOnIt > 1000
                 {
                     numRestarts += 1;
                     restartPreventionIteration = iteration;
                     //Restart
-                    Temperature += InitialTemperature/2;
+                    var oldTemp = Temperature;
+                    Temperature += InitialTemperature / 2;
                     routes.ForEach(x => x.ResetCache());
                     routes = BestSolution.ConvertAll(i => i.CreateDeepCopy());
                     viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                     removed = BestSolutionRemoved.ConvertAll(x => x);
                     currentValue = Solver.CalcTotalDistance(routes, removed, this);
                     bestSolValue = Solver.CalcTotalDistance(BestSolution, new List<Customer>(), this);
-                    Console.WriteLine($"{id}:Best solution changed to long ago. Restarting from best solution with T: {Temperature}");
+                    Console.WriteLine($"{id}:Best solution changed to long ago a T: {oldTemp}. Restarting from best solution with T: {Temperature}");
                 }
+                else if (Temperature < 0.02 && numRestarts >= 7)
+                    break;
                 if (printTimer.ElapsedMilliseconds > 3 * 1000)
                 {
                     var elapsed = printTimer.ElapsedMilliseconds;

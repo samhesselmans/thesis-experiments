@@ -53,22 +53,26 @@ namespace SA_ILP
             AllowLateArrivalDuringSearch = true,
 
 
-            AllowEarlyArrival = false,
+            AllowEarlyArrival = true,
             AllowLateArrival = false,
-            BaseEarlyArrivalPenalty = 0,
-            BaseLateArrivalPenalty = 0,
+            BaseEarlyArrivalPenalty = 2,
+            BaseLateArrivalPenalty = 2,
 
             BaseRemovedCustomerPenalty = 0.1,
             BaseRemovedCustomerPenaltyPow = 5,
             Alpha = 0.99,
+
             SaveColumnsAfterAllImprovements = true,
-            PenalizeEarlyArrival = true,
+            SaveColumnsAfterWorse = true,
+            SaveColumnThreshold = 0.2,
+
+
+            PenalizeEarlyArrival = false,
             PenalizeLateArrival = true,
             AdjustEarlyArrivalToTWStart = true,
             CheckOperatorScores = false,
             SaveRoutesBeforeOperator = false,
-            SaveColumnsAfterWorse = true,
-            SaveColumnThreshold = 0.2,
+
             PrintExtendedInfo = false
         };
 

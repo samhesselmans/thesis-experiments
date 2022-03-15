@@ -91,8 +91,8 @@ if (args.Length >= 1)
 
 //await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
 
-solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "fukuoka_full.csv"), numLoadLevels: 150, numIterations: 50000000, timelimit: 30 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350);
-//await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "fukuoka_full.csv"), numLoadLevels: 150, numIterations: 500000000, timelimit: 60 * 1000, numThreads: 4, numStarts: 4, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
+//solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "sydney_full.csv"), numLoadLevels: 150, numIterations: 50000000, timelimit: 45 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350);
+await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "seattle_full.csv"), numLoadLevels: 150, numIterations: 500000000, timelimit: 120 * 1000, numThreads: 4, numStarts: 4, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
 
 
 //var result = VRPLTT.ParseVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"));

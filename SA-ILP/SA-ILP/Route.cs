@@ -212,7 +212,7 @@ namespace SA_ILP
 
         public double CustomerDist(Customer start, Customer finish, double weight)
         {
-            int loadLevel = (int)((weight / max_capacity) * numLoadLevels);
+            int loadLevel = (int)((Math.Max(0,weight-0.000001) / max_capacity) * numLoadLevels);
 
             //This happens if the vehicle is fully loaded. It wants to check the next loadlevel
             if (loadLevel == numLoadLevels)

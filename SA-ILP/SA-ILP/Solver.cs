@@ -373,10 +373,13 @@ namespace SA_ILP
 
             foreach (var route in routes)
             {
-                Console.WriteLine(route.Score);
+                if (route.route.Count == 2)
+                    continue;
+                Console.WriteLine($"LS route score: {route.Score}");
                 GRBEnv env = new GRBEnv();
+                env.LogToConsole = 0;
                 GRBModel model = new GRBModel(env);
-
+                
                 int numCust = route.route.Count - 1;
 
                 GRBVar[,] edgeX = new GRBVar[route.route.Count - 1,route.route.Count - 1];
@@ -394,7 +397,7 @@ namespace SA_ILP
                     arrivalX[i] = model.AddVar(0, 1000, 0, GRB.CONTINUOUS, $"y_{i}");
                     arrivalX[i].Start = route.arrival_times[i];
 
-                    int loadLevel = (int)((load / maxLoad) * distanceMatrix.GetLength(2));
+                    int loadLevel = (int)((Math.Max(0, load - 0.000001) / maxLoad) * distanceMatrix.GetLength(2));
                     load -= route.route[i].Demand;
 
 
@@ -404,12 +407,12 @@ namespace SA_ILP
                     for (int j =0; j < route.route.Count - 1; j++)
                     {
                         edgeX[i,j] = model.AddVar(0,1,0,GRB.BINARY, $"X{i}_{j}"); //(0, 1, GRB.BINARY, $"X{i}_{j}"
-                        
+                        edgeX[i, j].Start = 0;
                         vehicleWeight[i, j] = model.AddVar(0, maxLoad, 0, GRB.CONTINUOUS, $"F{i}_{j}"); 
                         for(int l =0 ; l < distanceMatrix.GetLength(2); l++)
                         {
                             loadLevelEdgeX[i, j, l] = model.AddVar(0, 1, distanceMatrix[route.route[i].Id, route.route[j].Id, l], GRB.BINARY, $"z{i}_{j}_{l}");
-
+                            loadLevelEdgeX[i, j, l].Start = 0;
 
                             //llLowerBound[l] = 
 
@@ -421,11 +424,13 @@ namespace SA_ILP
                     {
                         edgeX[i, i + 1].Start = 1;
                         loadLevelEdgeX[i, i + 1, loadLevel].Start = 1;
+                        vehicleWeight[i, i + 1].Start = load;
                     }
                     else
                     {
                         edgeX[i, 0].Start = 1;
                         loadLevelEdgeX[i,0, loadLevel].Start = 1;
+                        vehicleWeight[i, 0].Start = 0;
                     }
                 }
 
@@ -448,6 +453,7 @@ namespace SA_ILP
                         GRBLinExpr llUpperBound = 0;
 
                         GRBLinExpr llTravelTime = 0;
+                        //GRB
                         for (int l = 0; l < distanceMatrix.GetLength(2); l++)
                         {
                             totalLLToEdge.AddTerm(1, loadLevelEdgeX[i, j, l]);
@@ -464,8 +470,11 @@ namespace SA_ILP
                         double Mij = Math.Max(0,route.route[i].TWEnd + route.route[i].ServiceTime + distanceMatrix[route.route[i].Id, route.route[j].Id, distanceMatrix.GetLength(2)-1] - route.route[j].TWStart);
 
                         //Constraint 14
-                        if(i != j && j != 0)
+                        if (i != j && j != 0)
+                        {
                             model.AddConstr(arrivalX[i] - arrivalX[j] + route.route[i].ServiceTime + llTravelTime <= Mij * (1 - edgeX[i, j]), $"Updating traveltimes ({i},{j})");
+                            //model.AddConstr(arrivalX[i] - arrivalX[j] + route.route[i].ServiceTime + llTravelTime >= 0, $"Updating traveltimes ({i},{j}) LB");
+                        }
 
                         //Constraint 12
                         model.AddConstr(totalLLToEdge == edgeX[i,j], $"loadLevelXMatchesEdgeX ({i},{j})");
@@ -544,10 +553,19 @@ namespace SA_ILP
                             //Console.WriteLine($"Taking edge ({route.route[i].Id},{route.route[j].Id}) with weight ${vehicleWeight[i,j].X}");
                     }
                 }
-                r.Sort((x, y) => x.Item3.CompareTo(y.Item3));
+                r.Sort((x, y) => y.Item3.CompareTo(x.Item3));
 
-                Console.WriteLine($"({String.Join(',', r.ConvertAll(x => $"{x.Item1}"))})");
+                Console.WriteLine($"ILp route: ({String.Join(',', r.ConvertAll(x => $"{x.Item1}"))})");
+                Console.WriteLine($"ILP loadlevels: ({String.Join(',', r.ConvertAll(x => $"{x.Item4}"))})");
+                Console.WriteLine($"ILP score: {model.ObjVal}");
 
+                var test = edgeX.Cast<GRBVar>().ToArray();
+                //edgeX.CopyTo(test,0);
+                var res = test.ToList().Any(x => x.Start != x.X);
+                Console.WriteLine($"ILP found different route: {res}");
+                //test.AddRange(edgeX.);
+
+                //route.CalcObjective();
             }
         }
 
