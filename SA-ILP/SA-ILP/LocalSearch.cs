@@ -272,6 +272,9 @@ namespace SA_ILP
             List<Route> BestSolution = routes.ConvertAll(i => i.CreateDeepCopy());
             List<Customer> BestSolutionRemoved = removed.ConvertAll(x => x);
 
+            List<(int, double)> SearchScores = new List<(int, double)>();
+            List<(int, double)> BestSolutionScores = new List<(int, double)>();
+
             Dictionary<string, int> OPImprovementCount = new Dictionary<string, int>();
             Dictionary<string, double> OPImprovementTotal = new Dictionary<string, double>();
             Dictionary<string, double> OPBestImprovement = new Dictionary<string, double>();
@@ -328,6 +331,7 @@ namespace SA_ILP
                             OPBestImprovement[OS.LastOperator] = imp;
 
                         RunAndCheckOperator(id, routes, removed, imp, act);
+                       
                         ////act();
                         //if (Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6) != Math.Round(expectedVal, 6))
                         //    Solver.ErrorPrint($"{id}: ERROR expected {Math.Round(expectedVal, 6)} not equal to {Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, Temperature)} , OP: {OS.LastOperator}");
@@ -337,6 +341,9 @@ namespace SA_ILP
                         //Console.WriteLine(p);
                         //routes.ForEach(route => route.CheckRouteValidity());
                         currentValue -= imp;
+                        SearchScores.Add((iteration, currentValue));
+
+
                         if (currentValue < bestSolValue && removed.Count == 0 && IsValidSolution(routes, removed))
                         {
                             //New best solution found
@@ -344,6 +351,8 @@ namespace SA_ILP
                             bestImprovedIteration = iteration;
                             restartPreventionIteration = iteration;
                             BestSolution = routes.ConvertAll(i => i.CreateDeepCopy());
+
+                            BestSolutionScores.Add((iteration, bestSolValue));
 
                             //Now we know all customers are used
                             BestSolutionRemoved = new List<Customer>();
@@ -398,6 +407,7 @@ namespace SA_ILP
 
                             viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                             currentValue -= imp;
+                            SearchScores.Add((iteration, currentValue));
 
                             lastChangeExceptedOnIt = iteration;
                         }
@@ -427,7 +437,7 @@ namespace SA_ILP
                     restartPreventionIteration = iteration;
                     //Restart
                     var oldTemp = Temperature;
-                    Temperature += InitialTemperature / 2;
+                    Temperature += InitialTemperature / 3;
                     routes.ForEach(x => x.ResetCache());
                     routes = BestSolution.ConvertAll(i => i.CreateDeepCopy());
                     viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
@@ -456,7 +466,7 @@ namespace SA_ILP
                     Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
 
             }
-
+            BestSolutionScores.Add((iteration, bestSolValue));
 
             Console.WriteLine($"DONE {id}: {name}, Score: {Solver.CalcTotalDistance(BestSolution, new List<Customer>(), this)}, Columns: {Columns.Count}. Completed {iteration} iterations in {Math.Round((double)timer.ElapsedMilliseconds / 1000, 3)}s");
 
@@ -477,6 +487,10 @@ namespace SA_ILP
 
             }
 
+            Console.WriteLine("Saving scores");
+            System.IO.File.WriteAllLines("SearchScores.txt",SearchScores.ConvertAll(x=>$"{x.Item1};{x.Item2}"));
+            File.WriteAllLines("BestScores.txt",BestSolutionScores.ConvertAll(x => $"{x.Item1};{x.Item2}"));
+            Console.WriteLine("Done saving scores");
             return (Columns, BestSolution, Solver.CalcTotalDistance(BestSolution, removed, this));
         }
     }

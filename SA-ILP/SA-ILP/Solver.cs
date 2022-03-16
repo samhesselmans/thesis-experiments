@@ -105,21 +105,31 @@ namespace SA_ILP
             Parallel.For(0, customers.Count, i =>
             {
                 for (int j = 0; j < customers.Count; j++)
+                {
+                    double dist;
+                    if (i < j)
+                        dist = distanceMatrix[i, j];
+                    else
+                        dist = distanceMatrix[j, i];
+                    double heightDiff = customers[j].Elevation - customers[i].Elevation;
+
+                    //double slope = Math.Atan(heightDiff /( dist * 1000));
+                    //if (dist == 0)
+                    //    slope = 0;
+                    ////if(j > i)
+                    //total += Math.Abs(slope);
                     for (int l = 0; l < numLoadLevels; l++)
                     {
                         double loadLevelWeight = minWeight + ((maxWeight - minWeight) / numLoadLevels) * l + ((maxWeight - minWeight) / numLoadLevels) / 2;
 
-                        double dist;
-                        if (i < j)
-                            dist = distanceMatrix[i, j];
-                        else
-                            dist = distanceMatrix[j, i];
+  
 
-                        matrix[i, j, l] = VRPLTT.CalculateTravelTime(customers[j].Elevation  - customers[i].Elevation, dist, loadLevelWeight, powerInput);
+                        matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput);
                     }
+                }
 
             }); // (int i = 0; i < customers.Count; i++)
-
+            
             //for (int i = 0; i < customers.Count; i++)
             //    for (int j = 0; j < customers.Count; j++)
             //        for (int l = 0; l < numLoadLevels; l++)
