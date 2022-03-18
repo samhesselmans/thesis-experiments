@@ -559,7 +559,7 @@ namespace SA_ILP
         public double OptimizeStartTime(List<Customer> toOptimizeOver,double load,Customer? toRemove=null,int skip = 0,Customer? toAdd = null, int pos=-1, int ignore=-1, int swapIndex1 =-1, int swapIndex2 = -1, int reverseIndex1 = -1, int reverseIndex2 = -1)
         {
             //If early arrival is allowed this optimization of the start time is unneccesary.
-            if(parent.AllowEarlyArrival)
+            if (parent.AllowEarlyArrival)
                 return 0;
 
             double startTimeLowerBound = 0;

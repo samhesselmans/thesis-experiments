@@ -91,8 +91,8 @@ if (args.Length >= 1)
 
 //await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
 
-solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 150, numIterations: 50000000, timelimit: 100 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350);
-//await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "seattle_full.csv"), numLoadLevels: 150, numIterations: 500000000, timelimit: 240 * 1000, numThreads: 4, numStarts: 4, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
+//solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 150, numIterations: 50000000, timelimit: 100 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350);
+await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 150, numIterations: 500000000, timelimit: 240 * 1000, numThreads: 4, numStarts: 16, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
 
 
 //var result = VRPLTT.ParseVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"));
@@ -157,6 +157,46 @@ async Task RunTestAsync()
     Console.WriteLine($"Finsihed all. Average score: {(total / num).ToString("0.000")}, best score: {best.ToString("0.000")}, worst score: {worst.ToString("0.000")}, Total time: {(watch.ElapsedMilliseconds / 1000).ToString("0.000")}");
 }
 
+async Task RunVRPLTTTests(string dir, string solDir)
+{
+    if (!Directory.Exists(solDir))
+        Directory.CreateDirectory(solDir);
+
+    using (var totalWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.txt")))
+    {
+
+        double totalValue = 0.0;
+        int total = 0;
+        foreach (var file in Directory.GetFiles(dir))
+        {
+            bool newInstance = false;
+            if (skip.Contains(Path.GetFileName(file)))
+                continue;
+
+
+            (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveVRPLTTInstanceAsync(file,numIterations:50000000,numLoadLevels:150,timelimit:480 * 1000, numThreads:4, numStarts:32);//solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations, timeLimit: 30 * 1000);
+            using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileName(file))))
+            {
+                if (failed)
+                    writer.Write("FAIL did not meet check");
+                writer.WriteLine($"Score: {ilpVal}, ilpTime: {ilpTime}, lsTime: {lsTime}");
+                foreach (var route in ilpSol)
+                {
+                    writer.WriteLine($"{route}");
+                }
+            }
+            if (failed)
+                totalWriter.Write("FAIL did not meet check");
+
+
+            totalValue += ilpVal;
+            total++;
+
+            totalWriter.WriteLine($"Instance: {Path.GetFileName(file)}, Score: {Math.Round(ilpVal, 3)}, Vehicles: {ilpSol.Count}, ilpTime: {Math.Round(ilpTime, 3)}, lsTime: {Math.Round(lsTime, 3)}, lsVal: {Math.Round(lsVal, 3)}, ilpImp: {Math.Round((lsVal - ilpVal) / lsVal * 100, 3)}%");
+            totalWriter.Flush();
+        }
+    }
+}
 
 
 async Task SolveAllAsync(string dir,string solDir,List<String> skip, int numThreads = 4, int numIterations = 3000000)

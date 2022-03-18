@@ -306,7 +306,15 @@ namespace SA_ILP
             {
                 //double p = random.NextDouble();
 
+                //if(iteration - restartPreventionIteration == 7500 && numRestarts == 1)
+                //{
+                //    Console.WriteLine($"Current routes: {currentValue}");
+                //    Solver.PrintRoutes(routes);
+                //    Console.WriteLine($"Best Solution: {bestSolValue}");
+                //    Solver.PrintRoutes(BestSolution);
 
+                //    break;
+                //}
 
                 double imp = 0;
                 Action? act = null;
@@ -341,7 +349,8 @@ namespace SA_ILP
                         //Console.WriteLine(p);
                         //routes.ForEach(route => route.CheckRouteValidity());
                         currentValue -= imp;
-                        SearchScores.Add((iteration, currentValue));
+                        if(id == 0)
+                            SearchScores.Add((iteration, currentValue));
 
 
                         if (currentValue < bestSolValue && removed.Count == 0 && IsValidSolution(routes, removed))
@@ -351,8 +360,8 @@ namespace SA_ILP
                             bestImprovedIteration = iteration;
                             restartPreventionIteration = iteration;
                             BestSolution = routes.ConvertAll(i => i.CreateDeepCopy());
-
-                            BestSolutionScores.Add((iteration, bestSolValue));
+                            if (id == 0)
+                                BestSolutionScores.Add((iteration, bestSolValue));
 
                             //Now we know all customers are used
                             BestSolutionRemoved = new List<Customer>();
@@ -407,7 +416,8 @@ namespace SA_ILP
 
                             viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                             currentValue -= imp;
-                            SearchScores.Add((iteration, currentValue));
+                            if (id == 0)
+                                SearchScores.Add((iteration, currentValue));
 
                             lastChangeExceptedOnIt = iteration;
                         }
@@ -486,11 +496,13 @@ namespace SA_ILP
                 }
 
             }
-
-            Console.WriteLine("Saving scores");
-            System.IO.File.WriteAllLines("SearchScores.txt",SearchScores.ConvertAll(x=>$"{x.Item1};{x.Item2}"));
-            File.WriteAllLines("BestScores.txt",BestSolutionScores.ConvertAll(x => $"{x.Item1};{x.Item2}"));
-            Console.WriteLine("Done saving scores");
+            if (id == 0)
+            {
+                Console.WriteLine("Saving scores");
+                System.IO.File.WriteAllLines("SearchScores.txt", SearchScores.ConvertAll(x => $"{x.Item1};{x.Item2}"));
+                File.WriteAllLines("BestScores.txt", BestSolutionScores.ConvertAll(x => $"{x.Item1};{x.Item2}"));
+                Console.WriteLine("Done saving scores");
+            }
             return (Columns, BestSolution, Solver.CalcTotalDistance(BestSolution, removed, this));
         }
     }
