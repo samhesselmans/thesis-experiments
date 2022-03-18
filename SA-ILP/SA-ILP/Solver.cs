@@ -305,12 +305,16 @@ namespace SA_ILP
             await LocalSearchInstancAsync(name, numV, capV, customers, distanceMatrix, 4,4, numIterations, timeLimit,LocalSearchConfigs.VRPTW);
         }
 
-        public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal)> SolveSolomonInstanceAsync(string fileName, int numThreads = 1, int numStarts=4, int numIterations = 3000000, int timeLimit = 100000)
+        public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal)> SolveSolomonInstanceAsync(string fileName, int numThreads = 1, int numStarts=4, int numIterations = 3000000, int timeLimit = 100000,LocalSearchConfiguration? config = null)
         {
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
             var distanceMatrix = CalculateDistanceMatrix(customers);
 
-            (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads,numStarts, numIterations, LocalSearchConfigs.VRPTW, timeLimit: timeLimit);
+
+            if (config == null)
+                config = LocalSearchConfigs.VRPTW;
+
+            (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads,numStarts, numIterations, (LocalSearchConfiguration)config, timeLimit: timeLimit);
             bool failed = SolomonParser.CheckSolomonSolution(fileName, ilpSol, ilpVal);
             ilpSol.ForEach(x=>Console.WriteLine(x));    
             return (failed, ilpSol, ilpVal, ilpTime, lsTime, lsVal);

@@ -3,9 +3,7 @@ using SA_ILP;
 using System.Diagnostics;
 using Gurobi;
 using CommandLine;
-
-
-
+using System.Text;
 
 string baseDir = "../../../../../";
 
@@ -50,6 +48,10 @@ if (args.Length >= 1)
         await solver.SolveSolomonInstanceAsync(opts.Instance, numIterations: opts.Iterations, timeLimit: opts.TimeLimitLS * 1000, numStarts: opts.NumStarts, numThreads: opts.NumThreads);
 
     }
+    else if(opts.Mode == "allvrpltt")
+    {
+        await RunVRPLTTTests(opts.Instance,Path.Join("Solutions",DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")),5,opts);
+    }
     else
     {
         Console.WriteLine("Enter correct mode");
@@ -92,7 +94,7 @@ if (args.Length >= 1)
 //await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
 
 //solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 150, numIterations: 50000000, timelimit: 100 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350);
-await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 150, numIterations: 500000000, timelimit: 240 * 1000, numThreads: 4, numStarts: 16, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
+//await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 150, numIterations: 500000000, timelimit: 240 * 1000, numThreads: 4, numStarts: 16, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
 
 
 //var result = VRPLTT.ParseVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"));
@@ -113,7 +115,7 @@ await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large
 //        str = "0" + str;
 //    skip.Add($"r2{str}.txt");
 //}
-var skip = new List<String>();
+//var skip = new List<String>();
 //await SolveAllAsync(@"..\..\..\..\..\solomon_instances", Path.Join(@"..\..\..\..\..\solutions\solomon_instances",DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")),skip,numThreads:4,numIterations:50000000);
 
 
@@ -147,53 +149,68 @@ async Task RunTestAsync()
 
     for (int i = 0; i < num; i++)
     {
-        double res = await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000,timelimit:30000);
-        if (res < best)
-            best = res;
-        if(res > worst)
-            worst = res;
-        total += res;
+        (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000,timelimit:30000);
+        if (ilpVal < best)
+            best = ilpVal;
+        if(ilpVal > worst)
+            worst = ilpVal;
+        total += ilpVal;
     }
     Console.WriteLine($"Finsihed all. Average score: {(total / num).ToString("0.000")}, best score: {best.ToString("0.000")}, worst score: {worst.ToString("0.000")}, Total time: {(watch.ElapsedMilliseconds / 1000).ToString("0.000")}");
 }
 
-async Task RunVRPLTTTests(string dir, string solDir)
+async Task RunVRPLTTTests(string dir, string solDir, int numRepeats, Options opts)
 {
+    Console.WriteLine("Testing on all vrpltt instances");
     if (!Directory.Exists(solDir))
         Directory.CreateDirectory(solDir);
 
     using (var totalWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.txt")))
     {
-
-        double totalValue = 0.0;
-        int total = 0;
-        foreach (var file in Directory.GetFiles(dir))
-        {
-            bool newInstance = false;
-            if (skip.Contains(Path.GetFileName(file)))
-                continue;
-
-
-            (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveVRPLTTInstanceAsync(file,numIterations:50000000,numLoadLevels:150,timelimit:480 * 1000, numThreads:4, numStarts:32);//solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations, timeLimit: 30 * 1000);
-            using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileName(file))))
+        totalWriter.WriteLine(opts.ToString());
+        using(var csvWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.csv"))) {
+            csvWriter.WriteLine("SEP=;");
+            csvWriter.WriteLine("Instance;AllowWaiting;Score;N;ILP time;LS time;LS score;ILP imp(%)");
+            foreach (var file in Directory.GetFiles(dir))
             {
-                if (failed)
-                    writer.Write("FAIL did not meet check");
-                writer.WriteLine($"Score: {ilpVal}, ilpTime: {ilpTime}, lsTime: {lsTime}");
-                foreach (var route in ilpSol)
+                Console.WriteLine($"Testing on { Path.GetFileNameWithoutExtension(file)}");
+                double totalValue = 0.0;
+                bool newInstance = false;
+                LocalSearchConfiguration config = LocalSearchConfigs.VRPTW;
+                //string append = "Waiting allowed";
+                for (int i = 0; i < numRepeats * 2; i++)
                 {
-                    writer.WriteLine($"{route}");
+                    if (i == numRepeats)
+                    {
+                        totalWriter.WriteLine($"AVG: {totalValue / numRepeats}");
+                        totalValue = 0;
+                        config.AllowEarlyArrival = false;
+                        config.PenalizeEarlyArrival = true;
+                        //append = "Waiting not allowed";
+                    }
+                    (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveVRPLTTInstanceAsync(file, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads);//solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations, timeLimit: 30 * 1000);
+                    using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileNameWithoutExtension(file) + $"_{i}.txt")))
+                    {
+                        if (failed)
+                            writer.Write("FAIL did not meet check");
+                        writer.WriteLine($"Score: {ilpVal}, ilpTime: {ilpTime}, lsTime: {lsTime}, Early arrival allowed {config.AllowEarlyArrival}");
+                        foreach (var route in ilpSol)
+                        {
+                            writer.WriteLine($"{route}");
+                        }
+                    }
+                    if (failed)
+                        totalWriter.Write("FAIL did not meet check");
+
+
+                    totalValue += ilpVal;
+
+                    totalWriter.WriteLine($"Instance: { Path.GetFileNameWithoutExtension(file)},Early arrival allowed {config.AllowEarlyArrival}, Score: {Math.Round(ilpVal, 3)}, Vehicles: {ilpSol.Count}, ilpTime: {Math.Round(ilpTime, 3)}, lsTime: {Math.Round(lsTime, 3)}, lsVal: {Math.Round(lsVal, 3)}, ilpImp: {Math.Round((lsVal - ilpVal) / lsVal * 100, 3)}%");
+                    csvWriter.WriteLine($"{ Path.GetFileNameWithoutExtension(file)};{config.AllowEarlyArrival};{Math.Round(ilpVal, 3)};{ilpSol.Count};{Math.Round(ilpTime, 3)};{Math.Round(lsTime, 3)};{Math.Round(lsVal, 3)};{Math.Round((lsVal - ilpVal) / lsVal * 100, 3)}");
+                    totalWriter.Flush();
+                    csvWriter.Flush();
                 }
             }
-            if (failed)
-                totalWriter.Write("FAIL did not meet check");
-
-
-            totalValue += ilpVal;
-            total++;
-
-            totalWriter.WriteLine($"Instance: {Path.GetFileName(file)}, Score: {Math.Round(ilpVal, 3)}, Vehicles: {ilpSol.Count}, ilpTime: {Math.Round(ilpTime, 3)}, lsTime: {Math.Round(lsTime, 3)}, lsVal: {Math.Round(lsVal, 3)}, ilpImp: {Math.Round((lsVal - ilpVal) / lsVal * 100, 3)}%");
-            totalWriter.Flush();
         }
     }
 }
@@ -274,10 +291,10 @@ class Options
     //[Value(0, MetaName = "offset", HelpText = "File offset.")]
     //public long? Offset { get; set; }
 
-    [Value(0, MetaName = "mode", HelpText = "Program mode.")]
+    [Value(0, MetaName = "mode", HelpText = "Program mode.\n\tOptions:\n\t\t- vrpltt\n\t\t- vrptw\n\t\t- vrplttmt\n\t\t- vrptwmt\n\t\t- allvrpltt")]
     public string Mode { get; set; }
 
-    [Value(1,MetaName = "instance", HelpText ="Path to isnstance")]
+    [Value(1,MetaName = "instance", HelpText ="Path to instance")]
     public string Instance { get; set; }
 
     [Option("iterations", Default = 50000000, HelpText = "LS timelimit.")]
@@ -305,4 +322,15 @@ class Options
 
     [Option("loadlevels", Default = 150, HelpText = "Number of loadlevels in vrpltt.")]
     public int NumLoadLevels { get; set; }
+
+
+    public override string ToString()
+    {
+        return GetType().GetProperties()
+    .Select(info => (info.Name, Value: info.GetValue(this, null) ?? "(null)"))
+    .Aggregate(
+        new StringBuilder(),
+        (sb, pair) => sb.AppendLine($"{pair.Name}: {pair.Value}"),
+        sb => sb.ToString());
+    }
 }

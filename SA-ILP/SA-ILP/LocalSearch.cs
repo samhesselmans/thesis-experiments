@@ -53,7 +53,14 @@ namespace SA_ILP
 
         private OperatorSelector OS;
 
-        public LocalSearch(LocalSearchConfiguration config, int seed)
+        public LocalSearch(LocalSearchConfiguration config, int seed, OperatorSelector os)
+        {
+            random = new Random(seed);
+            Init(config, seed, os);
+        }
+
+
+        private void Init(LocalSearchConfiguration config, int seed, OperatorSelector os)
         {
             Temperature = config.InitialTemperature;
             InitialTemperature = config.InitialTemperature;
@@ -75,20 +82,29 @@ namespace SA_ILP
             SaveColumnThreshold = config.SaveColumnThreshold;
             PrintExtendedInfo = config.PrintExtendedInfo;
             Alpha = config.Alpha;
-            random = new Random(seed);
-            OS = new OperatorSelector(random);
-
-            OS.Add(Operators.AddRandomRemovedCustomer, 1, "add");
-            OS.Add(Operators.RemoveRandomCustomer, 1, "remove");
-            OS.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move");
-            OS.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best");
-            OS.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route");
-            OS.Add((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap");
-            OS.Add((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route");
-            OS.Add((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse");
-            OS.Add((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble");
-            OS.Add((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails");
+            
+            OS = os;
         }
+
+        public LocalSearch (LocalSearchConfiguration config, int seed)
+        {
+            random = new Random(seed);
+            var os = new OperatorSelector(random);
+
+            os.Add(Operators.AddRandomRemovedCustomer, 1, "add");
+            os.Add(Operators.RemoveRandomCustomer, 1, "remove");
+            os.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move");
+            os.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best");
+            os.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route");
+            os.Add((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap");
+            os.Add((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route");
+            os.Add((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse");
+            os.Add((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble");
+            os.Add((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails");
+            Init(config, seed, os);
+
+        }
+
         public static void StupidShuffle(List<Customer> customers, Random random, double timesShuffle = 1)
         {
             for (int i = 0; i < timesShuffle * customers.Count; i++)

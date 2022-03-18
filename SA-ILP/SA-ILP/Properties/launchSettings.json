@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SA-ILP": {
+      "commandName": "Project",
+      "commandLineArgs": "allvrpltt ..\\..\\..\\..\\..\\vrpltt_instances\\large"
+    }
+  }
+}
