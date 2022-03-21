@@ -4,6 +4,7 @@ using System.Diagnostics;
 using Gurobi;
 using CommandLine;
 using System.Text;
+using MathNet.Numerics.Distributions;
 
 string baseDir = "../../../../../";
 
@@ -117,6 +118,10 @@ if (args.Length >= 1)
 //}
 //var skip = new List<String>();
 //await SolveAllAsync(@"..\..\..\..\..\solomon_instances", Path.Join(@"..\..\..\..\..\solutions\solomon_instances",DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")),skip,numThreads:4,numIterations:50000000);
+
+
+var gamma = new Gamma(2.0, 1.5);
+
 
 
 async Task RunTestAsync()
