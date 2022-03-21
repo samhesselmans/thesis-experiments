@@ -47,7 +47,9 @@ namespace SA_ILP
 
         public bool SaveRoutesBeforeOperator { get; private set; }
 
-        public bool PrintExtendedInfo { get;private set; }
+        public bool PrintExtendedInfo { get; private set; }
+
+        public bool SaveScoreDevelopment { get; private set; }
 
         private Random random;
 
@@ -82,11 +84,12 @@ namespace SA_ILP
             SaveColumnThreshold = config.SaveColumnThreshold;
             PrintExtendedInfo = config.PrintExtendedInfo;
             Alpha = config.Alpha;
-            
+            SaveScoreDevelopment = config.SaveScoreDevelopment;
+
             OS = os;
         }
 
-        public LocalSearch (LocalSearchConfiguration config, int seed)
+        public LocalSearch(LocalSearchConfiguration config, int seed)
         {
             random = new Random(seed);
             var os = new OperatorSelector(random);
@@ -269,7 +272,7 @@ namespace SA_ILP
                         throw new Exception();
                     }
 
-            Console.WriteLine($"Finished making initial solution with value {Solver.CalcTotalDistance(routes,removed,this).ToString("0.000")}");
+            Console.WriteLine($"Finished making initial solution with value {Solver.CalcTotalDistance(routes, removed, this).ToString("0.000")}");
 
             int amtImp = 0, amtWorse = 0, amtNotDone = 0;
             //double temp = initialTemp;
@@ -355,7 +358,7 @@ namespace SA_ILP
                             OPBestImprovement[OS.LastOperator] = imp;
 
                         RunAndCheckOperator(id, routes, removed, imp, act);
-                       
+
                         ////act();
                         //if (Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6) != Math.Round(expectedVal, 6))
                         //    Solver.ErrorPrint($"{id}: ERROR expected {Math.Round(expectedVal, 6)} not equal to {Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, Temperature)} , OP: {OS.LastOperator}");
@@ -365,7 +368,7 @@ namespace SA_ILP
                         //Console.WriteLine(p);
                         //routes.ForEach(route => route.CheckRouteValidity());
                         currentValue -= imp;
-                        if(id == 0)
+                        if (id == 0 && SaveScoreDevelopment)
                             SearchScores.Add((iteration, currentValue));
 
 
@@ -376,7 +379,7 @@ namespace SA_ILP
                             bestImprovedIteration = iteration;
                             restartPreventionIteration = iteration;
                             BestSolution = routes.ConvertAll(i => i.CreateDeepCopy());
-                            if (id == 0)
+                            if (id == 0 && SaveScoreDevelopment)
                                 BestSolutionScores.Add((iteration, bestSolValue));
 
                             //Now we know all customers are used
@@ -432,7 +435,7 @@ namespace SA_ILP
 
                             viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                             currentValue -= imp;
-                            if (id == 0)
+                            if (id == 0 && SaveScoreDevelopment)
                                 SearchScores.Add((iteration, currentValue));
 
                             lastChangeExceptedOnIt = iteration;
@@ -492,7 +495,8 @@ namespace SA_ILP
                     Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
 
             }
-            BestSolutionScores.Add((iteration, bestSolValue));
+            if (id == 0 && SaveScoreDevelopment)
+                BestSolutionScores.Add((iteration, bestSolValue));
 
             Console.WriteLine($"DONE {id}: {name}, Score: {Solver.CalcTotalDistance(BestSolution, new List<Customer>(), this)}, Columns: {Columns.Count}. Completed {iteration} iterations in {Math.Round((double)timer.ElapsedMilliseconds / 1000, 3)}s");
 
@@ -512,7 +516,7 @@ namespace SA_ILP
                 }
 
             }
-            if (id == 0)
+            if (id == 0 && SaveScoreDevelopment)
             {
                 Console.WriteLine("Saving scores");
                 System.IO.File.WriteAllLines("SearchScores.txt", SearchScores.ConvertAll(x => $"{x.Item1};{x.Item2}"));
@@ -523,5 +527,5 @@ namespace SA_ILP
         }
     }
 
- 
+
 }

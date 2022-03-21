@@ -2,7 +2,7 @@
   "profiles": {
     "SA-ILP": {
       "commandName": "Project",
-      "commandLineArgs": "allvrpltt ..\\..\\..\\..\\..\\vrpltt_instances\\large"
+      "commandLineArgs": "allvrpltt ..\\..\\..\\..\\..\\vrpltt_instances\\large --threads 6 --starts 16 --lstl 480"
     }
   }
 }

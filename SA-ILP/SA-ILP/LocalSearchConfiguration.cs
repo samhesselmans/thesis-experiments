@@ -39,6 +39,7 @@ namespace SA_ILP
 
         public double SaveColumnThreshold { get; set; }
         public bool PrintExtendedInfo { get; set; }
+        public bool SaveScoreDevelopment { get; set; }
 
     }
 
@@ -73,7 +74,8 @@ namespace SA_ILP
             CheckOperatorScores = false,
             SaveRoutesBeforeOperator = false,
 
-            PrintExtendedInfo = false
+            PrintExtendedInfo = false,
+            SaveScoreDevelopment = false
         };
 
         public static LocalSearchConfiguration VRPLTTDebug { get { var config = VRPLTT; config.PrintExtendedInfo = true; return config; } }
@@ -99,7 +101,8 @@ namespace SA_ILP
             CheckOperatorScores = true,
             SaveRoutesBeforeOperator = false,
             SaveColumnsAfterWorse = true,
-            SaveColumnThreshold = 0.1
+            SaveColumnThreshold = 0.1,
+            SaveScoreDevelopment = false
         };
 
 
