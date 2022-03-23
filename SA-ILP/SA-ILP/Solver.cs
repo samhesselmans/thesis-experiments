@@ -648,7 +648,10 @@ namespace SA_ILP
                 if (columnDecisions[i].X == 1)
                     solution.Add(columList[i]);
             }
-            return (solution, model.ObjVal, model.Runtime);
+            double val = model.ObjVal;
+            double time = model.Runtime;
+            model.Dispose();
+            return (solution, val, time);
         }
 
     }
