@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MathNet.Numerics.Distributions;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -141,7 +142,7 @@ namespace SA_ILP
             {
                 if (customers.Count == 0)
                     break;
-                double arrivalTime = route.CustomerDist(depot, seed, route.max_capacity);
+                (double arrivalTime, Gamma distribution) = route.CustomerDist(depot, seed, route.max_capacity);
 
                 if (inserted.Contains(seed))
                     Console.WriteLine("Gaat fout buiten while");
@@ -165,7 +166,7 @@ namespace SA_ILP
 
                     Customer? next = customers.MinBy(x =>
                     {
-                        double dist = route.CustomerDist(seed, x, route.max_capacity);
+                       ( double dist, Gamma distribution) = route.CustomerDist(seed, x, route.max_capacity);
 
                         if (arrivalTime + dist < x.TWEnd)
                             if (arrivalTime + dist < x.TWStart)
@@ -175,13 +176,13 @@ namespace SA_ILP
                         else return double.MaxValue;
 
                     });
-
-                    if (arrivalTime + route.CustomerDist(seed, next, route.max_capacity) > next.TWEnd || route.used_capacity + next.Demand > route.max_capacity)
+                    (double dist, Gamma d) = route.CustomerDist(seed, next, route.max_capacity);
+                    if (arrivalTime + dist > next.TWEnd || route.used_capacity + next.Demand > route.max_capacity)
                     {
                         seed = customers.MinBy(x => x.TWEnd);
                         break;
                     }
-                    arrivalTime += route.CustomerDist(seed, next, route.max_capacity);// + next.ServiceTime;
+                    arrivalTime += dist;// + next.ServiceTime;
 
                     seed = next;
 
@@ -241,7 +242,7 @@ namespace SA_ILP
                 if (Math.Round(Solver.CalcTotalDistance(routes, removed, this), 6) != Math.Round(expectedVal, 6))
                     Solver.ErrorPrint($"{id}: ERROR expected {expectedVal} not equal to {Solver.CalcTotalDistance(routes, removed, this)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, this)} , OP: {OS.LastOperator}");
         }
-        public (HashSet<RouteStore>, List<Route>, double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers, double[,,] distanceMatrix, int numInterations = 3000000, int timeLimit = 30000, bool checkInitialSolution = false)
+        public (HashSet<RouteStore>, List<Route>, double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers, double[,,] distanceMatrix,Gamma[,,] distributionMatrix, int numInterations = 3000000, int timeLimit = 30000, bool checkInitialSolution = false)
         {
             Console.WriteLine("Starting local search");
             //customers.Sort(1, customers.Count - 1, delegate (Customer x, Customer y) { x.TWEnd.CompareTo(y.TWEnd); });
@@ -258,7 +259,7 @@ namespace SA_ILP
 
             //Generate routes
             for (int i = 0; i < numVehicles; i++)
-                routes.Add(new Route(customers[0], distanceMatrix, vehicleCapacity, seed: random.Next(), this));
+                routes.Add(new Route(customers[0], distanceMatrix,distributionMatrix, vehicleCapacity,seed: random.Next(), this));
 
             CreateSmartInitialSolution(routes, customers, removed);
 

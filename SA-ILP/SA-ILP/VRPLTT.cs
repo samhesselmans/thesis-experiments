@@ -50,8 +50,9 @@ namespace SA_ILP
 
         public static Gamma CreateTravelTimeDistribution(double weight, double traveltime)
         {
-            double shape = 3;
-            double rate = (1 / (traveltime * 0.1 / 8))/(1 + weight/(290*3));
+            double shape = 1.5 + traveltime * 0.5 + weight/(290);
+            //RATE moet zelfde blijven, niet shape
+            double rate = 1;// (1 / (traveltime * 0.1 / 8))/(1 + weight/(290*3));
 
 
             return new Gamma(shape, rate);

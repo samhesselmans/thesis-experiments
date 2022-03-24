@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MathNet.Numerics.Distributions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,8 +12,7 @@ namespace SA_ILP
         public List<Customer> route;
         public List<double> arrival_times;
         public double[,,] objective_matrix;
-        public double[] objeciveMatrix1d;
-
+        public Gamma[,,] distributionMatrix;
         public double startTime = 0;
         
         public int numLoadLevels;
@@ -48,7 +48,7 @@ namespace SA_ILP
         public long bestFitCacheHit = 0;
         public long bestFitCacheMiss = 0;
 #endif
-        public Route(Customer depot, double[,,] distanceMatrix, double maxCapacity, int seed, LocalSearch parent)
+        public Route(Customer depot, double[,,] distanceMatrix,Gamma[,,] distributionMatrix, double maxCapacity, int seed, LocalSearch parent)
         {
             this.route = new List<Customer>() { depot, depot };
             this.arrival_times = new List<double>() { 0, 0 };
@@ -65,6 +65,7 @@ namespace SA_ILP
             used_capacity = 0;
             this.max_capacity = maxCapacity;
             random = new Random(seed);
+            this.distributionMatrix = distributionMatrix;
             //BestCustomerPos = new Dictionary<int,(int,double)>();
             ResetCache();
         }
@@ -85,7 +86,7 @@ namespace SA_ILP
         //            }
         //}
 
-        public  Route(List<Customer> route, List<double> arrivalTimes, double[,,] distanceMatrix, double usedCapcity, double maxCapacity,int seed,LocalSearch parent,double startTime)
+        public  Route(List<Customer> route, List<double> arrivalTimes, double[,,] distanceMatrix, Gamma[,,] distributionMatrix, double usedCapcity, double maxCapacity,int seed,LocalSearch parent,double startTime)
         {
             this.route = route;
             this.arrival_times = arrivalTimes;
@@ -101,11 +102,12 @@ namespace SA_ILP
             this.max_capacity = maxCapacity;
             this.startTime = startTime;
             random = new Random(seed);
+            this.distributionMatrix = distributionMatrix;
             //BestCustomerPos = new Dictionary<int, (int, double)>();
             ResetCache();
         }
 
-        public Route(List<Customer> customers,RouteStore routeStore, Customer depot, double[,,] distanceMatrix, double maxCapacity,LocalSearch parent)
+        public Route(List<Customer> customers,RouteStore routeStore, Customer depot, double[,,] distanceMatrix, Gamma[,,] distributionMatrix, double maxCapacity,LocalSearch parent)
         {
             this.route = new List<Customer>() { depot, depot };
             this.arrival_times = new List<double>() { 0, 0 };
@@ -116,7 +118,7 @@ namespace SA_ILP
             //this.objeciveMatrix1d = new double[numX * numY * numLoadLevels];
             //Create1DMAtrix();
             this.parent = parent;
-
+            this.distributionMatrix = distributionMatrix;
             this.time_done = 0;
             //this.lastCust = depot;
             used_capacity = 0;
@@ -182,7 +184,7 @@ namespace SA_ILP
             double arrivalTime = startTime;
             for(int i =0; i< route.Count - 1; i++)
             {
-                double dist = this.CustomerDist(route[i], route[i + 1], totalWeight);
+                (double dist,Gamma distribution) = this.CustomerDist(route[i], route[i + 1], totalWeight);
                 totalDist += dist;
                 arrivalTime += dist + route[i].ServiceTime;
 
@@ -210,7 +212,7 @@ namespace SA_ILP
             return totalDist;
         }
 
-        public double CustomerDist(Customer start, Customer finish, double weight)
+        public (double,Gamma) CustomerDist(Customer start, Customer finish, double weight)
         {
             int loadLevel = (int)((Math.Max(0,weight-0.000001) / max_capacity) * numLoadLevels);
 
@@ -222,7 +224,7 @@ namespace SA_ILP
             //var val2 = objeciveMatrix1d[cust1.Id + cust2.Id * numX + loadLevel * numX * numY];
             //if (val != val2)
             //    Console.WriteLine("wops");
-            return val;
+            return (val,distributionMatrix[start.Id,finish.Id,loadLevel]);
         }
 
         public void ResetCache()
@@ -252,7 +254,7 @@ namespace SA_ILP
                 var c = route[i];
                 if (c.Id != cust.Id)
                 {
-                    var dist = CustomerDist(previous_cust, c, load);
+                    (var dist,var distribution) = CustomerDist(previous_cust, c, load);
                     load -= c.Demand;
                     newArriveTime += dist;
                     if (newArriveTime < c.TWStart)
@@ -339,7 +341,7 @@ namespace SA_ILP
                         arrival_time = currentCust.TWStart;
                     }
                 }
-                var dist = CustomerDist(currentCust, nextCust, load);
+                (var dist, var distribution) = CustomerDist(currentCust, nextCust, load);
                 load -= nextCust.Demand;
                 totalTravelTime += dist;
                 arrival_time += dist + currentCust.ServiceTime;
@@ -433,7 +435,7 @@ namespace SA_ILP
                     }
 
                     load -= cust.Demand;
-                    var time = CustomerDist(cust, route[i + skip], load);
+                    (var time, var distribution) = CustomerDist(cust, route[i + skip], load);
                     totalTravelTime += time;
                     arrivalTime += time + cust.ServiceTime;
                     i += skip;
@@ -487,11 +489,11 @@ namespace SA_ILP
                     double time;
                     //If the current customer is the customer before the potential position of the new customer update the time accordingly
                     if (i == pos - 1)
-                        time = CustomerDist(route[i], cust, load);
+                        time = CustomerDist(route[i], cust, load).Item1;
                     else if (i == ignore - 1)
-                        time = CustomerDist(route[i], route[i+2], load);
+                        time = CustomerDist(route[i], route[i+2], load).Item1;
                     else
-                        time = CustomerDist(route[i], route[i + 1], load);
+                        time = CustomerDist(route[i], route[i + 1], load).Item1;
                     totalTravelTime += time;
                     arrivalTime += time + route[i].ServiceTime;
 
@@ -592,7 +594,8 @@ namespace SA_ILP
                     if (toAdd.TWEnd - val < startTimeUpperBound)
                         startTimeUpperBound = toAdd.TWEnd - val;
                     l -= toAdd.Demand;
-                    val += CustomerDist(toAdd, currentCust, l) + toAdd.ServiceTime;
+                    (var dist, var distribution) = CustomerDist(toAdd, currentCust, l);
+                    val += dist + toAdd.ServiceTime;
                 }
                 else if (i == swapIndex1)
                     currentCust = toOptimizeOver[swapIndex2];
@@ -627,7 +630,8 @@ namespace SA_ILP
                         nextCust = toOptimizeOver[swapIndex1];
                     else if( i >= reverseIndex1 - 1 && i < reverseIndex2)
                         nextCust = toOptimizeOver[reverseIndex2 - i + reverseIndex1 - 1];
-                    val += CustomerDist(currentCust, nextCust, l) + currentCust.ServiceTime;
+                    (var dist, var distribution) = CustomerDist(currentCust, nextCust, l);
+                    val += dist  + currentCust.ServiceTime;
                 }
             }
             double epsilon = 0.0000001;
@@ -665,7 +669,7 @@ namespace SA_ILP
             newArrivalTimes.Add(arrivalTime);
             for (int i = 0; i < newRoute.Count - 1; i++)
             {
-                var dist = CustomerDist(newRoute[i], newRoute[i + 1], load);
+                (var dist, var distribution) = CustomerDist(newRoute[i], newRoute[i + 1], load);
                 arrivalTime += dist + newRoute[i].ServiceTime;
                 newCost += dist;
                 if (arrivalTime < newRoute[i + 1].TWStart)
@@ -763,7 +767,7 @@ namespace SA_ILP
 
 
                 //Travel time to new customer
-                double dist = CustomerDist(currentCust, nextCust,load);
+                double dist = CustomerDist(currentCust, nextCust,load).Item1;
                 //Add travel time to total cost
                 newCost += dist;
 
@@ -843,7 +847,7 @@ namespace SA_ILP
                     nextCust = route[j + 1];
 
 
-                var cost = CustomerDist(route[j], nextCust, load);
+                (var cost, var distribution) = CustomerDist(route[j], nextCust, load);
                 newCost += cost;
                 arrival_time += cost + route[j].ServiceTime;
                 if (arrival_time < nextCust.TWStart)
@@ -921,7 +925,7 @@ namespace SA_ILP
 
                     newCustArrivalTime = newArrivalTime;
                     load -= cust.Demand;
-                    newArrivalTime += CustomerDist(cust, route[i], load) + cust.ServiceTime;
+                    newArrivalTime += CustomerDist(cust, route[i], load).Item1 + cust.ServiceTime;
 
                     //Take the new customer into account into the route length
                     actualIndex++;
@@ -956,9 +960,9 @@ namespace SA_ILP
                     double time;
                     //If the next index is the new cust target pos, use the travel time to the new customer
                     if (i == pos - 1)
-                        time = CustomerDist(route[i], cust, load);
+                        time = CustomerDist(route[i], cust, load).Item1;
                     else
-                        time = CustomerDist(route[i], route[i + 1], load);
+                        time = CustomerDist(route[i], route[i + 1], load).Item1;
                     newArrivalTime += time + route[i].ServiceTime;
                 }
 
@@ -1003,7 +1007,7 @@ namespace SA_ILP
 
             for (int i = 0; i < route.Count - 1; i++)
             {
-                var dist = CustomerDist(route[i],route[i+1], load);
+                var dist = CustomerDist(route[i],route[i+1], load).Item1;
                 arrivalTime += dist + route[i].ServiceTime;
 
                 if(arrivalTime < route[i+1].TWStart)
@@ -1054,7 +1058,7 @@ namespace SA_ILP
 
         public Route CreateDeepCopy()
         {
-            return new Route(route.ConvertAll(i => i), arrival_times.ConvertAll(i => i), objective_matrix, used_capacity, max_capacity,random.Next(),this.parent, startTime);
+            return new Route(route.ConvertAll(i => i), arrival_times.ConvertAll(i => i), objective_matrix,distributionMatrix, used_capacity, max_capacity,random.Next(),this.parent, startTime);
         }
 
         public List<int> CreateIdList()
