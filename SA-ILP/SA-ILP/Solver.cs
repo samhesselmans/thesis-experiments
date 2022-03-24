@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Gurobi;
+using MathNet.Numerics.Distributions;
 
 namespace SA_ILP
 {
@@ -99,54 +100,7 @@ namespace SA_ILP
             return matrix;
         }
 
-        private double[,,] CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput)
-        {
-            double[,,] matrix = new double[customers.Count, customers.Count, numLoadLevels];
-            Parallel.For(0, customers.Count, i =>
-            {
-                for (int j = 0; j < customers.Count; j++)
-                {
-                    double dist;
-                    if (i < j)
-                        dist = distanceMatrix[i, j];
-                    else
-                        dist = distanceMatrix[j, i];
-                    double heightDiff = customers[j].Elevation - customers[i].Elevation;
 
-                    //double slope = Math.Atan(heightDiff /( dist * 1000));
-                    //if (dist == 0)
-                    //    slope = 0;
-                    ////if(j > i)
-                    //total += Math.Abs(slope);
-                    for (int l = 0; l < numLoadLevels; l++)
-                    {
-                        double loadLevelWeight = minWeight + ((maxWeight - minWeight) / numLoadLevels) * l + ((maxWeight - minWeight) / numLoadLevels) / 2;
-
-  
-
-                        matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput);
-                    }
-                }
-
-            }); // (int i = 0; i < customers.Count; i++)
-            
-            //for (int i = 0; i < customers.Count; i++)
-            //    for (int j = 0; j < customers.Count; j++)
-            //        for (int l = 0; l < numLoadLevels; l++)
-            //        {
-            //            double loadLevelWeight = minWeight + ((maxWeight - minWeight) / numLoadLevels) * l + ((maxWeight - minWeight) / numLoadLevels) / 2;
-
-            //            double dist;
-            //            if (i < j)
-            //                dist = distanceMatrix[i, j];
-            //            else
-            //                dist = distanceMatrix[j, i];
-
-            //            matrix[i, j, l] = VRPLTT.CalculateTravelTime(customers[i].Elevation - customers[j].Elevation, dist, loadLevelWeight, powerInput);
-            //        }
-
-            return matrix;
-        }
 
         public static double CalculateDistanceObjective(Customer cust1, Customer cust2)
         {
@@ -203,7 +157,7 @@ namespace SA_ILP
             Stopwatch w = new Stopwatch();
             w.Start();
             Console.WriteLine("Calculating travel time matrix");
-            double[,,] matrix = CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
+            (double[,,] matrix,Gamma[,,] distributionMatrix) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
             Console.WriteLine($"Created distance matrix in {((double)w.ElapsedMilliseconds/1000).ToString("0.00")}s");
             //(var colums, var sol, _, var value) = await LocalSearchInstancAsync("", customers.Count, bikeMaxMass - bikeMinMass, customers, matrix, 1, numIterations, timelimit);//LocalSearchInstance(-1, "", customers.Count, bikeMaxMass-bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix,random.Next(), numInterations: numIterations,checkInitialSolution:true,timeLimit:timelimit,printExtendedInfo:true);
             //Route.objective_matrix = matrix;
@@ -251,7 +205,7 @@ namespace SA_ILP
         public double SolveVRPLTTInstance(string fileName, int numIterations = 3000000, double bikeMinMass = 150, double bikeMaxMass = 350, int numLoadLevels = 10, double inputPower = 400, int timelimit = 30000)
         {
             (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(fileName);
-            double[,,] matrix = CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
+            (double[,,] matrix,Gamma[,,] distributionMatrix) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
             var ls = new LocalSearch(LocalSearchConfigs.VRPLTTDebug, random.Next());
             (var colums, var sol, var value) = ls.LocalSearchInstance(0, "", customers.Count, bikeMaxMass - bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix, numInterations: numIterations, checkInitialSolution: false, timeLimit: timelimit);
             foreach (var route in sol)
