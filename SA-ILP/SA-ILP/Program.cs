@@ -181,7 +181,7 @@ async Task RunVRPLTTTests(string dir, string solDir, int numRepeats, Options opt
                 Console.WriteLine($"Testing on { Path.GetFileNameWithoutExtension(file)}");
                 double totalValue = 0.0;
                 bool newInstance = false;
-                LocalSearchConfiguration config = LocalSearchConfigs.VRPTW;
+                LocalSearchConfiguration config = LocalSearchConfigs.VRPLTT;
                 if (Path.GetExtension(file) != ".csv")
                     continue;
 
