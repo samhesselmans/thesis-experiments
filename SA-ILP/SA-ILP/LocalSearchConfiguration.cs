@@ -65,7 +65,7 @@ namespace SA_ILP
 
             SaveColumnsAfterAllImprovements = true,
             SaveColumnsAfterWorse = true,
-            SaveColumnThreshold = 0.2,
+            SaveColumnThreshold = 0.07,
 
 
             PenalizeEarlyArrival = false,
