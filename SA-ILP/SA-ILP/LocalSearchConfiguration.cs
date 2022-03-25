@@ -41,6 +41,22 @@ namespace SA_ILP
         public bool PrintExtendedInfo { get; set; }
         public bool SaveScoreDevelopment { get; set; }
 
+        public override string ToString()
+        {
+            LocalSearchConfiguration obj = this;
+            return GetType().GetProperties()
+
+        .Select(info =>
+        {
+            
+            return (info.Name, Value: info.GetValue(obj, null) ?? "(null)");
+        })
+        .Aggregate(
+            new StringBuilder(),
+            (sb, pair) => sb.AppendLine($"{pair.Name}: {pair.Value}"),
+            sb => sb.ToString());
+        }
+
     }
 
     public static class LocalSearchConfigs
@@ -60,12 +76,12 @@ namespace SA_ILP
             BaseLateArrivalPenalty = 2,
 
             BaseRemovedCustomerPenalty = 0.1,
-            BaseRemovedCustomerPenaltyPow = 5,
+            BaseRemovedCustomerPenaltyPow = 2,
             Alpha = 0.99,
 
             SaveColumnsAfterAllImprovements = true,
             SaveColumnsAfterWorse = true,
-            SaveColumnThreshold = 0.07,
+            SaveColumnThreshold = 0.2,
 
 
             PenalizeEarlyArrival = false,
