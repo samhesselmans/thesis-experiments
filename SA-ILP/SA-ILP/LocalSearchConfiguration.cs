@@ -84,7 +84,7 @@ namespace SA_ILP
         {
             InitialTemperature = 10,
             AllowEarlyArrivalDuringSearch = true,
-            AllowLateArrivalDuringSearch = false,
+            AllowLateArrivalDuringSearch = true,
             AllowEarlyArrival = true,
             AllowLateArrival = false,
             BaseEarlyArrivalPenalty = 100,

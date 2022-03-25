@@ -221,7 +221,7 @@ namespace SA_ILP
             double totalRouteLength = 0;
             foreach (RouteStore rs in ilpSol)
             {
-                var ls = new LocalSearch(LocalSearchConfigs.VRPLTT, random.Next());
+                var ls = new LocalSearch((LocalSearchConfiguration)config, random.Next());
                 Route r = new Route(customers, rs, customers[0], matrix, bikeMaxMass - bikeMinMass, ls);
                 checkValue += r.CalcObjective();
                 totalStartTime += r.arrival_times[0];
