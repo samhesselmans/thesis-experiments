@@ -41,6 +41,8 @@ namespace SA_ILP
         public bool PrintExtendedInfo { get; set; }
         public bool SaveScoreDevelopment { get; set; }
 
+        public double ExpectedEarlinessPenalty { get; set; }
+        public double ExpectedLatenessPenalty { get; set; }
         public override string ToString()
         {
             LocalSearchConfiguration obj = this;
@@ -91,8 +93,13 @@ namespace SA_ILP
             SaveRoutesBeforeOperator = false,
 
             PrintExtendedInfo = false,
-            SaveScoreDevelopment = false
+            SaveScoreDevelopment = false,
+            ExpectedEarlinessPenalty = 0,
+            ExpectedLatenessPenalty =0
         };
+
+        public static LocalSearchConfiguration VRPSLTT { get { var config = VRPLTT; config.ExpectedEarlinessPenalty = 1;config.ExpectedLatenessPenalty = 1;return config; } }
+
 
         public static LocalSearchConfiguration VRPLTTDebug { get { var config = VRPLTT; config.PrintExtendedInfo = true; return config; } }
 
@@ -118,7 +125,9 @@ namespace SA_ILP
             SaveRoutesBeforeOperator = false,
             SaveColumnsAfterWorse = true,
             SaveColumnThreshold = 0.1,
-            SaveScoreDevelopment = false
+            SaveScoreDevelopment = false,
+            ExpectedEarlinessPenalty = 0,
+            ExpectedLatenessPenalty = 0
         };
 
 

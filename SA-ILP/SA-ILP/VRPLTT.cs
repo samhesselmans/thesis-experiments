@@ -52,10 +52,10 @@ namespace SA_ILP
         {
             double shape = 1.5 + traveltime * 0.5 + weight/(290);
             //RATE moet zelfde blijven, niet shape
-            double rate = 1;// (1 / (traveltime * 0.1 / 8))/(1 + weight/(290*3));
+            double rate = 10;// (1 / (traveltime * 0.1 / 8))/(1 + weight/(290*3));
+            var gamma = new Gamma(shape, rate);
 
-
-            return new Gamma(shape, rate);
+            return gamma;
         }
 
 
@@ -63,6 +63,7 @@ namespace SA_ILP
         {
             double[,,] matrix = new double[customers.Count, customers.Count, numLoadLevels];
             Gamma[,,] distributionMatrix = new Gamma[customers.Count,customers.Count, numLoadLevels];
+            //List<(double, double, double)> plotData = new List<(double, double, double)>();
             Parallel.For(0, customers.Count, i =>
             {
                 for (int j = 0; j < customers.Count; j++)
@@ -107,7 +108,26 @@ namespace SA_ILP
             //            matrix[i, j, l] = VRPLTT.CalculateTravelTime(customers[i].Elevation - customers[j].Elevation, dist, loadLevelWeight, powerInput);
             //        }
 
-            return (matrix,distributionMatrix);
+
+            Gamma gam = null;
+
+            double longest = 0;
+
+            using(StreamWriter w = new StreamWriter("data.txt"))
+
+            for (int i = 0; i < customers.Count; i++)
+                for (int j = 0; j < customers.Count; j++)
+                    for (int l = 0; l < numLoadLevels; l++)
+                    {
+                            if (matrix[i, j, l] > longest)
+                            {
+                                longest = matrix[i, j, l];
+                                gam = distributionMatrix[i, j, l];
+                            }
+                            w.WriteLine($"{matrix[i,j,l]};{distributionMatrix[i,j,l].Mean};{distributionMatrix[i, j, l].Mode}");
+                    }
+            Console.WriteLine($"{gam.Shape};{gam.Rate}");
+        return (matrix,distributionMatrix);
         }
 
         public static (double[,] distances,List<Customer> customers) ParseVRPLTTInstance(string file)

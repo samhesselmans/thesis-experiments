@@ -52,6 +52,9 @@ namespace SA_ILP
 
         public bool SaveScoreDevelopment { get; private set; }
 
+        public double ExpectedEarlinessPenalty { get; private set; }
+        public double ExpectedLatenessPenalty { get; private set; }
+
         private Random random;
 
         private OperatorSelector OS;
@@ -86,7 +89,8 @@ namespace SA_ILP
             PrintExtendedInfo = config.PrintExtendedInfo;
             Alpha = config.Alpha;
             SaveScoreDevelopment = config.SaveScoreDevelopment;
-
+            ExpectedEarlinessPenalty = config.ExpectedEarlinessPenalty;
+            ExpectedLatenessPenalty = config.ExpectedLatenessPenalty;
             OS = os;
         }
 
@@ -137,7 +141,7 @@ namespace SA_ILP
 
 
             List<Customer> inserted = new List<Customer>();
-
+            
             foreach (Route route in routes)
             {
                 if (customers.Count == 0)
