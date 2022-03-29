@@ -98,7 +98,15 @@ namespace SA_ILP
             ExpectedLatenessPenalty =0
         };
 
-        public static LocalSearchConfiguration VRPSLTT { get { var config = VRPLTT; config.ExpectedEarlinessPenalty = 1;config.ExpectedLatenessPenalty = 1;return config; } }
+        public static LocalSearchConfiguration VRPSLTT { get { 
+                var config = VRPLTT; 
+                config.ExpectedEarlinessPenalty = 10;
+                config.ExpectedLatenessPenalty = 10;
+                config.AdjustEarlyArrivalToTWStart = false;
+                config.AllowEarlyArrival = false;
+                config.PenalizeEarlyArrival = true;
+                config.CheckOperatorScores = false;
+                return config; } }
 
 
         public static LocalSearchConfiguration VRPLTTDebug { get { var config = VRPLTT; config.PrintExtendedInfo = true; return config; } }

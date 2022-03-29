@@ -206,16 +206,58 @@ namespace SA_ILP
             return (false,ilpSol,ilpVal,ilpTime,lsTime,lsVal);
         }
 
-        public double SolveVRPLTTInstance(string fileName, int numIterations = 3000000, double bikeMinMass = 150, double bikeMaxMass = 350, int numLoadLevels = 10, double inputPower = 400, int timelimit = 30000)
+        public double SolveVRPLTTInstance(string fileName, int numIterations = 3000000, double bikeMinMass = 150, double bikeMaxMass = 350, int numLoadLevels = 10, double inputPower = 400, int timelimit = 30000,LocalSearchConfiguration? config = null)
         {
             (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(fileName);
+
+            if (config == null)
+                config = LocalSearchConfigs.VRPLTTDebug;
+
             (double[,,] matrix,Gamma[,,] distributionMatrix) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
-            var ls = new LocalSearch(LocalSearchConfigs.VRPLTTDebug, random.Next());
+            var ls = new LocalSearch((LocalSearchConfiguration)config, random.Next());
             (var colums, var sol, var value) = ls.LocalSearchInstance(0, "", customers.Count, bikeMaxMass - bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix,distributionMatrix, numInterations: numIterations, checkInitialSolution: false, timeLimit: timelimit);
             foreach (var route in sol)
-                if(route.route.Count != 2)
-                    Console.WriteLine($"{route}; ST {route.startTime} ; SST {route.route[1].TWStart - route.CustomerDist(route.route[0], route.route[1],route.used_capacity).Item1}");
+            {
+                if (route.route.Count != 2)
+                {
+                    Console.WriteLine($"{route}; ST {route.startTime} ; SST {route.route[1].TWStart - route.CustomerDist(route.route[0], route.route[1], route.used_capacity).Item1}");
 
+                    double avg = 0;
+                    int total = 0;
+                    double worst = double.MaxValue;
+                    for (int i = 0; i < route.route.Count; i++)
+                    {
+
+                        if (route.customerDistributions[i] != null)
+                        {
+                            total += 1;
+
+                            double difUp = route.route[i].TWEnd - route.arrival_times[i];
+                            double difDown = route.route[i].TWStart - route.arrival_times[i];
+
+                            if (difUp < 0)
+                                difUp = 0;
+                            if (difDown < 0)
+                                difDown = 0;
+
+                            double pEarly = route.customerDistributions[i].CumulativeDistribution(difDown);
+
+                            double pOnTime = (route.customerDistributions[i].CumulativeDistribution(difUp));
+
+                            if (Double.IsNaN(pOnTime))
+                                pOnTime = 1;
+
+                            double p = pOnTime - pEarly;
+
+                            avg += p;
+                            if (p < worst)
+                                worst = p;
+                        }
+                    }
+                    Console.WriteLine($"On time performance: {avg / total} worst: {worst}");
+                }
+            
+            }
 
             //CheckRouteQualityVRPLTT(sol, matrix, bikeMaxMass - bikeMinMass);
 

@@ -11,7 +11,7 @@ namespace SA_ILP
     {
         public List<Customer> route;
         public List<double> arrival_times;
-        public List<IDistribution> customerDistributions;
+        public List<IContinuousDistribution> customerDistributions;
         public double[,,] objective_matrix;
         public Gamma[,,] distributionMatrix;
         public double startTime = 0;
@@ -53,6 +53,7 @@ namespace SA_ILP
         {
             this.route = new List<Customer>() { depot, depot };
             this.arrival_times = new List<double>() { 0, 0 };
+            this.customerDistributions = new List<IContinuousDistribution>() { null,null };
             objective_matrix = distanceMatrix;
             this.numX = distanceMatrix.GetLength(0);
             this.numY = distanceMatrix.GetLength(1);
@@ -87,10 +88,11 @@ namespace SA_ILP
         //            }
         //}
 
-        public  Route(List<Customer> route, List<double> arrivalTimes, double[,,] distanceMatrix, Gamma[,,] distributionMatrix, double usedCapcity, double maxCapacity,int seed,LocalSearch parent,double startTime)
+        public  Route(List<Customer> route, List<double> arrivalTimes,List<IContinuousDistribution> customerDistributions, double[,,] distanceMatrix, Gamma[,,] distributionMatrix, double usedCapcity, double maxCapacity,int seed,LocalSearch parent,double startTime)
         {
             this.route = route;
             this.arrival_times = arrivalTimes;
+            this.customerDistributions = customerDistributions;
             objective_matrix = distanceMatrix;
             this.numX = distanceMatrix.GetLength(0);
             this.numY = distanceMatrix.GetLength(1);
@@ -112,6 +114,7 @@ namespace SA_ILP
         {
             this.route = new List<Customer>() { depot, depot };
             this.arrival_times = new List<double>() { 0, 0 };
+            this.customerDistributions = new List<IContinuousDistribution>() { null, null };
             objective_matrix = distanceMatrix;
             this.numX = distanceMatrix.GetLength(0);
             this.numY = distanceMatrix.GetLength(1);
@@ -155,10 +158,22 @@ namespace SA_ILP
         public double CalculateUncertaintyPenaltyTerm(IContinuousDistribution dist, Customer cust, double minArrrivalTime)
         {
             //double onTimeP = 1 - (dist.CumulativeDistribution(cust.TWEnd - minArrrivalTime) - dist.CumulativeDistribution(cust.TWStart - minArrrivalTime));
-            
-            double toLateP = 1 - dist.CumulativeDistribution(cust.TWEnd - minArrrivalTime);
-            double toEarlyP = dist.CumulativeDistribution(cust.TWStart - minArrrivalTime);
-            return toLateP * parent.ExpectedLatenessPenalty + toEarlyP * parent.ExpectedEarlinessPenalty;
+
+            double toLateP = 1;
+            if(cust.TWEnd - minArrrivalTime >= 0)
+                toLateP = 1 - dist.CumulativeDistribution(cust.TWEnd - minArrrivalTime);
+            double toEarlyP = 0;
+            if(cust.TWStart - minArrrivalTime >= 0)
+                toEarlyP = dist.CumulativeDistribution(cust.TWStart - minArrrivalTime);
+
+            if (Double.IsNaN(toLateP))
+                toLateP = 0;
+
+            double res = toLateP * parent.ExpectedLatenessPenalty + toEarlyP * parent.ExpectedEarlinessPenalty;
+
+
+
+            return res;
         }
 
         public double CalculateLatePenaltyTerm(double arrivalTime, double timeWindowEnd)
@@ -194,7 +209,7 @@ namespace SA_ILP
             //CachedObjective = total_dist;
             //return total_dist;
 
-            double totalDist = 0;
+            double totalObjectiveValue = 0;
             double totalWeight = used_capacity;// route.Sum(x => x.Demand);
             double arrivalTime = startTime;
 
@@ -204,14 +219,14 @@ namespace SA_ILP
             {
                 (double dist,Gamma distribution) = this.CustomerDist(route[i], route[i + 1], totalWeight);
                 total = AddDistributions(total, distribution);
-                totalDist += dist;
+                totalObjectiveValue += dist;
                 arrivalTime += dist + route[i].ServiceTime;
-                totalDist += CalculateUncertaintyPenaltyTerm(total, route[i + 1], arrivalTime);
+                totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, route[i + 1], arrivalTime);
                 if(arrivalTime < route[i + 1].TWStart)
                 {
                     if(i != 0)
                     {
-                        totalDist += CalculateEarlyPenaltyTerm(arrivalTime, route[i + 1].TWStart);
+                        totalObjectiveValue += CalculateEarlyPenaltyTerm(arrivalTime, route[i + 1].TWStart);
                         if (parent.AdjustEarlyArrivalToTWStart)
                             arrivalTime = route[i + 1].TWStart;
                     }
@@ -222,13 +237,13 @@ namespace SA_ILP
                 }
                 else if(arrivalTime > route[i + 1].TWEnd)
                 {
-                    totalDist += CalculateLatePenaltyTerm(arrivalTime,route[i + 1].TWEnd);
+                    totalObjectiveValue += CalculateLatePenaltyTerm(arrivalTime,route[i + 1].TWEnd);
                 }
 
                 totalWeight -= route[i + 1].Demand;
             }
-            CachedObjective = totalDist;
-            return totalDist;
+            CachedObjective = totalObjectiveValue;
+            return totalObjectiveValue;
         }
 
         public (double,Gamma) CustomerDist(Customer start, Customer finish, double weight)
@@ -317,6 +332,7 @@ namespace SA_ILP
                 Console.WriteLine("Helpt");
             route.RemoveAt(index);
             arrival_times.RemoveAt(index);
+            customerDistributions.RemoveAt(index);
             //this.lastCust = lastCust;
             ResetCache();
 
@@ -354,7 +370,7 @@ namespace SA_ILP
                 //        totalTravelTime += CalculateLatePenaltyTerm(arrival_time, currentCust.TWEnd);
                 //    else
                 //        return (false, double.MinValue);
-                objectiveValue += CalculateUncertaintyPenaltyTerm(total, currentCust, arrival_time);
+                
                 if(arrival_time < currentCust.TWStart)
                 {
                     if (i != 1)
@@ -371,10 +387,11 @@ namespace SA_ILP
                 }
                 (var dist, var distribution) = CustomerDist(currentCust, nextCust, load);
                 total = AddDistributions(total, distribution);
+                
                 load -= nextCust.Demand;
                 objectiveValue += dist;
                 arrival_time += dist + currentCust.ServiceTime;
-
+                objectiveValue += CalculateUncertaintyPenaltyTerm(total, nextCust, arrival_time);
                 if (arrival_time > nextCust.TWEnd)
                     if(parent.AllowLateArrivalDuringSearch)
                         objectiveValue += CalculateLatePenaltyTerm(arrival_time, nextCust.TWEnd);
@@ -400,7 +417,7 @@ namespace SA_ILP
             //if (skip > 0 && ignore != -1)
             //    throw new Exception("Cant use ignore and skip together");
 
-            double totalTravelTime = 0;
+            double totalObjectiveValue = 0;
             double load = used_capacity + cust.Demand;
 
             //Remove the demand of the removed customers from the inital load
@@ -424,7 +441,7 @@ namespace SA_ILP
             }
 
             //int actualIndex = 0;
-
+            Gamma total = new Gamma(0, 10);
             double arrivalTime = OptimizeStartTime(route,load,toAdd:cust,pos:pos,skip:skip,ignore:ignore);
             for (int i = 0,actualIndex=0; i < route.Count; i++,actualIndex ++)
             {
@@ -436,7 +453,7 @@ namespace SA_ILP
                     {
                         //CustPossibleAtPosCache[(cust.Id, pos)] = (false, false, double.MinValue);
                         if (parent.AllowLateArrivalDuringSearch)
-                            totalTravelTime += CalculateLatePenaltyTerm(arrivalTime, cust.TWEnd);
+                            totalObjectiveValue += CalculateLatePenaltyTerm(arrivalTime, cust.TWEnd);
                         else
                             return (false, false, double.MinValue);
 
@@ -448,7 +465,7 @@ namespace SA_ILP
                     {
                         if (actualIndex != 1)
                         {
-                            totalTravelTime += CalculateEarlyPenaltyTerm(arrivalTime, cust.TWStart);//cust.TWStart - arrivalTime;
+                            totalObjectiveValue += CalculateEarlyPenaltyTerm(arrivalTime, cust.TWStart);//cust.TWStart - arrivalTime;
                             if (parent.AdjustEarlyArrivalToTWStart)
                                 arrivalTime = cust.TWStart;
                         }
@@ -465,8 +482,12 @@ namespace SA_ILP
 
                     load -= cust.Demand;
                     (var time, var distribution) = CustomerDist(cust, route[i + skip], load);
-                    totalTravelTime += time;
+                    total = AddDistributions(total, distribution);
+                    totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, route[i+skip], arrivalTime);
+
+                    totalObjectiveValue += time;
                     arrivalTime += time + cust.ServiceTime;
+                    
                     i += skip;
 
                     //We visited the cust so the index in the new route should be increased.
@@ -482,7 +503,7 @@ namespace SA_ILP
                     {
                         //CustPossibleAtPosCache[(cust.Id,pos)] = (false, false, double.MinValue);
                         if (parent.AllowLateArrivalDuringSearch)
-                            totalTravelTime += CalculateLatePenaltyTerm(arrivalTime, route[i].TWEnd);
+                            totalObjectiveValue += CalculateLatePenaltyTerm(arrivalTime, route[i].TWEnd);
                         else
                             return (false, false, double.MinValue);
 
@@ -491,7 +512,7 @@ namespace SA_ILP
                     {
                         //CustPossibleAtPosCache[(cust.Id, pos)] = (false, true, double.MinValue);
                         if (parent.AllowLateArrivalDuringSearch)
-                            totalTravelTime += CalculateLatePenaltyTerm(arrivalTime, route[i].TWEnd);
+                            totalObjectiveValue += CalculateLatePenaltyTerm(arrivalTime, route[i].TWEnd);
                         else
                             return (false, true, double.MinValue);
                     }
@@ -501,7 +522,7 @@ namespace SA_ILP
                 {
                     if (actualIndex != 1)
                     {
-                        totalTravelTime += CalculateEarlyPenaltyTerm(arrivalTime, route[i].TWStart);//route[i].TWStart - arrivalTime;
+                        totalObjectiveValue += CalculateEarlyPenaltyTerm(arrivalTime, route[i].TWStart);//route[i].TWStart - arrivalTime;
                         if (parent.AdjustEarlyArrivalToTWStart)
                             arrivalTime = route[i].TWStart;
                     }
@@ -516,14 +537,24 @@ namespace SA_ILP
                 if (i != route.Count - 1)
                 {
                     double time;
+                    Gamma distribution;
+                    Customer nextCust;
                     //If the current customer is the customer before the potential position of the new customer update the time accordingly
                     if (i == pos - 1)
-                        time = CustomerDist(route[i], cust, load).Item1;
+                        nextCust = cust;
+                    //(time,distribution) = CustomerDist(route[i], cust, load);
                     else if (i == ignore - 1)
-                        time = CustomerDist(route[i], route[i+2], load).Item1;
+                        nextCust = route[i + 2];
+                    //(time, distribution) = CustomerDist(route[i], route[i+2], load);
                     else
-                        time = CustomerDist(route[i], route[i + 1], load).Item1;
-                    totalTravelTime += time;
+                        nextCust = route[i + 1];
+                        //(time, distribution) = CustomerDist(route[i], route[i + 1], load);
+
+                    (time, distribution) = CustomerDist(route[i], nextCust, load);
+
+                    totalObjectiveValue += time;
+                    total = AddDistributions(total, distribution);
+                    totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, route[i + skip], arrivalTime);
                     arrivalTime += time + route[i].ServiceTime;
 
                 }
@@ -534,7 +565,7 @@ namespace SA_ILP
             //    objective = CalcObjective();
 
             //CustPossibleAtPosCache[(cust.Id, pos)] = (true, true, totalTravelTime - objective);
-            return (true, true, totalTravelTime - this.Score);
+            return (true, true, totalObjectiveValue - this.Score);
 
         }
 
@@ -573,13 +604,14 @@ namespace SA_ILP
             return (bestIndex, bestDistIncr);
         }
 
-        public void ReverseSubRoute(int index1, int index2, List<double> newArrivalTimes, bool violatesLowerTimewindow, bool violatesUpperTimeWindow)
+        public void ReverseSubRoute(int index1, int index2, List<double> newArrivalTimes,List<IContinuousDistribution> newDistributions, bool violatesLowerTimewindow, bool violatesUpperTimeWindow)
         {
 
             //Invalidate the cache
 
             this.startTime = newArrivalTimes[0];
             this.arrival_times = newArrivalTimes;
+            this.customerDistributions = newDistributions;
             this.ViolatesLowerTimeWindow = violatesLowerTimewindow;
             this.ViolatesUpperTimeWindow = violatesUpperTimeWindow;
             this.route.Reverse(index1, index2 - index1 + 1);
@@ -677,18 +709,19 @@ namespace SA_ILP
 
         //Using the function is quite a bit slower than using specifically made functions, but is definatly a possibility. 
         //It can therefore be used to test new operators for example
-        public (bool possible,double improvement,List<double> newArrivalTimes,bool,bool) NewRoutePossible(List<Customer> newRoute,double changedCapacity)
+        public (bool possible,double improvement,List<double> newArrivalTimes,List<IContinuousDistribution> newDistributions,bool,bool) NewRoutePossible(List<Customer> newRoute,double changedCapacity)
         {
             double load = used_capacity + changedCapacity;
 
             if (load > max_capacity)
-                return (false, double.MinValue, null,false,false);
+                return (false, double.MinValue, null,null,false,false);
 
             double arrivalTime = 0;
-            double newCost = 0;
+            double newObjectiveValue = 0;
             bool violatesLowerTimeWindow = false;
             bool violatesUpperTimeWindow = false;
             List<double> newArrivalTimes = new List<double>(newRoute.Count) {};
+            List<IContinuousDistribution> newDistributions =  new List<IContinuousDistribution>(newRoute.Count);
             //List<double> systemOfEquationsLower = new List<double>(newRoute.Count);
             //List<double> systemOfEquationsUpper = new List<double>(newRoute.Count);
 
@@ -696,11 +729,15 @@ namespace SA_ILP
 
             //Adding the arrival time for the depot. This is used for setting the start time of the route.
             newArrivalTimes.Add(arrivalTime);
+            newDistributions.Add(null);
+            Gamma total = new Gamma(0, 10);
             for (int i = 0; i < newRoute.Count - 1; i++)
             {
                 (var dist, var distribution) = CustomerDist(newRoute[i], newRoute[i + 1], load);
+                total = AddDistributions(total, distribution);
                 arrivalTime += dist + newRoute[i].ServiceTime;
-                newCost += dist;
+                newObjectiveValue += dist;
+                newObjectiveValue += CalculateUncertaintyPenaltyTerm(total, newRoute[i + 1], arrivalTime);
                 if (arrivalTime < newRoute[i + 1].TWStart)
                 {
                     if (i != 0)
@@ -708,13 +745,13 @@ namespace SA_ILP
                         if (parent.AllowEarlyArrivalDuringSearch)
                         {
                             //TODO: might want to make this an option in the configuration
-                            newCost += CalculateEarlyPenaltyTerm(arrivalTime, newRoute[i + 1].TWStart);
+                            newObjectiveValue += CalculateEarlyPenaltyTerm(arrivalTime, newRoute[i + 1].TWStart);
                             if (parent.AdjustEarlyArrivalToTWStart)
                                 arrivalTime = newRoute[i + 1].TWStart;
                             violatesLowerTimeWindow = true;
                         }
                         else
-                            return (false, double.MinValue, newArrivalTimes, false, false);
+                            return (false, double.MinValue, newArrivalTimes,newDistributions, false, false);
                     }
                     else
                     {
@@ -728,42 +765,46 @@ namespace SA_ILP
                 {
                     if (parent.AllowLateArrivalDuringSearch)
                     {
-                        newCost += CalculateLatePenaltyTerm(arrivalTime, newRoute[i + 1].TWEnd);
+                        newObjectiveValue += CalculateLatePenaltyTerm(arrivalTime, newRoute[i + 1].TWEnd);
                         violatesUpperTimeWindow = true;
                     }
                     else
-                        return (false, double.MinValue, newArrivalTimes, false, false);
+                        return (false, double.MinValue, newArrivalTimes,newDistributions, false, false);
                 }
 
                 load -= newRoute[i + 1].Demand;
                 newArrivalTimes.Add(arrivalTime);
+                newDistributions.Add(total);
 
             }
-            return (true,this.Score - newCost,newArrivalTimes,violatesLowerTimeWindow,violatesUpperTimeWindow);
+            return (true,this.Score - newObjectiveValue,newArrivalTimes,newDistributions,violatesLowerTimeWindow,violatesUpperTimeWindow);
         }
 
-        public void SetNewRoute(List<Customer> customers, List<double> arrivalTimes, bool violatesLowerTimeWindow, bool violatesUpperTimeWindow)
+        public void SetNewRoute(List<Customer> customers, List<double> arrivalTimes,List<IContinuousDistribution> newDistributions, bool violatesLowerTimeWindow, bool violatesUpperTimeWindow)
         {
             this.route = customers;
             this.arrival_times = arrivalTimes;
             this.startTime = arrivalTimes[0];
+            this.customerDistributions = newDistributions;
             this.ViolatesLowerTimeWindow = violatesLowerTimeWindow;
             this.ViolatesUpperTimeWindow = violatesUpperTimeWindow;
             this.used_capacity = customers.Sum(x => x.Demand);
             ResetCache();
         }
 
-        public (bool possible, double improvement,List<double> newArrivalTimes, bool violatesLowerTimeWindow, bool violatesUpperTimeWindow) CanReverseSubRoute(int index1, int index2)
+        public (bool possible, double improvement,List<double> newArrivalTimes,List<IContinuousDistribution> newDistributions, bool violatesLowerTimeWindow, bool violatesUpperTimeWindow) CanReverseSubRoute(int index1, int index2)
         {
             double load = used_capacity;
             double arrival_time = OptimizeStartTime(route,load,reverseIndex1:index1,reverseIndex2: index2);
-            double newCost = 0;
+            double newObjectiveValue = 0;
 
             bool violatesLowerTimeWindow = false;
             bool violatesUpperTimeWindow = false;
 
             //int[] newArrivalTimes = new int[arrival_times.Count];
             List<double> newArrivalTimes = new List<double>(route.Count) { arrival_time};
+            List<IContinuousDistribution> newDistributions = new List<IContinuousDistribution>(route.Count) {null};
+            Gamma total = new Gamma(0, 10);
             //Check if the action would be possible and calculate the new objective score
             for(int i=0; i<route.Count - 1; i++)
             {
@@ -796,18 +837,24 @@ namespace SA_ILP
 
 
                 //Travel time to new customer
-                double dist = CustomerDist(currentCust, nextCust,load).Item1;
-                //Add travel time to total cost
-                newCost += dist;
+                (double dist,Gamma distribution) = CustomerDist(currentCust, nextCust,load);
+                total = AddDistributions(total, distribution);
 
+                
+
+                //Add travel time to total cost
+                newObjectiveValue += dist;
+                
                 //Update arrival time for next customer
                 arrival_time += dist + currentCust.ServiceTime;
+
+                newObjectiveValue += CalculateUncertaintyPenaltyTerm(total, nextCust, arrival_time);
 
                 if (arrival_time < nextCust.TWStart)
                 {
                     if (i != 0)
                     {
-                        newCost += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);
+                        newObjectiveValue += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);
                         if (parent.AdjustEarlyArrivalToTWStart)
                             arrival_time = nextCust.TWStart;
                         violatesLowerTimeWindow = true;
@@ -820,16 +867,16 @@ namespace SA_ILP
                 }
 
                 newArrivalTimes.Add(arrival_time);
-
+                newDistributions.Add(total);
                 //Check the timewindow end of the next customer
                 if (arrival_time > nextCust.TWEnd)
                     if (parent.AllowLateArrivalDuringSearch)
                     {
                         violatesUpperTimeWindow = true;
-                        newCost += CalculateLatePenaltyTerm(arrival_time, nextCust.TWEnd);
+                        newObjectiveValue += CalculateLatePenaltyTerm(arrival_time, nextCust.TWEnd);
                     }
                     else
-                        return (false, double.MinValue, newArrivalTimes, violatesLowerTimeWindow, false);
+                        return (false, double.MinValue, newArrivalTimes,newDistributions, violatesLowerTimeWindow, false);
 
                 //After traveling to the next customer we can remove it's load
                 load -= nextCust.Demand;
@@ -841,7 +888,7 @@ namespace SA_ILP
             //    objective = CalcObjective();
             //if (newArrivalTimes[0] != arrival_times[0])
             //    Console.WriteLine("Maybe problemo");
-            return (true, this.Score - newCost, newArrivalTimes,violatesLowerTimeWindow,violatesUpperTimeWindow);
+            return (true, this.Score - newObjectiveValue, newArrivalTimes,newDistributions,violatesLowerTimeWindow,violatesUpperTimeWindow);
         }
 
         public (Customer? toRemove, double objectiveDecrease,int index) RandomCust()
@@ -850,10 +897,10 @@ namespace SA_ILP
                 return (null, double.MaxValue,-1);
 
             var i = random.Next(1, route.Count - 1);
-            double newCost = 0;
+            double newObjectiveValue = 0;
             double load = used_capacity - route[i].Demand;
             double arrival_time = OptimizeStartTime(route,load,toRemove: route[i]);
-
+            Gamma total = new Gamma(0, 10);
             for (int j = 0, actualIndex=0; j < route.Count - 1; j++,actualIndex++ )
             {
                 double time;
@@ -877,13 +924,21 @@ namespace SA_ILP
 
 
                 (var cost, var distribution) = CustomerDist(route[j], nextCust, load);
-                newCost += cost;
+                total = AddDistributions(total, distribution);
+
+                newObjectiveValue += cost;
+
+                
+
                 arrival_time += cost + route[j].ServiceTime;
+                newObjectiveValue += CalculateUncertaintyPenaltyTerm(total, nextCust, arrival_time);
+
+
                 if (arrival_time < nextCust.TWStart)
                 {
                     if (actualIndex != 0)
                     {
-                        newCost += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);//nextCust.TWStart- arrival_time;
+                        newObjectiveValue += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);//nextCust.TWStart- arrival_time;
                                                                                              //newCost += penalty;
                         if (parent.AdjustEarlyArrivalToTWStart)
                             arrival_time = nextCust.TWStart;
@@ -894,7 +949,7 @@ namespace SA_ILP
                     }
                 }
                 else if(arrival_time > nextCust.TWEnd)
-                        newCost += CalculateLatePenaltyTerm(arrival_time,nextCust.TWEnd);
+                        newObjectiveValue += CalculateLatePenaltyTerm(arrival_time,nextCust.TWEnd);
                 load -= nextCust.Demand;
             }
 
@@ -902,10 +957,10 @@ namespace SA_ILP
             //if (objective == -1)
             //    objective = CalcObjective();
 
-            if (route.Count == 3 && newCost != 0)
-                Solver.ErrorPrint("FOUT");
+            //if (route.Count == 3 && newObjectiveValue != 0)
+            //    Solver.ErrorPrint("FOUT");
 
-            return (route[i], this.Score - newCost,i);
+            return (route[i], this.Score - newObjectiveValue,i);
         }
 
         public (Customer?, int) RandomCustIndex()
@@ -930,6 +985,10 @@ namespace SA_ILP
             ViolatesUpperTimeWindow  = false;
             double newArrivalTime = OptimizeStartTime(route,used_capacity,toAdd:cust,pos:pos);
             startTime = newArrivalTime;
+
+            Gamma total = new Gamma(0, 10);
+
+            Gamma? newCustDistribution = null;
             for (int i = 0, actualIndex = 0; i < route.Count; i++,actualIndex++)
             {
                 if (i == pos)
@@ -953,8 +1012,13 @@ namespace SA_ILP
                         ViolatesUpperTimeWindow = true;
 
                     newCustArrivalTime = newArrivalTime;
+                    newCustDistribution = total;
                     load -= cust.Demand;
-                    newArrivalTime += CustomerDist(cust, route[i], load).Item1 + cust.ServiceTime;
+
+                    (double dist, Gamma distribution) = CustomerDist(cust, route[i], load);
+                    total = AddDistributions(total, distribution);
+                    newArrivalTime += dist + cust.ServiceTime;
+                    
 
                     //Take the new customer into account into the route length
                     actualIndex++;
@@ -983,16 +1047,23 @@ namespace SA_ILP
                 else if (newArrivalTime > route[i].TWEnd)
                     ViolatesUpperTimeWindow = true;
                 arrival_times[i] = newArrivalTime;
+                customerDistributions[i] = total;
                 load -= route[i].Demand;
                 if (i != route.Count - 1)
                 {
                     double time;
+                    Customer nextCust;
                     //If the next index is the new cust target pos, use the travel time to the new customer
                     if (i == pos - 1)
-                        time = CustomerDist(route[i], cust, load).Item1;
+                        //time = CustomerDist(route[i], cust, load).Item1;
+                        nextCust = cust;
                     else
-                        time = CustomerDist(route[i], route[i + 1], load).Item1;
-                    newArrivalTime += time + route[i].ServiceTime;
+                        //time = CustomerDist(route[i], route[i + 1], load).Item1;
+                        nextCust = route[i + 1];
+                    (double dist, Gamma distribution) = CustomerDist(route[i], nextCust, load);
+                    total = AddDistributions(total, distribution);
+                    newArrivalTime += dist + route[i].ServiceTime;
+
                 }
 
                 //}
@@ -1000,6 +1071,11 @@ namespace SA_ILP
             }
             arrival_times.Insert(pos, newCustArrivalTime);
             route.Insert(pos, cust);
+
+            if (newCustDistribution == null)
+                throw new Exception("Wrong distribution");
+
+            customerDistributions.Insert(pos, newCustDistribution);
             ResetCache();
         }
 
@@ -1026,7 +1102,7 @@ namespace SA_ILP
             bool failed = false;
             double usedCapacity = 0;
             double load = route.Sum(x=> x.Demand);
-
+            Gamma total = new Gamma(0, 10);
             if(load > max_capacity)
             {
                 failed = true;
@@ -1036,8 +1112,11 @@ namespace SA_ILP
 
             for (int i = 0; i < route.Count - 1; i++)
             {
-                var dist = CustomerDist(route[i],route[i+1], load).Item1;
+                (double dist, Gamma distribution) = CustomerDist(route[i],route[i+1], load);
                 arrivalTime += dist + route[i].ServiceTime;
+                total = AddDistributions(total, distribution);
+
+                
 
                 if(arrivalTime < route[i+1].TWStart)
                 {
@@ -1087,7 +1166,7 @@ namespace SA_ILP
 
         public Route CreateDeepCopy()
         {
-            return new Route(route.ConvertAll(i => i), arrival_times.ConvertAll(i => i), objective_matrix,distributionMatrix, used_capacity, max_capacity,random.Next(),this.parent, startTime);
+            return new Route(route.ConvertAll(i => i), arrival_times.ConvertAll(i => i),customerDistributions.ConvertAll(i=>i), objective_matrix,distributionMatrix, used_capacity, max_capacity,random.Next(),this.parent, startTime);
         }
 
         public List<int> CreateIdList()
