@@ -547,6 +547,8 @@ namespace SA_ILP
                 if (possible)
                     return (imp, () =>
                     {
+                        double bestdcr = decr1;
+                        double increase = objectiveIncr;
 
                         if (src == dest && i < pos)
                             pos--;

@@ -29,6 +29,17 @@ namespace SA_ILP
 
             } }
 
+        private int CashedHashCode =-1;
+        public int HashCode { get
+            {
+                if (CashedHashCode != -1)
+                    return CashedHashCode;
+                else
+                    return GetHashCode();
+
+            }
+
+        }
 
         public bool ViolatesLowerTimeWindow { get;private set; }
         public bool ViolatesUpperTimeWindow { get; private set; }
@@ -482,12 +493,14 @@ namespace SA_ILP
 
                     load -= cust.Demand;
                     (var time, var distribution) = CustomerDist(cust, route[i + skip], load);
-                    total = AddDistributions(total, distribution);
-                    totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, route[i+skip], arrivalTime);
+   
 
                     totalObjectiveValue += time;
                     arrivalTime += time + cust.ServiceTime;
-                    
+
+                    total = AddDistributions(total, distribution);
+                    totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, route[i + skip], arrivalTime);
+
                     i += skip;
 
                     //We visited the cust so the index in the new route should be increased.
@@ -553,9 +566,10 @@ namespace SA_ILP
                     (time, distribution) = CustomerDist(route[i], nextCust, load);
 
                     totalObjectiveValue += time;
-                    total = AddDistributions(total, distribution);
-                    totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, route[i + skip], arrivalTime);
                     arrivalTime += time + route[i].ServiceTime;
+
+                    total = AddDistributions(total, distribution);
+                    totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, nextCust, arrivalTime);
 
                 }
                 //}
@@ -972,6 +986,30 @@ namespace SA_ILP
             return (route[i], i);
         }
 
+        public override int GetHashCode()
+        {
+            //unchecked
+            //{
+            //    int hash = 19;
+            //    foreach (var foo in Route)
+            //    {
+            //        hash = hash * 31 + foo.GetHashCode();
+            //    }
+            //    return hash;
+            //}
+
+
+            //return Route.Sum();
+            int total = 0;
+            for (int i = 0; i < route.Count; i++)
+            {
+                total += route[i].Id * (i + 1001);
+            }
+            CashedHashCode = total;
+            return total;
+            //return Route.Sum(x=>);//String.Join(";", Route).GetHashCode();
+        }
+
         public void InsertCust(Customer cust, int pos)
         {
             //double TArrivalNewCust = arrival_times[pos - 1] + route[pos - 1].ServiceTime + CustomerDist(cust, route[pos - 1]);
@@ -1047,7 +1085,8 @@ namespace SA_ILP
                 else if (newArrivalTime > route[i].TWEnd)
                     ViolatesUpperTimeWindow = true;
                 arrival_times[i] = newArrivalTime;
-                customerDistributions[i] = total;
+                if(i != 0)
+                    customerDistributions[i] = total;
                 load -= route[i].Demand;
                 if (i != route.Count - 1)
                 {

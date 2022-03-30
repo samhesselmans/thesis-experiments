@@ -220,11 +220,13 @@ namespace SA_ILP
             {
                 if (route.route.Count != 2)
                 {
-                    Console.WriteLine($"{route}; ST {route.startTime} ; SST {route.route[1].TWStart - route.CustomerDist(route.route[0], route.route[1], route.used_capacity).Item1}");
+                    //Console.WriteLine($"{route}; ST {route.startTime} ; SST {route.route[1].TWStart - route.CustomerDist(route.route[0], route.route[1], route.used_capacity).Item1}");
 
                     double avg = 0;
                     int total = 0;
                     double worst = double.MaxValue;
+                    Customer? worstCust = null;
+                    int worstIndex = -1;
                     for (int i = 0; i < route.route.Count; i++)
                     {
 
@@ -251,10 +253,14 @@ namespace SA_ILP
 
                             avg += p;
                             if (p < worst)
+                            {
+                                worstCust = route.route[i];
                                 worst = p;
+                                worstIndex = i;
+                            }
                         }
                     }
-                    Console.WriteLine($"On time performance: {avg / total} worst: {worst}");
+                    Console.WriteLine($"On time performance: {avg / total} worst: {worst} at {worstCust} at {worstIndex}");
                 }
             
             }
