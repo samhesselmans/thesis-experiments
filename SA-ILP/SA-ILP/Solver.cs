@@ -261,6 +261,7 @@ namespace SA_ILP
                         }
                     }
                     Console.WriteLine($"On time performance: {avg / total} worst: {worst} at {worstCust} at {worstIndex}");
+                    route.Simulate(1000000);
                 }
             
             }
