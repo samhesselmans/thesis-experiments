@@ -197,7 +197,7 @@ namespace SA_ILP
             //Console.WriteLine($"Total waiting time: {totalWaitingTime} over {numViolations} customers");
         }
 
-        public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal)> SolveVRPLTTInstanceAsync(string fileName, int numIterations = 3000000, double bikeMinMass = 140, double bikeMaxMass = 290, int numLoadLevels = 10, double inputPower = 350, int timelimit = 30000, int numThreads = 4, int numStarts=4,LocalSearchConfiguration? config = null)
+        public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal,string solutionJSON)> SolveVRPLTTInstanceAsync(string fileName, int numIterations = 3000000, double bikeMinMass = 140, double bikeMaxMass = 290, int numLoadLevels = 10, double inputPower = 350, int timelimit = 30000, int numThreads = 4, int numStarts=4,LocalSearchConfiguration? config = null)
         {
             (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(fileName);
             Stopwatch w = new Stopwatch();
@@ -211,7 +211,7 @@ namespace SA_ILP
             if (config == null)
                 config = LocalSearchConfigs.VRPLTT;
 
-            (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync("", customers.Count, bikeMaxMass - bikeMinMass, customers, matrix, numThreads,numStarts, numIterations, (LocalSearchConfiguration)config, timeLimit: timelimit);
+            (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal,string solutionJSON) = await SolveInstanceAsync("", customers.Count, bikeMaxMass - bikeMinMass, customers, matrix, numThreads,numStarts, numIterations, (LocalSearchConfiguration)config, timeLimit: timelimit);
 
             double totalWaitingTime = 0;
             int numViolations = 0;
@@ -219,6 +219,8 @@ namespace SA_ILP
             double checkValue = 0;
             double numCustomers = 0;
             double totalRouteLength = 0;
+            HashSet<int> visitedCustomers = new HashSet<int>();
+            bool failed = false;
             foreach (RouteStore rs in ilpSol)
             {
                 var ls = new LocalSearch((LocalSearchConfiguration)config, random.Next());
@@ -230,9 +232,15 @@ namespace SA_ILP
                 var load = r.used_capacity;
                 if(r.route.Count != 2)
                     Console.WriteLine(r);
-                r.CheckRouteValidity();
+                if (r.CheckRouteValidity())
+                {
+                    failed = true;
+                }
                 for (int i = 0; i < r.route.Count - 1; i++)
                 {
+                    if (i != 0 && visitedCustomers.Contains(r.route[i].Id))
+                        failed = true;
+                    visitedCustomers.Add(r.route[i].Id);
                     var dist = r.CustomerDist(r.route[i], r.route[i + 1], load);
                     load -= r.route[i + 1].Demand;
                     if (r.arrival_times[i] + dist + r.route[i].ServiceTime < r.route[i + 1].TWStart)
@@ -243,13 +251,16 @@ namespace SA_ILP
                     }
                 }
             }
+
+            if (visitedCustomers.Count != customers.Count)
+                failed = true;
             Console.WriteLine($"TotalRouteLength {totalRouteLength}");
             Console.WriteLine($"Num Customers {numCustomers}");
             Console.WriteLine($"Recalculated score: {checkValue}");
             Console.WriteLine($"Total start time {totalStartTime}");
             Console.WriteLine($"Total waiting time: {totalWaitingTime} over {numViolations} customers");
             //(List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads, numIterations);
-            return (false,ilpSol,ilpVal,ilpTime,lsTime,lsVal);
+            return (failed,ilpSol,ilpVal,ilpTime,lsTime,lsVal, solutionJSON);
         }
 
         public double SolveVRPLTTInstance(string fileName, int numIterations = 3000000, double bikeMinMass = 150, double bikeMaxMass = 350, int numLoadLevels = 10, double inputPower = 400, int timelimit = 30000)
@@ -318,7 +329,7 @@ namespace SA_ILP
             if (config == null)
                 config = LocalSearchConfigs.VRPTW;
 
-            (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads,numStarts, numIterations, (LocalSearchConfiguration)config, timeLimit: timeLimit);
+            (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal,string solutionJSON) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads,numStarts, numIterations, (LocalSearchConfiguration)config, timeLimit: timeLimit);
             bool failed = SolomonParser.CheckSolomonSolution(fileName, ilpSol, ilpVal);
             ilpSol.ForEach(x=>Console.WriteLine(x));    
             return (failed, ilpSol, ilpVal, ilpTime, lsTime, lsVal);
@@ -371,15 +382,15 @@ namespace SA_ILP
             return (allColumns, bestSolution, (double)watch.ElapsedMilliseconds / 1000, bestLSVal);
         }
 
-        public async Task<(List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal)> SolveInstanceAsync(string name, int numV, double capV, List<Customer> customers, double[,,] distanceMatrix, int numThreads,int numStarts, int numIterations, LocalSearchConfiguration configuration, int timeLimit = 30000)
+        public async Task<(List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal, string solutionJSON)> SolveInstanceAsync(string name, int numV, double capV, List<Customer> customers, double[,,] distanceMatrix, int numThreads,int numStarts, int numIterations, LocalSearchConfiguration configuration, int timeLimit = 30000)
         {
             (var allColumns, var bestSolution, var LSTime, var LSSCore) = await LocalSearchInstancAsync(name, numV, capV, customers, distanceMatrix, numThreads, numStarts, numIterations, timeLimit, configuration);
             //bestSolution.ForEach(x => Console.WriteLine(x));
             PrintRoutes(bestSolution);
-            (var ilpSol, double ilpVal, double time) = SolveILP(allColumns, customers, numV, bestSolution);
+            (var ilpSol, double ilpVal, double time,string solutionJSON) = SolveILP(allColumns, customers, numV, bestSolution);
 
 
-            return (ilpSol, ilpVal, time, LSTime, LSSCore);
+            return (ilpSol, ilpVal, time, LSTime, LSSCore,solutionJSON);
 
         }
 
@@ -587,7 +598,7 @@ namespace SA_ILP
             }
         }
 
-        private (List<RouteStore>, double, double) SolveILP(HashSet<RouteStore> columns, List<Customer> customers, int numVehicles, List<Route> bestSolutionLS)
+        private (List<RouteStore>, double, double,string solutionJSON) SolveILP(HashSet<RouteStore> columns, List<Customer> customers, int numVehicles, List<Route> bestSolutionLS)
         {
             var columList = columns.ToArray();
             var bestSolStore = bestSolutionLS.ConvertAll(x => new RouteStore(x.CreateIdList(), x.Score));
@@ -652,10 +663,12 @@ namespace SA_ILP
                 if (columnDecisions[i].X == 1)
                     solution.Add(columList[i]);
             }
+            //Console.WriteLine(model.GetJSONSolution());
+            string solutionJSON = model.GetJSONSolution();
             double val = model.ObjVal;
             double time = model.Runtime;
             model.Dispose();
-            return (solution, val, time);
+            return (solution, val, time,solutionJSON);
         }
 
     }
