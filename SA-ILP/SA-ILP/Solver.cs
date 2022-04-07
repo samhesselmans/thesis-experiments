@@ -216,17 +216,22 @@ namespace SA_ILP
             (double[,,] matrix,Gamma[,,] distributionMatrix) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
             var ls = new LocalSearch((LocalSearchConfiguration)config, random.Next());
             (var colums, var sol, var value) = ls.LocalSearchInstance(0, "", customers.Count, bikeMaxMass - bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix,distributionMatrix, numInterations: numIterations, checkInitialSolution: false, timeLimit: timelimit);
+
+            double totalDist = 0;
+            double totalOntimePercentage = 0;
+            int numRoutes = 0;
             foreach (var route in sol)
             {
                 if (route.route.Count != 2)
                 {
                     //Console.WriteLine($"{route}; ST {route.startTime} ; SST {route.route[1].TWStart - route.CustomerDist(route.route[0], route.route[1], route.used_capacity).Item1}");
-
+                    numRoutes++;
                     double avg = 0;
                     int total = 0;
                     double worst = double.MaxValue;
                     Customer? worstCust = null;
                     int worstIndex = -1;
+
                     for (int i = 0; i < route.route.Count; i++)
                     {
 
@@ -261,10 +266,14 @@ namespace SA_ILP
                         }
                     }
                     Console.WriteLine($"On time performance: {avg / total} worst: {worst} at {worstCust} at {worstIndex}");
-                    route.Simulate(1000000);
+                    var res = route.Simulate(1000000);
+                    totalDist += res.AverageTravelTime;
+                    totalOntimePercentage += res.OnTimePercentage;
                 }
             
             }
+
+            Console.WriteLine($"Average solution travel time: {totalDist} with OTP: {totalOntimePercentage/numRoutes}");
 
             //CheckRouteQualityVRPLTT(sol, matrix, bikeMaxMass - bikeMinMass);
 

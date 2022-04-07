@@ -43,6 +43,8 @@ namespace SA_ILP
 
         public double ExpectedEarlinessPenalty { get; set; }
         public double ExpectedLatenessPenalty { get; set; }
+
+        public bool UseMeanOfDistributionForTravelTime { get; set; }
         public override string ToString()
         {
             LocalSearchConfiguration obj = this;
@@ -95,18 +97,23 @@ namespace SA_ILP
             PrintExtendedInfo = false,
             SaveScoreDevelopment = false,
             ExpectedEarlinessPenalty = 0,
-            ExpectedLatenessPenalty =0
+            ExpectedLatenessPenalty =0,
+            UseMeanOfDistributionForTravelTime = false
         };
 
         public static LocalSearchConfiguration VRPSLTT { get { 
                 var config = VRPLTT; 
-                config.ExpectedEarlinessPenalty = 1000;
-                config.ExpectedLatenessPenalty = 1000;
+                config.ExpectedEarlinessPenalty = 0000;
+                config.ExpectedLatenessPenalty = 0000;
                 config.AdjustEarlyArrivalToTWStart = false;
                 config.AllowEarlyArrival = false;
                 config.PenalizeEarlyArrival = true;
                 config.CheckOperatorScores = false;
                 config.SaveRoutesBeforeOperator = false;
+
+                //This does not work with the checks currently!
+                config.UseMeanOfDistributionForTravelTime = false;
+
                 return config; } }
 
 
@@ -136,7 +143,8 @@ namespace SA_ILP
             SaveColumnThreshold = 0.1,
             SaveScoreDevelopment = false,
             ExpectedEarlinessPenalty = 0,
-            ExpectedLatenessPenalty = 0
+            ExpectedLatenessPenalty = 0,
+            UseMeanOfDistributionForTravelTime = false
         };
 
 

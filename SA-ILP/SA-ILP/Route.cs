@@ -7,6 +7,30 @@ using System.Threading.Tasks;
 
 namespace SA_ILP
 {
+    public struct RouteSimmulationResult
+    {
+        public double AverageTravelTime { get; private set; }
+        public int TotalSimmulations { get; private set; }
+        public int TotalToEarly { get; private set; }
+        public int TotalToLate { get; private set; }
+
+        public int NumSimmulations { get; private set; }
+
+        public double OnTimePercentage { get; private set; }
+
+        public RouteSimmulationResult(double totalTravelTime,int numSimmulations, int totalSimmulations, int totalToEarly, int totalToLate)
+        {
+            AverageTravelTime = totalTravelTime / numSimmulations;
+            TotalSimmulations = totalSimmulations;
+            TotalToEarly = totalToEarly;
+            TotalToLate = totalToLate;
+            NumSimmulations = numSimmulations;
+            OnTimePercentage = (double)(totalSimmulations - totalToEarly - totalToLate) / totalSimmulations;
+
+        }
+
+
+    }
     internal class Route
     {
         public List<Customer> route;
@@ -192,10 +216,12 @@ namespace SA_ILP
             return res;
         }
 
-        public void Simulate(int numSimulations = 1000)
+        public RouteSimmulationResult Simulate(int numSimulations = 1000)
         {
             int timesOnTime = 0;
             int timesTotal = 0;
+            int toLate = 0;
+            int toEarly = 0;
             double totalTravelTime = 0;
 
             for (int x = 0; x < numSimulations; x++)
@@ -212,16 +238,21 @@ namespace SA_ILP
                     arrivalTime += route[i].ServiceTime + tt;
 
                     if (arrivalTime <= route[i + 1].TWEnd && arrivalTime >= route[i + 1].TWStart)
-                        timesOnTime ++;
-                    
+                        timesOnTime++;
+                    else if (arrivalTime > route[i + 1].TWEnd)
+                        toLate++;
+                    else
+                        toEarly++;
                     timesTotal++;
 
                 }
             }
 
             Console.WriteLine($"Finished {numSimulations} simulations");
-            Console.WriteLine($"On time percentage {((double)timesOnTime/timesTotal)* 100}%. {timesTotal - timesOnTime} times not on time in {route.Count * numSimulations}");
+            Console.WriteLine($"On time percentage {((double)timesOnTime/timesTotal)* 100}%. {timesTotal - timesOnTime} times not on time in {route.Count * numSimulations}. Of these {toEarly} were to early and {toLate} to late");
             Console.WriteLine($"Average travel time: {totalTravelTime / numSimulations}. Score: {Score}");
+
+            return new RouteSimmulationResult(totalTravelTime,numSimulations, timesTotal, toEarly, toLate);
 
         }
 
@@ -270,6 +301,10 @@ namespace SA_ILP
                 total = AddDistributions(total, distribution);
                 totalObjectiveValue += dist;
                 arrivalTime += dist + route[i].ServiceTime;
+
+                if (parent.UseMeanOfDistributionForTravelTime)
+                    arrivalTime += distribution.Mean;
+
                 totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, route[i + 1], arrivalTime);
                 if (arrivalTime < route[i + 1].TWStart)
                 {
@@ -368,6 +403,10 @@ namespace SA_ILP
                     customerDistributions[i] = total;
                     arrival_times[i] = newArriveTime;
                     newArriveTime += c.ServiceTime;
+
+                    if (parent.UseMeanOfDistributionForTravelTime)
+                        newArriveTime += distribution.Mean;
+
                     lastCust = c;
                     previous_cust = c;
                 }
@@ -440,6 +479,10 @@ namespace SA_ILP
                 load -= nextCust.Demand;
                 objectiveValue += dist;
                 arrival_time += dist + currentCust.ServiceTime;
+
+                if (parent.UseMeanOfDistributionForTravelTime)
+                    arrival_time += distribution.Mean;
+
                 objectiveValue += CalculateUncertaintyPenaltyTerm(total, nextCust, arrival_time);
                 if (arrival_time > nextCust.TWEnd)
                     if (parent.AllowLateArrivalDuringSearch)
@@ -536,6 +579,9 @@ namespace SA_ILP
                     totalObjectiveValue += time;
                     arrivalTime += time + cust.ServiceTime;
 
+                    if (parent.UseMeanOfDistributionForTravelTime)
+                        arrivalTime += distribution.Mean;
+
                     total = AddDistributions(total, distribution);
                     totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, route[i + skip], arrivalTime);
 
@@ -605,6 +651,9 @@ namespace SA_ILP
 
                     totalObjectiveValue += time;
                     arrivalTime += time + route[i].ServiceTime;
+
+                    if (parent.UseMeanOfDistributionForTravelTime)
+                        arrivalTime += distribution.Mean;
 
                     total = AddDistributions(total, distribution);
                     totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, nextCust, arrivalTime);
@@ -709,6 +758,10 @@ namespace SA_ILP
                     l -= toAdd.Demand;
                     (var dist, var distribution) = CustomerDist(toAdd, currentCust, l);
                     val += dist + toAdd.ServiceTime;
+
+                    if (parent.UseMeanOfDistributionForTravelTime)
+                        val += distribution.Mean;
+
                 }
                 else if (i == swapIndex1)
                     currentCust = toOptimizeOver[swapIndex2];
@@ -745,6 +798,10 @@ namespace SA_ILP
                         nextCust = toOptimizeOver[reverseIndex2 - i + reverseIndex1 - 1];
                     (var dist, var distribution) = CustomerDist(currentCust, nextCust, l);
                     val += dist + currentCust.ServiceTime;
+
+                    if (parent.UseMeanOfDistributionForTravelTime)
+                        val += distribution.Mean;
+
                 }
             }
             double epsilon = 0.0000001;
@@ -788,6 +845,11 @@ namespace SA_ILP
                 (var dist, var distribution) = CustomerDist(newRoute[i], newRoute[i + 1], load);
                 total = AddDistributions(total, distribution);
                 arrivalTime += dist + newRoute[i].ServiceTime;
+
+
+                if (parent.UseMeanOfDistributionForTravelTime)
+                    arrivalTime += distribution.Mean;
+
                 newObjectiveValue += dist;
                 newObjectiveValue += CalculateUncertaintyPenaltyTerm(total, newRoute[i + 1], arrivalTime);
                 if (arrivalTime < newRoute[i + 1].TWStart)
@@ -900,6 +962,9 @@ namespace SA_ILP
                 //Update arrival time for next customer
                 arrival_time += dist + currentCust.ServiceTime;
 
+                if (parent.UseMeanOfDistributionForTravelTime)
+                    arrival_time += distribution.Mean;
+
                 newObjectiveValue += CalculateUncertaintyPenaltyTerm(total, nextCust, arrival_time);
 
                 if (arrival_time < nextCust.TWStart)
@@ -983,6 +1048,10 @@ namespace SA_ILP
 
 
                 arrival_time += cost + route[j].ServiceTime;
+
+                if (parent.UseMeanOfDistributionForTravelTime)
+                    arrival_time += distribution.Mean;
+
                 newObjectiveValue += CalculateUncertaintyPenaltyTerm(total, nextCust, arrival_time);
 
 
@@ -1095,7 +1164,8 @@ namespace SA_ILP
                     total = AddDistributions(total, distribution);
                     newArrivalTime += dist + cust.ServiceTime;
 
-
+                    if (parent.UseMeanOfDistributionForTravelTime)
+                        newArrivalTime += distribution.Mean;
                     //Take the new customer into account into the route length
                     actualIndex++;
                     //if (newArrivalTime < route[i].TWStart)
@@ -1140,7 +1210,8 @@ namespace SA_ILP
                     (double dist, Gamma distribution) = CustomerDist(route[i], nextCust, load);
                     total = AddDistributions(total, distribution);
                     newArrivalTime += dist + route[i].ServiceTime;
-
+                    if (parent.UseMeanOfDistributionForTravelTime)
+                        newArrivalTime += distribution.Mean;
                 }
 
                 //}
@@ -1191,6 +1262,10 @@ namespace SA_ILP
             {
                 (double dist, Gamma distribution) = CustomerDist(route[i], route[i + 1], load);
                 arrivalTime += dist + route[i].ServiceTime;
+
+                if (parent.UseMeanOfDistributionForTravelTime)
+                    arrivalTime += distribution.Mean;
+
                 total = AddDistributions(total, distribution);
 
 
