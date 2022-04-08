@@ -45,6 +45,9 @@ namespace SA_ILP
         public double ExpectedLatenessPenalty { get; set; }
 
         public bool UseMeanOfDistributionForTravelTime { get; set; }
+        public bool ScaleEarlinessPenaltyWithTemperature { get; set; }
+        public bool ScaleLatenessPenaltyWithTemperature { get; set; }
+
         public override string ToString()
         {
             LocalSearchConfiguration obj = this;
@@ -98,13 +101,15 @@ namespace SA_ILP
             SaveScoreDevelopment = false,
             ExpectedEarlinessPenalty = 0,
             ExpectedLatenessPenalty =0,
-            UseMeanOfDistributionForTravelTime = false
+            UseMeanOfDistributionForTravelTime = false,
+            ScaleEarlinessPenaltyWithTemperature = true,
+            ScaleLatenessPenaltyWithTemperature = true
         };
 
         public static LocalSearchConfiguration VRPSLTT { get { 
                 var config = VRPLTT; 
-                config.ExpectedEarlinessPenalty = 0000;
-                config.ExpectedLatenessPenalty = 0000;
+                config.ExpectedEarlinessPenalty = 100;
+                config.ExpectedLatenessPenalty = 100;
                 config.AdjustEarlyArrivalToTWStart = false;
                 config.AllowEarlyArrival = false;
                 config.PenalizeEarlyArrival = true;
@@ -144,7 +149,9 @@ namespace SA_ILP
             SaveScoreDevelopment = false,
             ExpectedEarlinessPenalty = 0,
             ExpectedLatenessPenalty = 0,
-            UseMeanOfDistributionForTravelTime = false
+            UseMeanOfDistributionForTravelTime = false,
+            ScaleEarlinessPenaltyWithTemperature = true,
+            ScaleLatenessPenaltyWithTemperature = true
         };
 
 

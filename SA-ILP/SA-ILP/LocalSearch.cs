@@ -55,6 +55,10 @@ namespace SA_ILP
         public double ExpectedEarlinessPenalty { get; private set; }
         public double ExpectedLatenessPenalty { get; private set; }
         public bool UseMeanOfDistributionForTravelTime { get; private set; }
+        public bool ScaleEarlinessPenaltyWithTemperature { get; private set; }
+        public bool ScaleLatenessPenaltyWithTemperature { get; private set; }
+
+        public readonly LocalSearchConfiguration Config;
 
         private Random random;
 
@@ -64,6 +68,7 @@ namespace SA_ILP
         {
             random = new Random(seed);
             Init(config, seed, os);
+            Config = config;
         }
 
 
@@ -100,7 +105,7 @@ namespace SA_ILP
         {
             random = new Random(seed);
             var os = new OperatorSelector(random);
-
+            Config = config;
             os.Add(Operators.AddRandomRemovedCustomer, 1, "add");
             os.Add(Operators.RemoveRandomCustomer, 1, "remove");
             os.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move");
@@ -467,7 +472,7 @@ namespace SA_ILP
                     currentValue = Solver.CalcTotalDistance(routes, removed, this);
                     bestSolValue = Solver.CalcTotalDistance(BestSolution, BestSolutionRemoved, this);
                 }
-                if (iteration - restartPreventionIteration > 300000 && Temperature < 0.02 && numRestarts < 7) //&& iteration - lastChangeExceptedOnIt > 1000
+                if (iteration - restartPreventionIteration > 600000 && Temperature < 0.02 && numRestarts < 7) //&& iteration - lastChangeExceptedOnIt > 1000
                 {
                     numRestarts += 1;
                     restartPreventionIteration = iteration;

@@ -194,7 +194,18 @@ namespace SA_ILP
             }
 
         }
+        public double CalculateLatePenaltyTerm(double arrivalTime, double timeWindowEnd)
+        {
+            if (!parent.PenalizeLateArrival)
+                return 0;
+            else
+            {
 
+                double scale = 1;
+
+                return (parent.BaseLateArrivalPenalty + arrivalTime - timeWindowEnd) / (parent.Temperature / parent.InitialTemperature);
+            }
+        }
         public double CalculateUncertaintyPenaltyTerm(IContinuousDistribution dist, Customer cust, double minArrrivalTime)
         {
             //double onTimeP = 1 - (dist.CumulativeDistribution(cust.TWEnd - minArrrivalTime) - dist.CumulativeDistribution(cust.TWStart - minArrrivalTime));
@@ -256,13 +267,7 @@ namespace SA_ILP
 
         }
 
-        public double CalculateLatePenaltyTerm(double arrivalTime, double timeWindowEnd)
-        {
-            if (!parent.PenalizeLateArrival)
-                return 0;
-            else
-                return (parent.BaseLateArrivalPenalty + arrivalTime - timeWindowEnd) / (parent.Temperature / parent.InitialTemperature);// + arrivalTime - timeWindowEnd;
-        }
+
 
         private Gamma AddDistributions(Gamma left, Gamma right)
         {

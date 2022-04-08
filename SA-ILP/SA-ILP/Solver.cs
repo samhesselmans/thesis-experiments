@@ -215,6 +215,7 @@ namespace SA_ILP
 
             (double[,,] matrix,Gamma[,,] distributionMatrix) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
             var ls = new LocalSearch((LocalSearchConfiguration)config, random.Next());
+            //ls.config.ScaleLatenessPenaltyWithTemperature = true;
             (var colums, var sol, var value) = ls.LocalSearchInstance(0, "", customers.Count, bikeMaxMass - bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix,distributionMatrix, numInterations: numIterations, checkInitialSolution: false, timeLimit: timelimit);
 
             double totalDist = 0;
