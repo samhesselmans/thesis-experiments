@@ -14,49 +14,49 @@ namespace SA_ILP
         private static readonly object ConsoleWriterLock = new object();
 
         public double Temperature { get; private set; }
-        public double InitialTemperature { get; private set; }
+        //public double InitialTemperature { get; private set; }
 
-        public bool AllowLateArrivalDuringSearch { get; private set; }
-        public bool AllowEarlyArrivalDuringSearch { get; private set; }
+        //public bool AllowLateArrivalDuringSearch { get; private set; }
+        //public bool AllowEarlyArrivalDuringSearch { get; private set; }
 
-        public bool AllowLateArrival { get; private set; }
-        public bool AllowEarlyArrival { get; private set; }
+        //public bool AllowLateArrival { get; private set; }
+        //public bool AllowEarlyArrival { get; private set; }
 
-        //public static readonly double BaseRemovedCustomerPenalty = 150;
-        //public static readonly double BaseRemovedCustomerPenaltyPow = 1.5;
+        ////public static readonly double BaseRemovedCustomerPenalty = 150;
+        ////public static readonly double BaseRemovedCustomerPenaltyPow = 1.5;
 
-        public double BaseRemovedCustomerPenalty { get; private set; }
-        public double BaseRemovedCustomerPenaltyPow { get; private set; }
+        //public double BaseRemovedCustomerPenalty { get; private set; }
+        //public double BaseRemovedCustomerPenaltyPow { get; private set; }
 
-        public double BaseEarlyArrivalPenalty { get; private set; }
-        public double BaseLateArrivalPenalty { get; private set; }
+        //public double BaseEarlyArrivalPenalty { get; private set; }
+        //public double BaseLateArrivalPenalty { get; private set; }
 
-        public double Alpha { get; private set; }
+        //public double Alpha { get; private set; }
 
-        public bool SaveColumnsAfterAllImprovements { get; private set; }
+        //public bool SaveColumnsAfterAllImprovements { get; private set; }
 
-        public bool SaveColumnsAfterWorse { get; private set; }
+        //public bool SaveColumnsAfterWorse { get; private set; }
 
-        public double SaveColumnThreshold { get; private set; }
+        //public double SaveColumnThreshold { get; private set; }
 
-        public bool PenalizeEarlyArrival { get; private set; }
-        public bool PenalizeLateArrival { get; private set; }
+        //public bool PenalizeEarlyArrival { get; private set; }
+        //public bool PenalizeLateArrival { get; private set; }
 
-        public bool AdjustEarlyArrivalToTWStart { get; private set; }
+        //public bool AdjustEarlyArrivalToTWStart { get; private set; }
 
-        public bool CheckOperatorScores { get; private set; }
+        //public bool CheckOperatorScores { get; private set; }
 
-        public bool SaveRoutesBeforeOperator { get; private set; }
+        //public bool SaveRoutesBeforeOperator { get; private set; }
 
-        public bool PrintExtendedInfo { get; private set; }
+        //public bool PrintExtendedInfo { get; private set; }
 
-        public bool SaveScoreDevelopment { get; private set; }
+        //public bool SaveScoreDevelopment { get; private set; }
 
-        public double ExpectedEarlinessPenalty { get; private set; }
-        public double ExpectedLatenessPenalty { get; private set; }
-        public bool UseMeanOfDistributionForTravelTime { get; private set; }
-        public bool ScaleEarlinessPenaltyWithTemperature { get; private set; }
-        public bool ScaleLatenessPenaltyWithTemperature { get; private set; }
+        //public double ExpectedEarlinessPenalty { get; private set; }
+        //public double ExpectedLatenessPenalty { get; private set; }
+        //public bool UseMeanOfDistributionForTravelTime { get; private set; }
+        //public bool ScaleEarlinessPenaltyWithTemperature { get; private set; }
+        //public bool ScaleLatenessPenaltyWithTemperature { get; private set; }
 
         public readonly LocalSearchConfiguration Config;
 
@@ -75,29 +75,29 @@ namespace SA_ILP
         private void Init(LocalSearchConfiguration config, int seed, OperatorSelector os)
         {
             Temperature = config.InitialTemperature;
-            InitialTemperature = config.InitialTemperature;
-            this.AllowEarlyArrival = config.AllowEarlyArrival;
-            this.AllowLateArrival = config.AllowLateArrival;
-            AllowEarlyArrivalDuringSearch = config.AllowEarlyArrivalDuringSearch;
-            AllowLateArrivalDuringSearch = config.AllowLateArrivalDuringSearch;
-            BaseRemovedCustomerPenalty = config.BaseRemovedCustomerPenalty;
-            BaseRemovedCustomerPenaltyPow = config.BaseRemovedCustomerPenaltyPow;
-            BaseEarlyArrivalPenalty = config.BaseEarlyArrivalPenalty;
-            BaseLateArrivalPenalty = config.BaseLateArrivalPenalty;
-            PenalizeLateArrival = config.PenalizeLateArrival;
-            PenalizeEarlyArrival = config.PenalizeEarlyArrival;
-            AdjustEarlyArrivalToTWStart = config.AdjustEarlyArrivalToTWStart;
-            CheckOperatorScores = config.CheckOperatorScores;
-            SaveRoutesBeforeOperator = config.SaveRoutesBeforeOperator;
-            SaveColumnsAfterAllImprovements = config.SaveColumnsAfterAllImprovements;
-            SaveColumnsAfterWorse = config.SaveColumnsAfterWorse;
-            SaveColumnThreshold = config.SaveColumnThreshold;
-            PrintExtendedInfo = config.PrintExtendedInfo;
-            Alpha = config.Alpha;
-            SaveScoreDevelopment = config.SaveScoreDevelopment;
-            ExpectedEarlinessPenalty = config.ExpectedEarlinessPenalty;
-            ExpectedLatenessPenalty = config.ExpectedLatenessPenalty;
-            UseMeanOfDistributionForTravelTime = config.UseMeanOfDistributionForTravelTime;
+            //InitialTemperature = config.InitialTemperature;
+            //this.AllowEarlyArrival = config.AllowEarlyArrival;
+            //this.AllowLateArrival = config.AllowLateArrival;
+            //AllowEarlyArrivalDuringSearch = config.AllowEarlyArrivalDuringSearch;
+            //AllowLateArrivalDuringSearch = config.AllowLateArrivalDuringSearch;
+            //BaseRemovedCustomerPenalty = config.BaseRemovedCustomerPenalty;
+            //BaseRemovedCustomerPenaltyPow = config.BaseRemovedCustomerPenaltyPow;
+            //BaseEarlyArrivalPenalty = config.BaseEarlyArrivalPenalty;
+            //BaseLateArrivalPenalty = config.BaseLateArrivalPenalty;
+            //PenalizeLateArrival = config.PenalizeLateArrival;
+            //PenalizeEarlyArrival = config.PenalizeEarlyArrival;
+            //AdjustEarlyArrivalToTWStart = config.AdjustEarlyArrivalToTWStart;
+            //CheckOperatorScores = config.CheckOperatorScores;
+            //SaveRoutesBeforeOperator = config.SaveRoutesBeforeOperator;
+            //SaveColumnsAfterAllImprovements = config.SaveColumnsAfterAllImprovements;
+            //SaveColumnsAfterWorse = config.SaveColumnsAfterWorse;
+            //SaveColumnThreshold = config.SaveColumnThreshold;
+            //PrintExtendedInfo = config.PrintExtendedInfo;
+            //Alpha = config.Alpha;
+            //SaveScoreDevelopment = config.SaveScoreDevelopment;
+            //ExpectedEarlinessPenalty = config.ExpectedEarlinessPenalty;
+            //ExpectedLatenessPenalty = config.ExpectedLatenessPenalty;
+            //UseMeanOfDistributionForTravelTime = config.UseMeanOfDistributionForTravelTime;
             OS = os;
         }
 
@@ -106,9 +106,10 @@ namespace SA_ILP
             random = new Random(seed);
             var os = new OperatorSelector(random);
             Config = config;
-            os.Add(Operators.AddRandomRemovedCustomer, 1, "add");
-            os.Add(Operators.RemoveRandomCustomer, 1, "remove");
-            os.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move");
+            //os.Add(Operators.AddRandomRemovedCustomer, 1, "add");
+            //os.Add(Operators.RemoveRandomCustomer, 1, "remove");
+            //os.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move");
+            //os.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move",100);
             os.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best");
             os.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route");
             os.Add((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap");
@@ -229,27 +230,27 @@ namespace SA_ILP
             bool upperViolations = routes.Exists(x => x.ViolatesUpperTimeWindow);
             bool lowerViolations = routes.Exists(x => x.ViolatesLowerTimeWindow);
 
-            return (!upperViolations || AllowLateArrival) && (!lowerViolations || AllowEarlyArrival);
+            return (!upperViolations || Config.AllowLateArrival) && (!lowerViolations || Config.AllowEarlyArrival);
         }
 
         private bool IsValidRoute(Route route)
         {
-            return (!route.ViolatesUpperTimeWindow || AllowLateArrival) && (!route.ViolatesLowerTimeWindow || AllowEarlyArrival);
+            return (!route.ViolatesUpperTimeWindow || Config.AllowLateArrival) && (!route.ViolatesLowerTimeWindow || Config.AllowEarlyArrival);
         }
 
         private void RunAndCheckOperator(int id, List<Route> routes, List<Customer> removed, double imp, Action op)
         {
             double expectedVal = 0;
             List<Route>? beforeCopy = null;
-            if (CheckOperatorScores)
+            if (Config.CheckOperatorScores)
                 expectedVal = Solver.CalcTotalDistance(routes, removed, this) - imp;
-            if (SaveRoutesBeforeOperator)
+            if (Config.SaveRoutesBeforeOperator)
             {
                 beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
             }
 
             op();
-            if (CheckOperatorScores)
+            if (Config.CheckOperatorScores)
                 if (Math.Round(Solver.CalcTotalDistance(routes, removed, this), 6) != Math.Round(expectedVal, 6))
                     Solver.ErrorPrint($"{id}: ERROR expected {expectedVal} not equal to {Solver.CalcTotalDistance(routes, removed, this)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, this)} , OP: {OS.LastOperator}");
         }
@@ -380,7 +381,7 @@ namespace SA_ILP
                         //Console.WriteLine(p);
                         //routes.ForEach(route => route.CheckRouteValidity());
                         currentValue -= imp;
-                        if (id == 0 && SaveScoreDevelopment)
+                        if (id == 0 && Config.SaveScoreDevelopment)
                             SearchScores.Add((iteration, currentValue));
 
 
@@ -391,7 +392,7 @@ namespace SA_ILP
                             bestImprovedIteration = iteration;
                             restartPreventionIteration = iteration;
                             BestSolution = routes.ConvertAll(i => i.CreateDeepCopy());
-                            if (id == 0 && SaveScoreDevelopment)
+                            if (id == 0 && Config.SaveScoreDevelopment)
                                 BestSolutionScores.Add((iteration, bestSolValue));
 
                             //Now we know all customers are used
@@ -406,7 +407,7 @@ namespace SA_ILP
                         }
 
                         //Add columns
-                        if (SaveColumnsAfterAllImprovements && Temperature < InitialTemperature * SaveColumnThreshold)
+                        if (Config.SaveColumnsAfterAllImprovements && Temperature < Config.InitialTemperature * Config.SaveColumnThreshold)
                             foreach (Route route in routes)
                             {
                                 if (IsValidRoute(route))
@@ -437,7 +438,7 @@ namespace SA_ILP
                             RunAndCheckOperator(id, routes, removed, imp, act);
 
 
-                            if (SaveColumnsAfterWorse && Temperature < InitialTemperature * SaveColumnThreshold)
+                            if (Config.SaveColumnsAfterWorse && Temperature < Config.InitialTemperature * Config.SaveColumnThreshold)
                                 foreach (Route route in routes)
                                 {
                                     if (IsValidRoute(route))
@@ -447,7 +448,7 @@ namespace SA_ILP
 
                             viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                             currentValue -= imp;
-                            if (id == 0 && SaveScoreDevelopment)
+                            if (id == 0 && Config.SaveScoreDevelopment)
                                 SearchScores.Add((iteration, currentValue));
 
                             lastChangeExceptedOnIt = iteration;
@@ -465,20 +466,20 @@ namespace SA_ILP
                 }
                 if (iteration % 10000 == 0 && iteration != 0)
                 {
-                    Temperature *= Alpha;
+                    Temperature *= Config.Alpha;
 
                     routes.ForEach(x => x.ResetCache());
                     //TOD: Seperate penalty calculation for optimization
                     currentValue = Solver.CalcTotalDistance(routes, removed, this);
                     bestSolValue = Solver.CalcTotalDistance(BestSolution, BestSolutionRemoved, this);
                 }
-                if (iteration - restartPreventionIteration > 600000 && Temperature < 0.02 && numRestarts < 7) //&& iteration - lastChangeExceptedOnIt > 1000
+                if (iteration - restartPreventionIteration > 600000 && Temperature < 0.02 && numRestarts < 3) //&& iteration - lastChangeExceptedOnIt > 1000
                 {
                     numRestarts += 1;
                     restartPreventionIteration = iteration;
                     //Restart
                     var oldTemp = Temperature;
-                    Temperature += InitialTemperature / 3;
+                    Temperature += Config.InitialTemperature / 3;
                     routes.ForEach(x => x.ResetCache());
                     routes = BestSolution.ConvertAll(i => i.CreateDeepCopy());
                     viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
@@ -487,7 +488,7 @@ namespace SA_ILP
                     bestSolValue = Solver.CalcTotalDistance(BestSolution, new List<Customer>(), this);
                     Console.WriteLine($"{id}:Best solution changed to long ago a T: {oldTemp}. Restarting from best solution with T: {Temperature}");
                 }
-                else if (Temperature < 0.02 && numRestarts >= 7)
+                else if (Temperature < 0.02 && numRestarts >= 3)
                     break;
                 if (printTimer.ElapsedMilliseconds > 3 * 1000)
                 {
@@ -507,12 +508,12 @@ namespace SA_ILP
                     Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
 
             }
-            if (id == 0 && SaveScoreDevelopment)
+            if (id == 0 && Config.SaveScoreDevelopment)
                 BestSolutionScores.Add((iteration, bestSolValue));
 
             Console.WriteLine($"DONE {id}: {name}, Score: {Solver.CalcTotalDistance(BestSolution, new List<Customer>(), this)}, Columns: {Columns.Count}. Completed {iteration} iterations in {Math.Round((double)timer.ElapsedMilliseconds / 1000, 3)}s");
 
-            if (PrintExtendedInfo)
+            if (Config.PrintExtendedInfo)
             {
                 lock (ConsoleWriterLock)
                 {
@@ -528,7 +529,7 @@ namespace SA_ILP
                 }
 
             }
-            if (id == 0 && SaveScoreDevelopment)
+            if (id == 0 && Config.SaveScoreDevelopment)
             {
                 Console.WriteLine("Saving scores");
                 System.IO.File.WriteAllLines("SearchScores.txt", SearchScores.ConvertAll(x => $"{x.Item1};{x.Item2}"));

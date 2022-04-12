@@ -108,13 +108,15 @@ namespace SA_ILP
 
         public static LocalSearchConfiguration VRPSLTT { get { 
                 var config = VRPLTT; 
-                config.ExpectedEarlinessPenalty = 100;
-                config.ExpectedLatenessPenalty = 100;
+                config.ExpectedEarlinessPenalty = 10;
+                config.ExpectedLatenessPenalty = 10;
                 config.AdjustEarlyArrivalToTWStart = false;
                 config.AllowEarlyArrival = false;
                 config.PenalizeEarlyArrival = true;
                 config.CheckOperatorScores = false;
                 config.SaveRoutesBeforeOperator = false;
+                config.ScaleEarlinessPenaltyWithTemperature = true;
+                config.ScaleLatenessPenaltyWithTemperature = true;
 
                 //This does not work with the checks currently!
                 config.UseMeanOfDistributionForTravelTime = false;

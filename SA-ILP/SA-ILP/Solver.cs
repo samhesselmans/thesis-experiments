@@ -85,7 +85,7 @@ namespace SA_ILP
 
         public static double CalcRemovedPenalty(int removedCount,LocalSearch ls)
         {
-            return Math.Pow(removedCount, ls.BaseRemovedCustomerPenaltyPow) * (ls.BaseRemovedCustomerPenalty / Math.Pow(ls.Temperature,2));
+            return Math.Pow(removedCount, ls.Config.BaseRemovedCustomerPenaltyPow) * (ls.Config.BaseRemovedCustomerPenalty / Math.Pow(ls.Temperature,2));
         }
 
 
@@ -151,7 +151,7 @@ namespace SA_ILP
             //Console.WriteLine($"Total waiting time: {totalWaitingTime} over {numViolations} customers");
         }
 
-        public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal)> SolveVRPLTTInstanceAsync(string fileName, int numIterations = 3000000, double bikeMinMass = 140, double bikeMaxMass = 290, int numLoadLevels = 10, double inputPower = 350, int timelimit = 30000, int numThreads = 4, int numStarts=4,LocalSearchConfiguration? config = null)
+        public async Task<(bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal)> SolveVRPLTTInstanceAsync(string fileName, int numIterations = 3000000, double bikeMinMass = 140, double bikeMaxMass = 290, int numLoadLevels = 10, double inputPower = 350, int timelimit = 30000, int numThreads = 4, int numStarts=4,LocalSearchConfiguration? config = null)
         {
             (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(fileName);
             Stopwatch w = new Stopwatch();
@@ -203,7 +203,8 @@ namespace SA_ILP
             Console.WriteLine($"Total start time {totalStartTime}");
             Console.WriteLine($"Total waiting time: {totalWaitingTime} over {numViolations} customers");
             //(List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads, numIterations);
-            return (false,ilpSol,ilpVal,ilpTime,lsTime,lsVal);
+            var parent = new LocalSearch((LocalSearchConfiguration)config, random.Next());
+            return (false,ilpSol.ConvertAll(x=>new Route(customers,x,customers[0],matrix,distributionMatrix,bikeMaxMass-bikeMinMass, parent)),ilpVal,ilpTime,lsTime,lsVal);
         }
 
         public double SolveVRPLTTInstance(string fileName, int numIterations = 3000000, double bikeMinMass = 150, double bikeMaxMass = 350, int numLoadLevels = 10, double inputPower = 400, int timelimit = 30000,LocalSearchConfiguration? config = null)
@@ -255,6 +256,9 @@ namespace SA_ILP
                             if (Double.IsNaN(pOnTime))
                                 pOnTime = 1;
 
+                            if (((LocalSearchConfiguration)config).AllowEarlyArrival)
+                                pEarly = 0;
+
                             double p = pOnTime - pEarly;
 
                             avg += p;
@@ -267,9 +271,24 @@ namespace SA_ILP
                         }
                     }
                     Console.WriteLine($"On time performance: {avg / total} worst: {worst} at {worstCust} at {worstIndex}");
+                    
                     var res = route.Simulate(1000000);
                     totalDist += res.AverageTravelTime;
                     totalOntimePercentage += res.OnTimePercentage;
+
+                    int minIndex = -1;
+                    double min = double.MaxValue;
+                    for(int j =0;j<res.CustomerOnTimePercentage.Length;j++)
+                    {
+                        if (res.CustomerOnTimePercentage[j] < min)
+                        {
+                            min = res.CustomerOnTimePercentage[j];
+                            minIndex = j;
+                        }
+
+                    }
+
+                    Console.WriteLine($"Simmulated on time perfomance: {res.OnTimePercentage} worst: {min} at {minIndex}\n");
                 }
             
             }

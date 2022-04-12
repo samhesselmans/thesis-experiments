@@ -2,7 +2,7 @@
   "profiles": {
     "SA-ILP": {
       "commandName": "Project",
-      "commandLineArgs": "allvrpltt ..\\..\\..\\..\\..\\vrpltt_instances\\large --threads 6 --starts 16 --lstl 480"
+      "commandLineArgs": "allvrpsltt ..\\..\\..\\..\\..\\vrpltt_instances\\large --threads 6 --starts 6 --lstl 1 --loadlevels 10"
     },
     "SA-ILP no launch params": {
       "commandName": "Project"
