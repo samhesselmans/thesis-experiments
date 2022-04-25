@@ -98,7 +98,7 @@ if (args.Length >= 1)
 
 //await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
 
-//solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full_tiny_tw.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 100 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350,config:LocalSearchConfigs.VRPSLTT);
+solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full_tiny_tw.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 100 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350,config:LocalSearchConfigs.VRPSLTT);
 //await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 500000000, timelimit: 1000 * 1000, numThreads: 4, numStarts: 16, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
 
 //const LocalSearchConfiguration config = LocalSearchConfigs.VRPLTT;
@@ -253,27 +253,27 @@ async Task RunVRPSLTTTests(string dir, string solDir, int numRepeats, Options op
                 int test = 0;
 
                 //string append = "Waiting allowed";
-                for (int r = 0; r < numRepeats * 3; r++)
+                for (int r = 0; r < numRepeats ; r++)
                 {
-                    if (r  %  numRepeats == 0 && r != 0)
-                    {
-                        if (test == 0)
-                        {
-                            config.ExpectedEarlinessPenalty = 0;
-                            config.ExpectedLatenessPenalty = 0;
-                            config.AdjustEarlyArrivalToTWStart = false;
-                            config.AllowEarlyArrival = false;
-                            config.PenalizeEarlyArrival = true;
-                            config.UseMeanOfDistributionForTravelTime = false;
-                        }
-                        else
-                        {
-                            config.UseMeanOfDistributionForTravelTime = true;
-                        }
+                    //if (r  %  numRepeats == 0 && r != 0)
+                    //{
+                    //    if (test == 0)
+                    //    {
+                    //        config.ExpectedEarlinessPenalty = 0;
+                    //        config.ExpectedLatenessPenalty = 0;
+                    //        config.AdjustEarlyArrivalToTWStart = false;
+                    //        config.AllowEarlyArrival = false;
+                    //        config.PenalizeEarlyArrival = true;
+                    //        config.UseMeanOfDistributionForTravelTime = false;
+                    //    }
+                    //    else
+                    //    {
+                    //        config.UseMeanOfDistributionForTravelTime = true;
+                    //    }
 
-                        //append = "Waiting not allowed";
-                        test += 1;
-                    }
+                    //    //append = "Waiting not allowed";
+                    //    test += 1;
+                    //}
                     (bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveVRPLTTInstanceAsync(file, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads, config: config);//solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations, timeLimit: 30 * 1000);
 
                     //List<Route> sol = ilpSol.ConvertAll(x=> new Route(custx))

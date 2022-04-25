@@ -334,13 +334,19 @@ namespace SA_ILP
             for (int i = 0; i < route.Count - 1; i++)
             {
                 (double dist, Gamma distribution) = this.CustomerDist(route[i], route[i + 1], totalWeight);
-                total = AddDistributions(total, distribution);
+                
                 totalObjectiveValue += dist;
                 arrivalTime += dist + route[i].ServiceTime;
 
                 if (parent.Config.UseMeanOfDistributionForTravelTime)
+                {
                     arrivalTime += distribution.Mean;
 
+                }
+                if (parent.Config.UseMeanOfDistributionForScore)
+                    totalObjectiveValue += distribution.Mean;
+
+                total = AddDistributions(total, distribution);
                 totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, route[i + 1], arrivalTime);
                 if (arrivalTime < route[i + 1].TWStart)
                 {
@@ -443,6 +449,7 @@ namespace SA_ILP
                     if (parent.Config.UseMeanOfDistributionForTravelTime)
                         newArriveTime += distribution.Mean;
 
+
                     lastCust = c;
                     previous_cust = c;
                 }
@@ -518,6 +525,8 @@ namespace SA_ILP
 
                 if (parent.Config.UseMeanOfDistributionForTravelTime)
                     arrival_time += distribution.Mean;
+                if (parent.Config.UseMeanOfDistributionForScore)
+                    objectiveValue += distribution.Mean;
 
                 objectiveValue += CalculateUncertaintyPenaltyTerm(total, nextCust, arrival_time);
                 if (arrival_time > nextCust.TWEnd)
@@ -617,6 +626,8 @@ namespace SA_ILP
 
                     if (parent.Config.UseMeanOfDistributionForTravelTime)
                         arrivalTime += distribution.Mean;
+                    if (parent.Config.UseMeanOfDistributionForScore)
+                        totalObjectiveValue += distribution.Mean;
 
                     total = AddDistributions(total, distribution);
                     totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, route[i + skip], arrivalTime);
@@ -690,6 +701,8 @@ namespace SA_ILP
 
                     if (parent.Config.UseMeanOfDistributionForTravelTime)
                         arrivalTime += distribution.Mean;
+                    if (parent.Config.UseMeanOfDistributionForScore)
+                        totalObjectiveValue += distribution.Mean;
 
                     total = AddDistributions(total, distribution);
                     totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, nextCust, arrivalTime);
@@ -798,6 +811,7 @@ namespace SA_ILP
                     if (parent.Config.UseMeanOfDistributionForTravelTime)
                         val += distribution.Mean;
 
+
                 }
                 else if (i == swapIndex1)
                     currentCust = toOptimizeOver[swapIndex2];
@@ -885,7 +899,8 @@ namespace SA_ILP
 
                 if (parent.Config.UseMeanOfDistributionForTravelTime)
                     arrivalTime += distribution.Mean;
-
+                if (parent.Config.UseMeanOfDistributionForScore)
+                    newObjectiveValue += distribution.Mean;
                 newObjectiveValue += dist;
                 newObjectiveValue += CalculateUncertaintyPenaltyTerm(total, newRoute[i + 1], arrivalTime);
                 if (arrivalTime < newRoute[i + 1].TWStart)
@@ -1000,6 +1015,8 @@ namespace SA_ILP
 
                 if (parent.Config.UseMeanOfDistributionForTravelTime)
                     arrival_time += distribution.Mean;
+                if (parent.Config.UseMeanOfDistributionForScore)
+                    newObjectiveValue += distribution.Mean;
 
                 newObjectiveValue += CalculateUncertaintyPenaltyTerm(total, nextCust, arrival_time);
 
@@ -1087,6 +1104,8 @@ namespace SA_ILP
 
                 if (parent.Config.UseMeanOfDistributionForTravelTime)
                     arrival_time += distribution.Mean;
+                if (parent.Config.UseMeanOfDistributionForScore)
+                    newObjectiveValue += distribution.Mean;
 
                 newObjectiveValue += CalculateUncertaintyPenaltyTerm(total, nextCust, arrival_time);
 
@@ -1202,6 +1221,7 @@ namespace SA_ILP
 
                     if (parent.Config.UseMeanOfDistributionForTravelTime)
                         newArrivalTime += distribution.Mean;
+
                     //Take the new customer into account into the route length
                     actualIndex++;
                     //if (newArrivalTime < route[i].TWStart)

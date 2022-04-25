@@ -48,6 +48,8 @@ namespace SA_ILP
         public bool ScaleEarlinessPenaltyWithTemperature { get; set; }
         public bool ScaleLatenessPenaltyWithTemperature { get; set; }
 
+        public bool UseMeanOfDistributionForScore { get; set; }
+
         public override string ToString()
         {
             LocalSearchConfiguration obj = this;
@@ -108,19 +110,19 @@ namespace SA_ILP
 
         public static LocalSearchConfiguration VRPSLTT { get { 
                 var config = VRPLTT; 
-                config.ExpectedEarlinessPenalty = 10;
-                config.ExpectedLatenessPenalty = 10;
+                config.ExpectedEarlinessPenalty = 0;
+                config.ExpectedLatenessPenalty = 0;
                 config.AdjustEarlyArrivalToTWStart = false;
                 config.AllowEarlyArrival = false;
                 config.PenalizeEarlyArrival = true;
-                config.CheckOperatorScores = false;
-                config.SaveRoutesBeforeOperator = false;
+                config.CheckOperatorScores = true;
+                config.SaveRoutesBeforeOperator = true;
                 config.ScaleEarlinessPenaltyWithTemperature = true;
                 config.ScaleLatenessPenaltyWithTemperature = true;
 
                 //This does not work with the checks currently!
-                config.UseMeanOfDistributionForTravelTime = false;
-
+                config.UseMeanOfDistributionForTravelTime = true;
+                config.UseMeanOfDistributionForScore = false;
                 return config; } }
 
 
