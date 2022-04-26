@@ -681,7 +681,7 @@ namespace SA_ILP
             List<RouteStore> solution = new List<RouteStore>();
             for (int i = 0; i < columnDecisions.Length; i++)
             {
-                if (columnDecisions[i].X == 1)
+                if (Math.Round(columnDecisions[i].X, 6) == 1)
                     solution.Add(columList[i]);
             }
             double val = model.ObjVal;
