@@ -352,6 +352,7 @@ namespace SA_ILP
                 {
                     if (i != 0)
                     {
+                        //Console.WriteLine($"Score to early in route {this} at {route[i + 1]}");
                         totalObjectiveValue += CalculateEarlyPenaltyTerm(arrivalTime, route[i + 1].TWStart);
                         if (parent.Config.AdjustEarlyArrivalToTWStart)
                             arrivalTime = route[i + 1].TWStart;
@@ -421,6 +422,10 @@ namespace SA_ILP
                     total = AddDistributions(total, distribution);
                     load -= c.Demand;
                     newArriveTime += dist;
+
+                    if (parent.Config.UseMeanOfDistributionForTravelTime)
+                        newArriveTime += distribution.Mean;
+
                     if (newArriveTime < c.TWStart)
                     {
                         if (actualIndex != 1)
@@ -446,8 +451,7 @@ namespace SA_ILP
                     arrival_times[i] = newArriveTime;
                     newArriveTime += c.ServiceTime;
 
-                    if (parent.Config.UseMeanOfDistributionForTravelTime)
-                        newArriveTime += distribution.Mean;
+
 
 
                     lastCust = c;
@@ -666,6 +670,7 @@ namespace SA_ILP
                 {
                     if (actualIndex != 1)
                     {
+                        //Console.WriteLine($"Expecting to early in route {this} at {route[i]}");
                         totalObjectiveValue += CalculateEarlyPenaltyTerm(arrivalTime, route[i].TWStart);//route[i].TWStart - arrivalTime;
                         if (parent.Config.AdjustEarlyArrivalToTWStart)
                             arrivalTime = route[i].TWStart;
@@ -768,13 +773,16 @@ namespace SA_ILP
             ResetCache();
         }
 
+        bool lastOptimizationFailed = false;
+
         //WARNING DO NOT USE DIFFERENT COMBINATIONS OF PARAMETERS. SOME COMBINATIONS ARE NOT SUPPORTED AND NOT CHECKED
         public double OptimizeStartTime(List<Customer> toOptimizeOver, double load, Customer? toRemove = null, int skip = 0, Customer? toAdd = null, int pos = -1, int ignore = -1, int swapIndex1 = -1, int swapIndex2 = -1, int reverseIndex1 = -1, int reverseIndex2 = -1)
         {
+
             //If early arrival is allowed this optimization of the start time is unneccesary.
             if (parent.Config.AllowEarlyArrival)
                 return 0;
-
+            lastOptimizationFailed = false;
             double startTimeLowerBound = 0;
             double startTimeUpperBound = double.MaxValue;
             double arrivalTime = 0;
@@ -861,7 +869,11 @@ namespace SA_ILP
                 arrivalTime = startTimeLowerBound + epsilon;
             }
             else if (startTimeUpperBound >= 0)
+            {
+                lastOptimizationFailed = true;
+                //Console.WriteLine("Did not found start time optimization");
                 arrivalTime = startTimeUpperBound;
+            }
             return arrivalTime;
         }
 

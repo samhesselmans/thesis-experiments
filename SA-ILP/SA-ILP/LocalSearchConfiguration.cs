@@ -115,13 +115,13 @@ namespace SA_ILP
                 config.AdjustEarlyArrivalToTWStart = false;
                 config.AllowEarlyArrival = false;
                 config.PenalizeEarlyArrival = true;
-                config.CheckOperatorScores = true;
-                config.SaveRoutesBeforeOperator = true;
+                config.CheckOperatorScores = false;
+                config.SaveRoutesBeforeOperator = false;
                 config.ScaleEarlinessPenaltyWithTemperature = true;
                 config.ScaleLatenessPenaltyWithTemperature = true;
 
                 //This does not work with the checks currently!
-                config.UseMeanOfDistributionForTravelTime = true;
+                config.UseMeanOfDistributionForTravelTime = false;
                 config.UseMeanOfDistributionForScore = false;
                 return config; } }
 
