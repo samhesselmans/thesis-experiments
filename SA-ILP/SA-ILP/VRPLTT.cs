@@ -1,4 +1,5 @@
 ﻿using MathNet.Numerics.Distributions;
+using MathNet.Numerics.LinearAlgebra;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -10,12 +11,12 @@ namespace SA_ILP
 {
     internal static class VRPLTT
     {
-        private static double CalculateSpeed(double heightDiff, double length, double vehicleMass,double powerInput)
+        private static double CalculateSpeed(double heightDiff, double length, double vehicleMass,double powerInput,double windSpeed)
         {
             double speed = 25;
             //double slope = Math.Atan(heightDiff / length);// * Math.PI / 180;
             double slope = Math.Asin(heightDiff / length);// * Math.PI / 180;
-            double requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope);
+            double requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope,windSpeed);
             double orignalPow = requiredPow;
             if (powerInput >= requiredPow)
             {
@@ -31,18 +32,18 @@ namespace SA_ILP
                 }
 
                 speed -= 0.01;
-                requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope);
+                requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope,windSpeed);
             }
             return 0;
         }
 
-        public static double CalculateTravelTime(double heightDiff, double length, double vehicleMass, double powerInput)
+        public static double CalculateTravelTime(double heightDiff, double length, double vehicleMass, double powerInput,double windSpeed)
         {
             if (length == 0)
                 return 0;
             length *= 1000;
             //Speed in m/s
-            double speed = CalculateSpeed(heightDiff, length, vehicleMass, powerInput)/3.6;
+            double speed = CalculateSpeed(heightDiff, length, vehicleMass, powerInput,windSpeed)/3.6;
 
             //Return travel time in minutes
             return length  / speed /60;
@@ -64,6 +65,13 @@ namespace SA_ILP
             double[,,] matrix = new double[customers.Count, customers.Count, numLoadLevels];
             Gamma[,,] distributionMatrix = new Gamma[customers.Count,customers.Count, numLoadLevels];
             //List<(double, double, double)> plotData = new List<(double, double, double)>();
+
+            double windSpeed = 30;
+            var V = Vector<double>.Build;
+            double[] vec = {1,2 };
+            var v = V.DenseOfArray(vec);
+            v = v.Divide(v.L2Norm());
+
             Parallel.For(0, customers.Count, i =>
             {
                 for (int j = 0; j < customers.Count; j++)
@@ -75,6 +83,18 @@ namespace SA_ILP
                         dist = distanceMatrix[j, i];
                     double heightDiff = customers[j].Elevation - customers[i].Elevation;
 
+
+                    double xDirection = customers[j].X - customers[i].X;
+                    double yDirection = customers[j].Y - customers[i].Y;
+
+
+
+
+                    double[] custVec = {xDirection, yDirection};
+                    var cv = V.DenseOfArray(custVec);
+                    cv = cv.Divide(cv.L2Norm());
+                    var test = cv.PointwiseMultiply(v);
+
                     //double slope = Math.Atan(heightDiff /( dist * 1000));
                     //if (dist == 0)
                     //    slope = 0;
@@ -84,9 +104,9 @@ namespace SA_ILP
                     {
                         double loadLevelWeight = minWeight + ((maxWeight - minWeight) / numLoadLevels) * l + ((maxWeight - minWeight) / numLoadLevels) / 2;
 
+                        
 
-
-                        matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput);
+                        matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput, test.Sum() * windSpeed);
                         distributionMatrix[i, j, l] = CreateTravelTimeDistribution(loadLevelWeight, matrix[i, j, l]);
                     }
                 }
@@ -182,7 +202,7 @@ namespace SA_ILP
         }
 
 
-        public static double CalcRequiredForce(double v, double mass, double slope)
+        public static double CalcRequiredForce(double v, double mass, double slope, double windSpeed)
         {
             double Cd = 1.18;
             double A = 0.83;
@@ -190,7 +210,7 @@ namespace SA_ILP
             double Cr = 0.01;
             double g = 9.81;
 
-            return ((Cd * A * Ro * Math.Pow(v, 2) / 2) + Cr * mass * g * Math.Cos(Math.Atan(slope)) + mass * g * Math.Sin(Math.Atan(slope))) * v / 0.95;
+            return ((Cd * A * Ro * Math.Pow(v + windSpeed, 2) / 2) + Cr * mass * g * Math.Cos(Math.Atan(slope)) + mass * g * Math.Sin(Math.Atan(slope))) * v / 0.95;
         }
     }
 }
