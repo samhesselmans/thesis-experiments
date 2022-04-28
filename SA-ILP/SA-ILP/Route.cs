@@ -1,4 +1,5 @@
 ﻿using MathNet.Numerics.Distributions;
+using MathNet.Numerics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -300,9 +301,49 @@ namespace SA_ILP
 
 
 
-        private Gamma AddDistributions(Gamma left, Gamma right)
+        private Gamma AddDistributions(Gamma left, Gamma right, double diffWithLowerTimeWindow = -1)
         {
-            return new Gamma(left.Shape + right.Shape, right.Rate);
+            if(parent.Config.IgnoreWaitingDuringDistributionAddition)
+                return new Gamma(left.Shape + right.Shape, right.Rate);
+
+
+            //First add the two distributions
+            Gamma? newDist = null;
+
+            if (left.Rate == right.Rate)
+                newDist = new Gamma(left.Shape + right.Shape, right.Rate);
+            else
+            {
+                //Approximate using the Welch–Satterthwaite equation Src: Gina v Lent
+                double beta1 = 1/left.Rate;
+                double beta2 = 1/right.Rate;
+
+                double newAlpha = Math.Pow((left.Shape * beta1 + right.Shape * beta2),2)/(Math.Pow(left.Shape,2) * beta1 + Math.Pow(right.Shape,2) *beta2);
+                double newBeta = (left.Shape * beta1 + right.Shape * beta2) / newAlpha;
+
+                newDist = new Gamma(newAlpha, 1 / newBeta);
+
+                
+            }
+
+
+            //If the deterministic arrival time is later than the lower timewindow we do not need to use the approximation of the max between a constant and a distribution
+            if (diffWithLowerTimeWindow <= 0)
+                return newDist;
+
+            //double Pc = newDist.CumulativeDistribution(diffWithLowerTimeWindow);
+            double expected = diffWithLowerTimeWindow - diffWithLowerTimeWindow * SpecialFunctions.GammaUpperIncomplete(newDist.Shape, diffWithLowerTimeWindow /newDist.Scale) / SpecialFunctions.Gamma(newDist.Shape) + newDist.Scale * SpecialFunctions.GammaUpperIncomplete(newDist.Shape + 1, diffWithLowerTimeWindow / newDist.Scale) / SpecialFunctions.Gamma(newDist.Shape);
+
+            double expectedSquared = Math.Pow(diffWithLowerTimeWindow, 2) + (-Math.Pow(diffWithLowerTimeWindow, 2) * SpecialFunctions.GammaUpperIncomplete(newDist.Shape, diffWithLowerTimeWindow / newDist.Scale)) / SpecialFunctions.Gamma(newDist.Shape) + Math.Pow(newDist.Scale, 2) * SpecialFunctions.GammaUpperIncomplete(newDist.Shape + 2, diffWithLowerTimeWindow / newDist.Scale) / SpecialFunctions.Gamma(newDist.Shape);
+
+            double variance = expectedSquared - Math.Pow(expected, 2);
+
+
+            double finalAlpha = Math.Pow(expected, 2) / variance;
+            double finalBeta = variance / expected;
+
+            //Invert the scale parameter to get the rate parameter
+            return new Gamma(finalAlpha, 1 / finalBeta);
         }
 
         public double CalcObjective()
@@ -346,7 +387,7 @@ namespace SA_ILP
                 if (parent.Config.UseMeanOfDistributionForScore)
                     totalObjectiveValue += distribution.Mean;
 
-                total = AddDistributions(total, distribution);
+                total = AddDistributions(total, distribution,route[i+1].TWStart-arrivalTime);
                 totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, route[i + 1], arrivalTime);
                 if (arrivalTime < route[i + 1].TWStart)
                 {
@@ -354,7 +395,7 @@ namespace SA_ILP
                     {
                         //Console.WriteLine($"Score to early in route {this} at {route[i + 1]}");
                         totalObjectiveValue += CalculateEarlyPenaltyTerm(arrivalTime, route[i + 1].TWStart);
-                        if (parent.Config.AdjustEarlyArrivalToTWStart)
+                        if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                             arrivalTime = route[i + 1].TWStart;
                     }
                     else
@@ -419,10 +460,10 @@ namespace SA_ILP
                 if (c.Id != cust.Id)
                 {
                     (var dist, var distribution) = CustomerDist(previous_cust, c, load);
-                    total = AddDistributions(total, distribution);
+                    
                     load -= c.Demand;
                     newArriveTime += dist;
-
+                    total = AddDistributions(total, distribution, c.TWStart - newArriveTime);
                     if (parent.Config.UseMeanOfDistributionForTravelTime)
                         newArriveTime += distribution.Mean;
 
@@ -431,7 +472,7 @@ namespace SA_ILP
                         if (actualIndex != 1)
                         {
                             ViolatesLowerTimeWindow = true;
-                            if (parent.Config.AdjustEarlyArrivalToTWStart)
+                            if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                                 newArriveTime = c.TWStart;
                         }
                         else
@@ -512,7 +553,7 @@ namespace SA_ILP
                     {
                         objectiveValue += CalculateEarlyPenaltyTerm(arrival_time, currentCust.TWStart);
 
-                        if (parent.Config.AdjustEarlyArrivalToTWStart)
+                        if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                             arrival_time = currentCust.TWStart;
                     }
                     else
@@ -521,12 +562,12 @@ namespace SA_ILP
                     }
                 }
                 (var dist, var distribution) = CustomerDist(currentCust, nextCust, load);
-                total = AddDistributions(total, distribution);
+                
 
                 load -= nextCust.Demand;
                 objectiveValue += dist;
                 arrival_time += dist + currentCust.ServiceTime;
-
+                total = AddDistributions(total, distribution, nextCust.TWStart - arrival_time);
                 if (parent.Config.UseMeanOfDistributionForTravelTime)
                     arrival_time += distribution.Mean;
                 if (parent.Config.UseMeanOfDistributionForScore)
@@ -607,7 +648,7 @@ namespace SA_ILP
                         if (actualIndex != 1)
                         {
                             totalObjectiveValue += CalculateEarlyPenaltyTerm(arrivalTime, cust.TWStart);//cust.TWStart - arrivalTime;
-                            if (parent.Config.AdjustEarlyArrivalToTWStart)
+                            if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                                 arrivalTime = cust.TWStart;
                         }
                         else
@@ -633,7 +674,7 @@ namespace SA_ILP
                     if (parent.Config.UseMeanOfDistributionForScore)
                         totalObjectiveValue += distribution.Mean;
 
-                    total = AddDistributions(total, distribution);
+                    total = AddDistributions(total, distribution, route[i + skip].TWStart - arrivalTime);
                     totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, route[i + skip], arrivalTime);
 
                     i += skip;
@@ -672,7 +713,7 @@ namespace SA_ILP
                     {
                         //Console.WriteLine($"Expecting to early in route {this} at {route[i]}");
                         totalObjectiveValue += CalculateEarlyPenaltyTerm(arrivalTime, route[i].TWStart);//route[i].TWStart - arrivalTime;
-                        if (parent.Config.AdjustEarlyArrivalToTWStart)
+                        if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                             arrivalTime = route[i].TWStart;
                     }
                     else
@@ -709,7 +750,7 @@ namespace SA_ILP
                     if (parent.Config.UseMeanOfDistributionForScore)
                         totalObjectiveValue += distribution.Mean;
 
-                    total = AddDistributions(total, distribution);
+                    total = AddDistributions(total, distribution,nextCust.TWStart -arrivalTime );
                     totalObjectiveValue += CalculateUncertaintyPenaltyTerm(total, nextCust, arrivalTime);
 
                 }
@@ -905,9 +946,9 @@ namespace SA_ILP
             for (int i = 0; i < newRoute.Count - 1; i++)
             {
                 (var dist, var distribution) = CustomerDist(newRoute[i], newRoute[i + 1], load);
-                total = AddDistributions(total, distribution);
+                
                 arrivalTime += dist + newRoute[i].ServiceTime;
-
+                total = AddDistributions(total, distribution, newRoute[i + 1].TWStart - arrivalTime);
 
                 if (parent.Config.UseMeanOfDistributionForTravelTime)
                     arrivalTime += distribution.Mean;
@@ -923,7 +964,7 @@ namespace SA_ILP
                         {
                             //TODO: might want to make this an option in the configuration
                             newObjectiveValue += CalculateEarlyPenaltyTerm(arrivalTime, newRoute[i + 1].TWStart);
-                            if (parent.Config.AdjustEarlyArrivalToTWStart)
+                            if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                                 arrivalTime = newRoute[i + 1].TWStart;
                             violatesLowerTimeWindow = true;
                         }
@@ -1015,7 +1056,7 @@ namespace SA_ILP
 
                 //Travel time to new customer
                 (double dist, Gamma distribution) = CustomerDist(currentCust, nextCust, load);
-                total = AddDistributions(total, distribution);
+                
 
 
 
@@ -1024,7 +1065,7 @@ namespace SA_ILP
 
                 //Update arrival time for next customer
                 arrival_time += dist + currentCust.ServiceTime;
-
+                total = AddDistributions(total, distribution,nextCust.TWStart-arrival_time);
                 if (parent.Config.UseMeanOfDistributionForTravelTime)
                     arrival_time += distribution.Mean;
                 if (parent.Config.UseMeanOfDistributionForScore)
@@ -1037,7 +1078,7 @@ namespace SA_ILP
                     if (i != 0)
                     {
                         newObjectiveValue += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);
-                        if (parent.Config.AdjustEarlyArrivalToTWStart)
+                        if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                             arrival_time = nextCust.TWStart;
                         violatesLowerTimeWindow = true;
                     }
@@ -1106,13 +1147,15 @@ namespace SA_ILP
 
 
                 (var cost, var distribution) = CustomerDist(route[j], nextCust, load);
-                total = AddDistributions(total, distribution);
+                
 
                 newObjectiveValue += cost;
 
 
 
                 arrival_time += cost + route[j].ServiceTime;
+
+                total = AddDistributions(total, distribution,nextCust.TWStart-arrival_time);
 
                 if (parent.Config.UseMeanOfDistributionForTravelTime)
                     arrival_time += distribution.Mean;
@@ -1128,7 +1171,7 @@ namespace SA_ILP
                     {
                         newObjectiveValue += CalculateEarlyPenaltyTerm(arrival_time, nextCust.TWStart);//nextCust.TWStart- arrival_time;
                                                                                                        //newCost += penalty;
-                        if (parent.Config.AdjustEarlyArrivalToTWStart)
+                        if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                             arrival_time = nextCust.TWStart;
                     }
                     else
@@ -1209,7 +1252,7 @@ namespace SA_ILP
                     {
                         if (actualIndex != 1)
                         {
-                            if (parent.Config.AdjustEarlyArrivalToTWStart)
+                            if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                                 newArrivalTime = cust.TWStart;
                             ViolatesLowerTimeWindow = true;
                         }
@@ -1228,9 +1271,9 @@ namespace SA_ILP
                     load -= cust.Demand;
 
                     (double dist, Gamma distribution) = CustomerDist(cust, route[i], load);
-                    total = AddDistributions(total, distribution);
+                    
                     newArrivalTime += dist + cust.ServiceTime;
-
+                    total = AddDistributions(total, distribution,route[i].TWStart - newArrivalTime);
                     if (parent.Config.UseMeanOfDistributionForTravelTime)
                         newArrivalTime += distribution.Mean;
 
@@ -1247,7 +1290,7 @@ namespace SA_ILP
                 {
                     if (actualIndex != 1)
                     {
-                        if (parent.Config.AdjustEarlyArrivalToTWStart)
+                        if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                             newArrivalTime = route[i].TWStart;
                         ViolatesLowerTimeWindow = true;
                     }
@@ -1276,8 +1319,10 @@ namespace SA_ILP
                         //time = CustomerDist(route[i], route[i + 1], load).Item1;
                         nextCust = route[i + 1];
                     (double dist, Gamma distribution) = CustomerDist(route[i], nextCust, load);
-                    total = AddDistributions(total, distribution);
+                    
                     newArrivalTime += dist + route[i].ServiceTime;
+
+                    total = AddDistributions(total, distribution,nextCust.TWStart - newArrivalTime);
                     if (parent.Config.UseMeanOfDistributionForTravelTime)
                         newArrivalTime += distribution.Mean;
                 }
@@ -1334,7 +1379,7 @@ namespace SA_ILP
                 if (parent.Config.UseMeanOfDistributionForTravelTime)
                     arrivalTime += distribution.Mean;
 
-                total = AddDistributions(total, distribution);
+                total = AddDistributions(total, distribution,route[i+1].TWStart - arrivalTime);
 
 
 
@@ -1346,7 +1391,7 @@ namespace SA_ILP
                         Console.WriteLine("FAIL arrived to early at customer");
                     }
 
-                    if (parent.Config.AdjustEarlyArrivalToTWStart)
+                    if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                         arrivalTime = route[i + 1].TWStart;
                     //Do something with penalty?
                 }
