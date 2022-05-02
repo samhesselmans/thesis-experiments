@@ -59,7 +59,8 @@ namespace SA_ILP
             return gamma;
         }
 
-        
+
+        //https://stackoverflow.com/questions/16266809/convert-from-latitude-longitude-to-x-y
         public static (double, double) ConvertToPlanarCoordinates(double latitude, double longitude, double centralLatitude, double centralLongitude)
         {
             double X = longitude / 180 * Math.PI * Math.Cos(centralLatitude / 180 * Math.PI);
