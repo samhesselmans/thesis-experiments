@@ -318,8 +318,8 @@ namespace SA_ILP
                 double beta1 = 1/left.Rate;
                 double beta2 = 1/right.Rate;
 
-                double newAlpha = Math.Pow((left.Shape * beta1 + right.Shape * beta2),2)/(Math.Pow(left.Shape,2) * beta1 + Math.Pow(right.Shape,2) *beta2);
-                double newBeta = (left.Shape * beta1 + right.Shape * beta2) / newAlpha;
+                double newAlpha = Math.Pow((left.Shape * left.Scale + right.Shape * right.Scale),2)/(Math.Pow(left.Shape,2) * left.Scale + Math.Pow(right.Shape,2) *right.Scale);
+                double newBeta = (left.Shape * left.Scale + right.Shape * right.Scale) / newAlpha;
 
                 newDist = new Gamma(newAlpha, 1 / newBeta);
 
