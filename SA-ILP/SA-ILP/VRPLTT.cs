@@ -128,10 +128,12 @@ namespace SA_ILP
                     var cv = V.DenseOfArray(custVec);
                     cv = cv.Divide(cv.L2Norm());
 
-                    
+
 
 
                     //var test = cv.PointwiseMultiply(v);
+
+                    //https://math.stackexchange.com/questions/286391/find-the-component-of-veca-along-vecb
                     double vComponentAlongCV = (v * cv) / cv.L2Norm();
                     //Math.Sign(test.Sum()) * test.L2Norm()
                     //if (j == 13 && i == 44)
