@@ -74,7 +74,7 @@ namespace SA_ILP
             Gamma[,,] distributionMatrix = new Gamma[customers.Count,customers.Count, numLoadLevels];
             //List<(double, double, double)> plotData = new List<(double, double, double)>();
 
-            double windSpeed = 3;
+            double windSpeed = 0;
             var V = Vector<double>.Build;
             double[] vec = {1,2 };
             var v = V.DenseOfArray(vec);

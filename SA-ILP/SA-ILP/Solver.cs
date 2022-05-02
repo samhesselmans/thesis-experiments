@@ -173,10 +173,12 @@ namespace SA_ILP
             double checkValue = 0;
             double numCustomers = 0;
             double totalRouteLength = 0;
+            using(var sw =  new StreamWriter("out.txt"))
             foreach (RouteStore rs in ilpSol)
             {
                 var ls = new LocalSearch((LocalSearchConfiguration)config, random.Next());
                 Route r = new Route(customers, rs, customers[0], matrix,distributionMatrix, bikeMaxMass - bikeMinMass, ls);
+                sw.WriteLine($"{r},");
                 checkValue += r.CalcObjective();
                 totalStartTime += r.arrival_times[0];
                 totalRouteLength += r.arrival_times[r.arrival_times.Count - 1] - r.route.Sum(x => x.ServiceTime);
