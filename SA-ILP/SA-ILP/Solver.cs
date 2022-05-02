@@ -226,6 +226,7 @@ namespace SA_ILP
             {
                 if (route.route.Count != 2)
                 {
+                    Console.WriteLine(route);
                     //Console.WriteLine($"{route}; ST {route.startTime} ; SST {route.route[1].TWStart - route.CustomerDist(route.route[0], route.route[1], route.used_capacity).Item1}");
                     numRoutes++;
                     double avg = 0;

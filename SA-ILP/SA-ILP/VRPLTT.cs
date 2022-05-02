@@ -59,6 +59,13 @@ namespace SA_ILP
             return gamma;
         }
 
+        
+        public static (double, double) ConvertToPlanarCoordinates(double latitude, double longitude, double centralLatitude, double centralLongitude)
+        {
+            double X = longitude / 180 * Math.PI * Math.Cos(centralLatitude / 180 * Math.PI);
+            double Y = latitude;
+            return (X, Y);
+        }
 
         public static (double[,,],Gamma[,,]) CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput)
         {
@@ -72,6 +79,28 @@ namespace SA_ILP
             var v = V.DenseOfArray(vec);
             v = v.Divide(v.L2Norm());
 
+
+            double minLatitude = double.MaxValue;
+            double maxLatitude = double.MinValue;
+            double minLongtitude = double.MaxValue;
+            double maxLongitude = double.MinValue;
+
+            foreach(var c in customers)
+            {
+                if(c.X < minLatitude)
+                    minLatitude = c.X;
+                if(c.X > maxLatitude)
+                    maxLatitude = c.X;
+                if(c.Y < minLongtitude)
+                    minLongtitude = c.Y;
+                if(c.Y > maxLongitude)
+                    maxLongitude = c.Y;
+            }
+
+            double centralLatitude = (minLatitude + maxLatitude) / 2;
+            double centralLongitude = (minLongtitude + maxLongitude) / 2;
+
+
             Parallel.For(0, customers.Count, i =>
             {
                 for (int j = 0; j < customers.Count; j++)
@@ -84,17 +113,31 @@ namespace SA_ILP
                     double heightDiff = customers[j].Elevation - customers[i].Elevation;
 
 
-                    double xDirection = customers[j].X - customers[i].X;
-                    double yDirection = customers[j].Y - customers[i].Y;
+                    //TODO: lattitude longtitude omzetten in daadwerkelijke 2d vectors! Anders werkt de wind richting natuurlijk niet
 
 
+                    (double X1, double Y1) = ConvertToPlanarCoordinates(customers[j].X, customers[j].Y, centralLatitude, centralLongitude);
+                    (double X2, double Y2) = ConvertToPlanarCoordinates(customers[i].X, customers[i].Y, centralLatitude, centralLongitude);
 
+                    double xDirection = X1 -X2;
+                    double yDirection = Y1 - Y2;
+
+                    
 
                     double[] custVec = {xDirection, yDirection};
                     var cv = V.DenseOfArray(custVec);
                     cv = cv.Divide(cv.L2Norm());
-                    var test = cv.PointwiseMultiply(v);
 
+                    
+
+
+                    //var test = cv.PointwiseMultiply(v);
+                    double vComponentAlongCV = (v * cv) / cv.L2Norm();
+                    //Math.Sign(test.Sum()) * test.L2Norm()
+                    //if (j == 13 && i == 44)
+                    //    Console.WriteLine("yes");
+                    //if (j == 44 && i == 13)
+                    //    Console.WriteLine("yes");
                     //double slope = Math.Atan(heightDiff /( dist * 1000));
                     //if (dist == 0)
                     //    slope = 0;
@@ -106,7 +149,7 @@ namespace SA_ILP
 
                         
 
-                        matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput, test.Sum() * windSpeed);
+                        matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput, vComponentAlongCV * windSpeed);
                         distributionMatrix[i, j, l] = CreateTravelTimeDistribution(loadLevelWeight, matrix[i, j, l]);
                     }
                 }
