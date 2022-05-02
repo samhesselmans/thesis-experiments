@@ -222,10 +222,12 @@ namespace SA_ILP
             double totalDist = 0;
             double totalOntimePercentage = 0;
             int numRoutes = 0;
+            using(var sw = new StreamWriter("out.txt"))
             foreach (var route in sol)
             {
                 if (route.route.Count != 2)
                 {
+                        sw.WriteLine($"{route},");
                     Console.WriteLine(route);
                     //Console.WriteLine($"{route}; ST {route.startTime} ; SST {route.route[1].TWStart - route.CustomerDist(route.route[0], route.route[1], route.used_capacity).Item1}");
                     numRoutes++;
