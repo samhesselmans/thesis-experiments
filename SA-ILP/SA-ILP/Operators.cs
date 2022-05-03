@@ -181,7 +181,7 @@ namespace SA_ILP
             Customer bestCust1 = null, bestCust2 = null;
             double bestImp = double.MinValue;
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 1; i++)
             {
 
                 (var cust1, int index1) = routes[src].RandomCustIndex();
@@ -247,7 +247,7 @@ namespace SA_ILP
 
             //viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
             var numRoutes = viableRoutes.Count;
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 1; i++)
             {
                 //Select destination
                 int dest_index = random.Next(numRoutes);
@@ -632,7 +632,7 @@ namespace SA_ILP
             //viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
             var numRoutes = viableRoutes.Count;
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 1; i++)
             {
                 //Select destination from routes with customers
                 int src = viableRoutes[random.Next(numRoutes)];
