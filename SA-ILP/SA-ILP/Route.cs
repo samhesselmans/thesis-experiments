@@ -314,6 +314,7 @@ namespace SA_ILP
                 newDist = new Gamma(left.Shape + right.Shape, right.Rate);
             else
             {
+                Console.WriteLine($"Adding {left} and {right} specially");
                 //Approximate using the Welch–Satterthwaite equation Src: Gina v Lent
                 double beta1 = 1/left.Rate;
                 double beta2 = 1/right.Rate;
@@ -325,8 +326,8 @@ namespace SA_ILP
 
                 
             }
-
-
+            //return newDist;
+            Console.WriteLine($"{this} Calculating max between {newDist} with mean {newDist.Mean} and variance {newDist.Variance} and constant {diffWithLowerTimeWindow}");
             //If the deterministic arrival time is later than the lower timewindow we do not need to use the approximation of the max between a constant and a distribution
             if (diffWithLowerTimeWindow <= 0)
                 return newDist;
@@ -1229,6 +1230,8 @@ namespace SA_ILP
 
         public void InsertCust(Customer cust, int pos)
         {
+            Console.WriteLine($"Inserting {cust} in {pos}");
+
             //double TArrivalNewCust = arrival_times[pos - 1] + route[pos - 1].ServiceTime + CustomerDist(cust, route[pos - 1]);
             //if(TArrivalNewCust < cust.TWStart)
             //    TArrivalNewCust = cust.TWStart;
@@ -1319,10 +1322,10 @@ namespace SA_ILP
                         //time = CustomerDist(route[i], route[i + 1], load).Item1;
                         nextCust = route[i + 1];
                     (double dist, Gamma distribution) = CustomerDist(route[i], nextCust, load);
-                    
+                    Console.WriteLine($"Checking between {route[i]} and {nextCust}");
                     newArrivalTime += dist + route[i].ServiceTime;
-
                     total = AddDistributions(total, distribution,nextCust.TWStart - newArrivalTime);
+                    Console.WriteLine($"Result: { total} with mean {total.Mean} and variance {total.Variance}\n");
                     if (parent.Config.UseMeanOfDistributionForTravelTime)
                         newArrivalTime += distribution.Mean;
                 }
