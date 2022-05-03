@@ -94,16 +94,16 @@ namespace SA_ILP
             random = new Random(seed);
             var os = new OperatorSelector(random);
 
-            os.Add(Operators.AddRandomRemovedCustomer, 1, "add");
-            os.Add(Operators.RemoveRandomCustomer, 1, "remove");
-            os.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move");
-            os.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best");
-            os.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route");
-            os.Add((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap");
-            os.Add((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route");
-            os.Add((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse");
-            os.Add((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble");
-            os.Add((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails");
+            os.Add(Operators.AddRandomRemovedCustomer, 1, "add"); //repeated 1 time
+            os.Add(Operators.RemoveRandomCustomer, 1, "remove"); //repeated 1 time
+            os.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move"); //repeated 1 time
+            os.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best"); //repeated 1 time
+            os.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route"); //repeated 4 times
+            os.Add((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap"); //repeated 4 times
+            os.Add((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route"); //repeated 4 times
+            os.Add((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse"); //repeated 1 time
+            os.Add((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble"); //Repeated 1 time
+            os.Add((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails"); //Repeated 1 time
             Init(config, seed, os);
 
         }
