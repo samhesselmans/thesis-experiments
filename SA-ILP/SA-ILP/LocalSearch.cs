@@ -14,49 +14,7 @@ namespace SA_ILP
         private static readonly object ConsoleWriterLock = new object();
 
         public double Temperature { get; private set; }
-        //public double InitialTemperature { get; private set; }
 
-        //public bool AllowLateArrivalDuringSearch { get; private set; }
-        //public bool AllowEarlyArrivalDuringSearch { get; private set; }
-
-        //public bool AllowLateArrival { get; private set; }
-        //public bool AllowEarlyArrival { get; private set; }
-
-        ////public static readonly double BaseRemovedCustomerPenalty = 150;
-        ////public static readonly double BaseRemovedCustomerPenaltyPow = 1.5;
-
-        //public double BaseRemovedCustomerPenalty { get; private set; }
-        //public double BaseRemovedCustomerPenaltyPow { get; private set; }
-
-        //public double BaseEarlyArrivalPenalty { get; private set; }
-        //public double BaseLateArrivalPenalty { get; private set; }
-
-        //public double Alpha { get; private set; }
-
-        //public bool SaveColumnsAfterAllImprovements { get; private set; }
-
-        //public bool SaveColumnsAfterWorse { get; private set; }
-
-        //public double SaveColumnThreshold { get; private set; }
-
-        //public bool PenalizeEarlyArrival { get; private set; }
-        //public bool PenalizeLateArrival { get; private set; }
-
-        //public bool AdjustEarlyArrivalToTWStart { get; private set; }
-
-        //public bool CheckOperatorScores { get; private set; }
-
-        //public bool SaveRoutesBeforeOperator { get; private set; }
-
-        //public bool PrintExtendedInfo { get; private set; }
-
-        //public bool SaveScoreDevelopment { get; private set; }
-
-        //public double ExpectedEarlinessPenalty { get; private set; }
-        //public double ExpectedLatenessPenalty { get; private set; }
-        //public bool UseMeanOfDistributionForTravelTime { get; private set; }
-        //public bool ScaleEarlinessPenaltyWithTemperature { get; private set; }
-        //public bool ScaleLatenessPenaltyWithTemperature { get; private set; }
 
         public readonly LocalSearchConfiguration Config;
 
@@ -75,29 +33,6 @@ namespace SA_ILP
         private void Init(LocalSearchConfiguration config, int seed, OperatorSelector os)
         {
             Temperature = config.InitialTemperature;
-            //InitialTemperature = config.InitialTemperature;
-            //this.AllowEarlyArrival = config.AllowEarlyArrival;
-            //this.AllowLateArrival = config.AllowLateArrival;
-            //AllowEarlyArrivalDuringSearch = config.AllowEarlyArrivalDuringSearch;
-            //AllowLateArrivalDuringSearch = config.AllowLateArrivalDuringSearch;
-            //BaseRemovedCustomerPenalty = config.BaseRemovedCustomerPenalty;
-            //BaseRemovedCustomerPenaltyPow = config.BaseRemovedCustomerPenaltyPow;
-            //BaseEarlyArrivalPenalty = config.BaseEarlyArrivalPenalty;
-            //BaseLateArrivalPenalty = config.BaseLateArrivalPenalty;
-            //PenalizeLateArrival = config.PenalizeLateArrival;
-            //PenalizeEarlyArrival = config.PenalizeEarlyArrival;
-            //AdjustEarlyArrivalToTWStart = config.AdjustEarlyArrivalToTWStart;
-            //CheckOperatorScores = config.CheckOperatorScores;
-            //SaveRoutesBeforeOperator = config.SaveRoutesBeforeOperator;
-            //SaveColumnsAfterAllImprovements = config.SaveColumnsAfterAllImprovements;
-            //SaveColumnsAfterWorse = config.SaveColumnsAfterWorse;
-            //SaveColumnThreshold = config.SaveColumnThreshold;
-            //PrintExtendedInfo = config.PrintExtendedInfo;
-            //Alpha = config.Alpha;
-            //SaveScoreDevelopment = config.SaveScoreDevelopment;
-            //ExpectedEarlinessPenalty = config.ExpectedEarlinessPenalty;
-            //ExpectedLatenessPenalty = config.ExpectedLatenessPenalty;
-            //UseMeanOfDistributionForTravelTime = config.UseMeanOfDistributionForTravelTime;
             OS = os;
         }
 
