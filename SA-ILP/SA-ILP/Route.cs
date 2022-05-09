@@ -316,14 +316,22 @@ namespace SA_ILP
             {
                 Console.WriteLine($"Adding {left} and {right} specially");
                 //Approximate using the Welch–Satterthwaite equation Src: Gina v Lent
-                double beta1 = 1/left.Rate;
-                double beta2 = 1/right.Rate;
+                //double beta1 = 1/left.Rate;
+                //double beta2 = 1/right.Rate;
 
-                double newAlpha = Math.Pow((left.Shape * left.Scale + right.Shape * right.Scale),2)/(Math.Pow(left.Shape,2) * left.Scale + Math.Pow(right.Shape,2) *right.Scale);
-                double newBeta = (left.Shape * left.Scale + right.Shape * right.Scale) / newAlpha;
+                //double newAlpha = Math.Pow((left.Shape * left.Scale + right.Shape * right.Scale),2)/(Math.Pow(left.Shape,2) * left.Scale + Math.Pow(right.Shape,2) *right.Scale);
+                //double newBeta = (left.Shape * left.Scale + right.Shape * right.Scale) / newAlpha;
+
+                //newDist = new Gamma(newAlpha, 1 / newBeta);
+
+                //MMM approximation
+
+                double mu = left.Shape * left.Scale + right.Shape * right.Scale;
+                double betaSquared = (left.Shape * Math.Pow(left.Scale, 2) + right.Shape * Math.Pow(right.Scale, 2));
+                double newAlpha = Math.Pow(mu, 2) / betaSquared;
+                double newBeta = betaSquared / mu;
 
                 newDist = new Gamma(newAlpha, 1 / newBeta);
-
                 
             }
             //return newDist;
