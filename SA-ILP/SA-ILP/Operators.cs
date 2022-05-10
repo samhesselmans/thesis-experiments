@@ -362,7 +362,10 @@ namespace SA_ILP
             Customer cust = removed[random.Next(removed.Count)];
 
 
-            int routeIndex = random.Next(viableRoutes.Count + 1);
+            //int routeIndex = random.Next(viableRoutes.Count + 1);
+
+            //REMOVE! This is just for testing
+            int routeIndex = random.Next(viableRoutes.Count);
             Route route;
             if (routeIndex >= viableRoutes.Count)
                 if (viableRoutes.Count != routes.Count)
@@ -467,6 +470,10 @@ namespace SA_ILP
             int extra = 0;
             if (viableRoutes.Count < routes.Count)
                 extra = 1;
+
+
+            //REMOVE THE FOLLOWING LINE. THIS IS JUST FOR TESTING
+            extra = 0;
 
             int destIndex = random.Next(viableRoutes.Count + extra);
             //if (destIndex >= src_index)
