@@ -303,7 +303,7 @@ namespace SA_ILP
 
         private Gamma AddDistributions(Gamma left, Gamma right, double diffWithLowerTimeWindow = -1)
         {
-            if(parent.Config.IgnoreWaitingDuringDistributionAddition)
+            if (parent.Config.IgnoreWaitingDuringDistributionAddition)
                 return new Gamma(left.Shape + right.Shape, right.Rate);
 
 
@@ -314,7 +314,7 @@ namespace SA_ILP
                 newDist = new Gamma(left.Shape + right.Shape, right.Rate);
             else
             {
-                Console.WriteLine($"Adding {left} and {right} specially");
+                //Console.WriteLine($"Adding {left} and {right} specially");
                 //Approximate using the Welch–Satterthwaite equation Src: Gina v Lent
                 //double beta1 = 1/left.Rate;
                 //double beta2 = 1/right.Rate;
@@ -332,16 +332,16 @@ namespace SA_ILP
                 double newBeta = betaSquared / mu;
 
                 newDist = new Gamma(newAlpha, 1 / newBeta);
-                
+
             }
             //return newDist;
-            Console.WriteLine($"{this} Calculating max between {newDist} with mean {newDist.Mean} and variance {newDist.Variance} and constant {diffWithLowerTimeWindow}");
+            //Console.WriteLine($"{this} Calculating max between {newDist} with mean {newDist.Mean} and variance {newDist.Variance} and constant {diffWithLowerTimeWindow}");
             //If the deterministic arrival time is later than the lower timewindow we do not need to use the approximation of the max between a constant and a distribution
             if (diffWithLowerTimeWindow <= 0)
                 return newDist;
 
             //double Pc = newDist.CumulativeDistribution(diffWithLowerTimeWindow);
-            double expected = diffWithLowerTimeWindow - diffWithLowerTimeWindow * SpecialFunctions.GammaUpperIncomplete(newDist.Shape, diffWithLowerTimeWindow /newDist.Scale) / SpecialFunctions.Gamma(newDist.Shape) + newDist.Scale * SpecialFunctions.GammaUpperIncomplete(newDist.Shape + 1, diffWithLowerTimeWindow / newDist.Scale) / SpecialFunctions.Gamma(newDist.Shape);
+            double expected = diffWithLowerTimeWindow - diffWithLowerTimeWindow * SpecialFunctions.GammaUpperIncomplete(newDist.Shape, diffWithLowerTimeWindow / newDist.Scale) / SpecialFunctions.Gamma(newDist.Shape) + newDist.Scale * SpecialFunctions.GammaUpperIncomplete(newDist.Shape + 1, diffWithLowerTimeWindow / newDist.Scale) / SpecialFunctions.Gamma(newDist.Shape);
 
             string wolframText = $"{diffWithLowerTimeWindow.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)} - {diffWithLowerTimeWindow.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)} * Gamma({newDist.Shape.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)},{(diffWithLowerTimeWindow / newDist.Scale).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)})/Gamma({newDist.Shape.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}) + {newDist.Scale.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)} * Gamma({(newDist.Shape + 1).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)},{(diffWithLowerTimeWindow / newDist.Scale).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)})/Gamma({newDist.Shape.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)})";
 
@@ -354,11 +354,32 @@ namespace SA_ILP
             double variance = expectedSquared - Math.Pow(expected, 2);
 
 
+            if (newDist.CumulativeDistribution(diffWithLowerTimeWindow) >= 0.95 && (Double.IsNaN(expected) || double.IsNaN(expectedSquared)))
+            {
+                expected = diffWithLowerTimeWindow;
+                variance = 1e-10;
+            }
+
+
+            if (newDist.CumulativeDistribution(diffWithLowerTimeWindow) < 1e-20 && (Double.IsNaN(expected) || double.IsNaN(expectedSquared)))
+            {
+                return newDist;
+            }
+
+
+            if (variance <= 0)
+                variance = 1e-10;
+
             double finalAlpha = Math.Pow(expected, 2) / variance;
             double finalBeta = variance / expected;
 
+
+            if (double.IsInfinity(finalBeta) || double.IsInfinity(finalAlpha))
+                Console.WriteLine("INFINTE");
+
             //Invert the scale parameter to get the rate parameter
             return new Gamma(finalAlpha, 1 / finalBeta);
+
         }
 
         public double CalcObjective()
@@ -1244,7 +1265,7 @@ namespace SA_ILP
 
         public void InsertCust(Customer cust, int pos)
         {
-            Console.WriteLine($"Inserting {cust} in {pos}");
+            //Console.WriteLine($"Inserting {cust} in {pos}");
 
             //double TArrivalNewCust = arrival_times[pos - 1] + route[pos - 1].ServiceTime + CustomerDist(cust, route[pos - 1]);
             //if(TArrivalNewCust < cust.TWStart)
@@ -1336,10 +1357,10 @@ namespace SA_ILP
                         //time = CustomerDist(route[i], route[i + 1], load).Item1;
                         nextCust = route[i + 1];
                     (double dist, Gamma distribution) = CustomerDist(route[i], nextCust, load);
-                    Console.WriteLine($"Checking between {route[i]} and {nextCust}");
+                    //Console.WriteLine($"Checking between {route[i]} and {nextCust}");
                     newArrivalTime += dist + route[i].ServiceTime;
                     total = AddDistributions(total, distribution,nextCust.TWStart - newArrivalTime);
-                    Console.WriteLine($"Result: { total} with mean {total.Mean} and variance {total.Variance}\n");
+                    //Console.WriteLine($"Result: { total} with mean {total.Mean} and variance {total.Variance}\n");
                     if (parent.Config.UseMeanOfDistributionForTravelTime)
                         newArrivalTime += distribution.Mean;
                 }
