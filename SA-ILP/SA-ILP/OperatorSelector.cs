@@ -36,9 +36,14 @@ namespace SA_ILP
         }
 
 
-        public void Add(Operator op, double weight, String label = "unnamed-operator")
+        public void Add(Operator op, double weight, String label = "unnamed-operator", int numRepeats = -1)
         {
-            operators.Add(op);
+            if (numRepeats == -1)
+                operators.Add(op);
+            else
+            {
+                operators.Add((x, y, z, w, v) => Operators.RepeatNTimes(numRepeats, op, x, y, z, w, v));
+            }
             weights.Add(weight);
             labels.Add(label);
 

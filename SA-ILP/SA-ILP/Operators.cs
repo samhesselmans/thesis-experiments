@@ -388,6 +388,26 @@ namespace SA_ILP
 
         }
 
+        public static (double, Action?) RepeatNTimes(int n, Operator op, List<Route> routes, List<int> viableRoutes, Random random, List<Customer> removed, LocalSearch ls)
+        {
+            double bestVale = double.MinValue;
+            Action? bestAction = null;
+
+            for (int i = 0; i < n; i++)
+            {
+                (double val, Action? act) = op(routes, viableRoutes, random, removed, ls);
+
+                if (val > bestVale)
+                {
+                    bestVale = val;
+                    bestAction = act;
+                }
+
+            }
+            return (bestVale, bestAction);
+        }
+
+
         public static (double, Action?) GreedilyMoveRandomCustomer(List<Route> routes, List<int> viableRoutes, Random random)
         {
             if (viableRoutes.Count == 0)
