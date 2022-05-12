@@ -372,7 +372,7 @@ namespace SA_ILP
                             SearchScores.Add((iteration, currentValue));
 
 
-                        if (currentValue < bestSolValue && removed.Count == 0 && IsValidSolution(routes, removed))
+                        if (Math.Round(currentValue,6) < Math.Round(bestSolValue,6) && removed.Count == 0 && IsValidSolution(routes, removed))
                         {
                             //New best solution found
                             bestSolValue = currentValue;
