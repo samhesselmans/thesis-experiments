@@ -59,10 +59,11 @@ namespace SA_ILP
         }
 
 
-        public static (double[,,],Gamma[,,]) CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput)
+        public static (double[,,],Gamma[,,],IContinuousDistribution[,,]) CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput)
         {
             double[,,] matrix = new double[customers.Count, customers.Count, numLoadLevels];
             Gamma[,,] distributionMatrix = new Gamma[customers.Count,customers.Count, numLoadLevels];
+            IContinuousDistribution[,,] approximationMatrix = new IContinuousDistribution[customers.Count, customers.Count, numLoadLevels];
             //List<(double, double, double)> plotData = new List<(double, double, double)>();
             Parallel.For(0, customers.Count, i =>
             {
@@ -88,6 +89,8 @@ namespace SA_ILP
 
                         matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput);
                         distributionMatrix[i, j, l] = CreateTravelTimeDistribution(loadLevelWeight, matrix[i, j, l]);
+                        approximationMatrix[i, j, l] = distributionMatrix[i, j, l]; //new Normal(distributionMatrix[i, j, l].Mean, distributionMatrix[i, j, l].StdDev);
+
                     }
                 }
 
@@ -127,7 +130,7 @@ namespace SA_ILP
                             w.WriteLine($"{matrix[i,j,l]};{distributionMatrix[i,j,l].Mean};{distributionMatrix[i, j, l].Mode}");
                     }
             Console.WriteLine($"{gam.Shape};{gam.Rate}");
-        return (matrix,distributionMatrix);
+        return (matrix,distributionMatrix,approximationMatrix);
         }
 
         public static (double[,] distances,List<Customer> customers) ParseVRPLTTInstance(string file)

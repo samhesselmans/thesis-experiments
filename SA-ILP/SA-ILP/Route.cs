@@ -46,6 +46,7 @@ namespace SA_ILP
         public List<IContinuousDistribution> customerDistributions;
         public double[,,] objective_matrix;
         public Gamma[,,] distributionMatrix;
+        public IContinuousDistribution[,,] distributionApproximationMatrix;
         public double startTime = 0;
 
         public int numLoadLevels;
@@ -97,7 +98,7 @@ namespace SA_ILP
         public long bestFitCacheHit = 0;
         public long bestFitCacheMiss = 0;
 #endif
-        public Route(Customer depot, double[,,] distanceMatrix, Gamma[,,] distributionMatrix, double maxCapacity, int seed, LocalSearch parent)
+        public Route(Customer depot, double[,,] distanceMatrix, Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix, double maxCapacity, int seed, LocalSearch parent)
         {
             this.route = new List<Customer>() { depot, depot };
             this.arrival_times = new List<double>() { 0, 0 };
@@ -116,6 +117,7 @@ namespace SA_ILP
             this.max_capacity = maxCapacity;
             random = new Random(seed);
             this.distributionMatrix = distributionMatrix;
+            this.distributionApproximationMatrix = approximationMatrix;
             //BestCustomerPos = new Dictionary<int,(int,double)>();
             ResetCache();
         }
@@ -136,7 +138,7 @@ namespace SA_ILP
         //            }
         //}
 
-        public Route(List<Customer> route, List<double> arrivalTimes, List<IContinuousDistribution> customerDistributions, double[,,] distanceMatrix, Gamma[,,] distributionMatrix, double usedCapcity, double maxCapacity, int seed, LocalSearch parent, double startTime)
+        public Route(List<Customer> route, List<double> arrivalTimes, List<IContinuousDistribution> customerDistributions, double[,,] distanceMatrix, Gamma[,,] distributionMatrix, IContinuousDistribution[,,] approximationMatrix, double usedCapcity, double maxCapacity, int seed, LocalSearch parent, double startTime)
         {
             this.route = route;
             this.arrival_times = arrivalTimes;
@@ -154,11 +156,12 @@ namespace SA_ILP
             this.startTime = startTime;
             random = new Random(seed);
             this.distributionMatrix = distributionMatrix;
+            this.distributionApproximationMatrix = approximationMatrix;
             //BestCustomerPos = new Dictionary<int, (int, double)>();
             ResetCache();
         }
 
-        public Route(List<Customer> customers, RouteStore routeStore, Customer depot, double[,,] distanceMatrix, Gamma[,,] distributionMatrix, double maxCapacity, LocalSearch parent)
+        public Route(List<Customer> customers, RouteStore routeStore, Customer depot, double[,,] distanceMatrix, Gamma[,,] distributionMatrix, IContinuousDistribution[,,] approximationMatrix, double maxCapacity, LocalSearch parent)
         {
             this.route = new List<Customer>() { depot, depot };
             this.arrival_times = new List<double>() { 0, 0 };
@@ -171,6 +174,7 @@ namespace SA_ILP
             //Create1DMAtrix();
             this.parent = parent;
             this.distributionMatrix = distributionMatrix;
+            this.distributionApproximationMatrix = approximationMatrix;
             this.time_done = 0;
             //this.lastCust = depot;
             used_capacity = 0;
@@ -299,9 +303,9 @@ namespace SA_ILP
 
         }
 
+        
 
-
-        private Gamma AddDistributions(Gamma left, Gamma right, double diffWithLowerTimeWindow = -1)
+        private Gamma AddGammaDistributions(Gamma left, Gamma right, double diffWithLowerTimeWindow = -1)
         {
             if (parent.Config.IgnoreWaitingDuringDistributionAddition)
                 return new Gamma(left.Shape + right.Shape, right.Rate);
@@ -354,7 +358,7 @@ namespace SA_ILP
                 return newDist;
 
             double factor = 1;
-            if(newDist.Shape > maxShape)
+            if (newDist.Shape > maxShape)
             {
                 factor = newDist.Shape / maxShape;
 
@@ -415,6 +419,30 @@ namespace SA_ILP
 
         }
 
+        private Normal AddNormalDistributions(Normal left, Normal right, double diffWithLowerTimeWindow)
+        {
+            if (parent.Config.IgnoreWaitingDuringDistributionAddition)
+                return new Normal(left.Mean + right.Mean, Math.Sqrt(left.Variance + right.Variance));
+
+            throw new NotImplementedException();
+        }
+
+
+        private IContinuousDistribution AddDistributions(IContinuousDistribution left, IContinuousDistribution right, double diffWithLowerTimeWindow = -1)
+        {
+
+            if (left.GetType() == typeof(Gamma))
+            {
+                return AddGammaDistributions((Gamma)left, (Gamma)right, diffWithLowerTimeWindow);
+            }
+            else if (left.GetType() == typeof(Normal))
+                return AddNormalDistributions((Normal)left, (Normal)right, diffWithLowerTimeWindow);
+
+            throw new NotImplementedException("Unsupported distribution");
+
+
+        }
+
         public double CalcObjective()
         {
             //var total_dist = 0.0;
@@ -440,10 +468,10 @@ namespace SA_ILP
             double arrivalTime = startTime;
 
             //TODO: rate halen uit distributies
-            Gamma total = new Gamma(0, 10);
+            IContinuousDistribution total = new Gamma(0, 10);
             for (int i = 0; i < route.Count - 1; i++)
             {
-                (double dist, Gamma distribution) = this.CustomerDist(route[i], route[i + 1], totalWeight);
+                (double dist, IContinuousDistribution distribution) = this.CustomerDist(route[i], route[i + 1], totalWeight);
                 
                 totalObjectiveValue += dist;
                 arrivalTime += dist + route[i].ServiceTime;
@@ -483,7 +511,7 @@ namespace SA_ILP
             return totalObjectiveValue;
         }
 
-        public (double, Gamma) CustomerDist(Customer start, Customer finish, double weight)
+        public (double deterministicDistance, IContinuousDistribution dist) CustomerDist(Customer start, Customer finish, double weight,bool provide_actualDistribution=false)
         {
             int loadLevel = (int)((Math.Max(0, weight - 0.000001) / max_capacity) * numLoadLevels);
 
@@ -495,7 +523,10 @@ namespace SA_ILP
             //var val2 = objeciveMatrix1d[cust1.Id + cust2.Id * numX + loadLevel * numX * numY];
             //if (val != val2)
             //    Console.WriteLine("wops");
-            return (val, distributionMatrix[start.Id, finish.Id, loadLevel]);
+            if (provide_actualDistribution)
+                return (val, distributionMatrix[start.Id, finish.Id, loadLevel]);
+            else
+                return (val, distributionApproximationMatrix[start.Id, finish.Id, loadLevel]);
         }
 
         public void ResetCache()
@@ -521,14 +552,14 @@ namespace SA_ILP
             double load = used_capacity;
             arrival_times[0] = newArriveTime;
 
-            Gamma total = new Gamma(0, 10);
+            IContinuousDistribution total = new Gamma(0, 10);
 
             for (int i = 1, actualIndex = 1; i < route.Count; i++, actualIndex++)
             {
                 var c = route[i];
                 if (c.Id != cust.Id)
                 {
-                    (var dist, var distribution) = CustomerDist(previous_cust, c, load);
+                    (var dist, IContinuousDistribution distribution) = CustomerDist(previous_cust, c, load);
                     
                     load -= c.Demand;
                     newArriveTime += dist;
@@ -590,7 +621,7 @@ namespace SA_ILP
             double objectiveValue = 0;
 
             //TODO: Get paramter from actual distributions
-            Gamma total = new Gamma(0, 10);
+            IContinuousDistribution total = new Gamma(0, 10);
 
             for (int i = 0; i < route.Count - 1; i++)
             {
@@ -630,7 +661,7 @@ namespace SA_ILP
                         arrival_time = currentCust.TWStart;
                     }
                 }
-                (var dist, var distribution) = CustomerDist(currentCust, nextCust, load);
+                (var dist, IContinuousDistribution distribution) = CustomerDist(currentCust, nextCust, load);
                 
 
                 load -= nextCust.Demand;
@@ -657,6 +688,10 @@ namespace SA_ILP
 
             return (true, objectiveValue - this.Score);
         }
+
+
+        //private void GeneralRouteWalk(double startWeight,Func<double,int,(Customer,Customer,double,int)> CustomerSelector)
+
 
         public (bool possible, bool possibleInLaterPosition, double objectiveIncrease) CustPossibleAtPos(Customer cust, int pos, int skip = 0, int ignore = -1)
         {
@@ -692,7 +727,7 @@ namespace SA_ILP
             }
 
             //int actualIndex = 0;
-            Gamma total = new Gamma(0, 10);
+            IContinuousDistribution total = new Gamma(0, 10);
             double arrivalTime = OptimizeStartTime(route, load, toAdd: cust, pos: pos, skip: skip, ignore: ignore);
             for (int i = 0, actualIndex = 0; i < route.Count; i++, actualIndex++)
             {
@@ -732,7 +767,7 @@ namespace SA_ILP
                     }
 
                     load -= cust.Demand;
-                    (var time, var distribution) = CustomerDist(cust, route[i + skip], load);
+                    (var time, IContinuousDistribution distribution) = CustomerDist(cust, route[i + skip], load);
 
 
                     totalObjectiveValue += time;
@@ -796,7 +831,7 @@ namespace SA_ILP
                 if (i != route.Count - 1)
                 {
                     double time;
-                    Gamma distribution;
+                    //Gamma distribution;
                     Customer nextCust;
                     //If the current customer is the customer before the potential position of the new customer update the time accordingly
                     if (i == pos - 1)
@@ -809,7 +844,7 @@ namespace SA_ILP
                         nextCust = route[i + 1];
                     //(time, distribution) = CustomerDist(route[i], route[i + 1], load);
 
-                    (time, distribution) = CustomerDist(route[i], nextCust, load);
+                    (time, IContinuousDistribution distribution) = CustomerDist(route[i], nextCust, load);
 
                     totalObjectiveValue += time;
                     arrivalTime += time + route[i].ServiceTime;
@@ -923,7 +958,7 @@ namespace SA_ILP
                     if (toAdd.TWEnd - val < startTimeUpperBound)
                         startTimeUpperBound = toAdd.TWEnd - val;
                     l -= toAdd.Demand;
-                    (var dist, var distribution) = CustomerDist(toAdd, currentCust, l);
+                    (var dist, IContinuousDistribution distribution) = CustomerDist(toAdd, currentCust, l);
                     val += dist + toAdd.ServiceTime;
 
                     if (parent.Config.UseMeanOfDistributionForTravelTime)
@@ -964,7 +999,7 @@ namespace SA_ILP
                         nextCust = toOptimizeOver[swapIndex1];
                     else if (i >= reverseIndex1 - 1 && i < reverseIndex2)
                         nextCust = toOptimizeOver[reverseIndex2 - i + reverseIndex1 - 1];
-                    (var dist, var distribution) = CustomerDist(currentCust, nextCust, l);
+                    (var dist, IContinuousDistribution distribution) = CustomerDist(currentCust, nextCust, l);
                     val += dist + currentCust.ServiceTime;
 
                     if (parent.Config.UseMeanOfDistributionForTravelTime)
@@ -1011,10 +1046,10 @@ namespace SA_ILP
             //Adding the arrival time for the depot. This is used for setting the start time of the route.
             newArrivalTimes.Add(arrivalTime);
             newDistributions.Add(null);
-            Gamma total = new Gamma(0, 10);
+            IContinuousDistribution total = new Gamma(0, 10);
             for (int i = 0; i < newRoute.Count - 1; i++)
             {
-                (var dist, var distribution) = CustomerDist(newRoute[i], newRoute[i + 1], load);
+                (var dist, IContinuousDistribution distribution) = CustomerDist(newRoute[i], newRoute[i + 1], load);
                 
                 arrivalTime += dist + newRoute[i].ServiceTime;
                 total = AddDistributions(total, distribution, newRoute[i + 1].TWStart - arrivalTime);
@@ -1091,7 +1126,7 @@ namespace SA_ILP
             //int[] newArrivalTimes = new int[arrival_times.Count];
             List<double> newArrivalTimes = new List<double>(route.Count) { arrival_time };
             List<IContinuousDistribution> newDistributions = new List<IContinuousDistribution>(route.Count) { null };
-            Gamma total = new Gamma(0, 10);
+            IContinuousDistribution total = new Gamma(0, 10);
             //Check if the action would be possible and calculate the new objective score
             for (int i = 0; i < route.Count - 1; i++)
             {
@@ -1124,7 +1159,7 @@ namespace SA_ILP
 
 
                 //Travel time to new customer
-                (double dist, Gamma distribution) = CustomerDist(currentCust, nextCust, load);
+                (double dist, IContinuousDistribution distribution) = CustomerDist(currentCust, nextCust, load);
                 
 
 
@@ -1192,7 +1227,7 @@ namespace SA_ILP
             double newObjectiveValue = 0;
             double load = used_capacity - route[i].Demand;
             double arrival_time = OptimizeStartTime(route, load, toRemove: route[i]);
-            Gamma total = new Gamma(0, 10);
+            IContinuousDistribution total = new Gamma(0, 10);
             for (int j = 0, actualIndex = 0; j < route.Count - 1; j++, actualIndex++)
             {
                 double time;
@@ -1215,7 +1250,7 @@ namespace SA_ILP
                     nextCust = route[j + 1];
 
 
-                (var cost, var distribution) = CustomerDist(route[j], nextCust, load);
+                (var cost, IContinuousDistribution distribution) = CustomerDist(route[j], nextCust, load);
                 
 
                 newObjectiveValue += cost;
@@ -1274,17 +1309,6 @@ namespace SA_ILP
 
         public override int GetHashCode()
         {
-            //unchecked
-            //{
-            //    int hash = 19;
-            //    foreach (var foo in Route)
-            //    {
-            //        hash = hash * 31 + foo.GetHashCode();
-            //    }
-            //    return hash;
-            //}
-
-
             //return Route.Sum();
             int total = 0;
             for (int i = 0; i < route.Count; i++)
@@ -1312,9 +1336,9 @@ namespace SA_ILP
             double newArrivalTime = OptimizeStartTime(route, used_capacity, toAdd: cust, pos: pos);
             startTime = newArrivalTime;
 
-            Gamma total = new Gamma(0, 10);
+            IContinuousDistribution total = new Gamma(0, 10);
 
-            Gamma? newCustDistribution = null;
+            IContinuousDistribution? newCustDistribution = null;
             for (int i = 0, actualIndex = 0; i < route.Count; i++, actualIndex++)
             {
                 if (i == pos)
@@ -1341,7 +1365,7 @@ namespace SA_ILP
                     newCustDistribution = total;
                     load -= cust.Demand;
 
-                    (double dist, Gamma distribution) = CustomerDist(cust, route[i], load);
+                    (double dist, IContinuousDistribution distribution) = CustomerDist(cust, route[i], load);
                     
                     newArrivalTime += dist + cust.ServiceTime;
                     total = AddDistributions(total, distribution,route[i].TWStart - newArrivalTime);
@@ -1393,7 +1417,7 @@ namespace SA_ILP
                     else
                         //time = CustomerDist(route[i], route[i + 1], load).Item1;
                         nextCust = route[i + 1];
-                    (double dist, Gamma distribution) = CustomerDist(route[i], nextCust, load);
+                    (double dist, IContinuousDistribution distribution) = CustomerDist(route[i], nextCust, load);
                     //Console.WriteLine($"Checking between {route[i]} and {nextCust}");
                     newArrivalTime += dist + route[i].ServiceTime;
                     total = AddDistributions(total, distribution,nextCust.TWStart - newArrivalTime);
@@ -1438,7 +1462,7 @@ namespace SA_ILP
             bool failed = false;
             double usedCapacity = 0;
             double load = route.Sum(x => x.Demand);
-            Gamma total = new Gamma(0, 10);
+            IContinuousDistribution total = new Gamma(0, 10);
             if (load > max_capacity)
             {
                 failed = true;
@@ -1448,7 +1472,7 @@ namespace SA_ILP
 
             for (int i = 0; i < route.Count - 1; i++)
             {
-                (double dist, Gamma distribution) = CustomerDist(route[i], route[i + 1], load);
+                (double dist, IContinuousDistribution distribution) = CustomerDist(route[i], route[i + 1], load);
                 arrivalTime += dist + route[i].ServiceTime;
 
                 if (parent.Config.UseMeanOfDistributionForTravelTime)
@@ -1506,7 +1530,7 @@ namespace SA_ILP
 
         public Route CreateDeepCopy()
         {
-            return new Route(route.ConvertAll(i => i), arrival_times.ConvertAll(i => i), customerDistributions.ConvertAll(i => i), objective_matrix, distributionMatrix, used_capacity, max_capacity, random.Next(), this.parent, startTime);
+            return new Route(route.ConvertAll(i => i), arrival_times.ConvertAll(i => i), customerDistributions.ConvertAll(i => i), objective_matrix, distributionMatrix,distributionApproximationMatrix, used_capacity, max_capacity, random.Next(), this.parent, startTime);
         }
 
         public List<int> CreateIdList()

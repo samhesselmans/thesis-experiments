@@ -127,7 +127,7 @@ namespace SA_ILP
                 config.UseMeanOfDistributionForTravelTime = false;
                 config.UseMeanOfDistributionForScore = false;
 
-                config.IgnoreWaitingDuringDistributionAddition = false;
+                config.IgnoreWaitingDuringDistributionAddition = true;
                 config.AdjustEarlyArrivalToTWStart = false;
 
                 return config; } }
