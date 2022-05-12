@@ -89,8 +89,8 @@ namespace SA_ILP
 
                         matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput);
                         distributionMatrix[i, j, l] = CreateTravelTimeDistribution(loadLevelWeight, matrix[i, j, l]);
-                        approximationMatrix[i, j, l] = distributionMatrix[i, j, l]; //new Normal(distributionMatrix[i, j, l].Mean, distributionMatrix[i, j, l].StdDev);
-
+                        approximationMatrix[i, j, l] = new Normal(distributionMatrix[i, j, l].Mean, distributionMatrix[i, j, l].StdDev); // //
+                        //approximationMatrix[i, j, l] = distributionMatrix[i, j, l];
                     }
                 }
 

@@ -320,7 +320,7 @@ namespace SA_ILP
                             SearchScores.Add((iteration, currentValue));
 
 
-                        if (currentValue < bestSolValue && removed.Count == 0 && IsValidSolution(routes, removed))
+                        if (Math.Round(currentValue,6) < Math.Round(bestSolValue,6) && removed.Count == 0 && IsValidSolution(routes, removed))
                         {
                             //New best solution found
                             bestSolValue = currentValue;
@@ -432,7 +432,10 @@ namespace SA_ILP
                     double itsPerSecond = (iteration - previousUpdateIteration) / ((double)elapsed / 1000);
                     previousUpdateIteration = iteration;
                     int cnt = routes.Count(x => x.route.Count > 2);
-                    Console.WriteLine($"{id}: T: {Temperature.ToString("0.000")}, S: {Solver.CalcTotalDistance(routes, removed, this).ToString("0.000")}, TS: {currentValue.ToString("0.000")}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeExceptedOnIt}, B: {bestSolValue.ToString("0.000")}, BI: {bestImprovedIteration}, IT/s: {itsPerSecond.ToString("0.00")}/s");
+                    Console.WriteLine($"{id}: T: {Temperature.ToString("0.000")}, S: {Solver.CalcTotalDistance(routes, removed, this).ToString("0.000")}, TS: {currentValue.ToString("0.000")}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeExceptedOnIt}, B: {bestSolValue},{Solver.CalcTotalDistance(BestSolution,BestSolutionRemoved,this)}, BI: {bestImprovedIteration}, IT/s: {itsPerSecond.ToString("0.00")}/s");
+                    //foreach (var rout in BestSolution)
+                    //    if(rout.route.Count > 2)
+                    //    Console.WriteLine(rout);
                 }
             }
 

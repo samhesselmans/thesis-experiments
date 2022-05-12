@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MathNet.Numerics.Distributions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -52,6 +53,8 @@ namespace SA_ILP
 
         public bool UseMeanOfDistributionForScore { get; set; }
         public bool IgnoreWaitingDuringDistributionAddition { get; set; }
+
+        public IContinuousDistribution DefaultDistribution { get; set; }
         public override string ToString()
         {
             LocalSearchConfiguration obj = this;
@@ -113,12 +116,14 @@ namespace SA_ILP
 
         public static LocalSearchConfiguration VRPSLTT { get { 
                 var config = VRPLTT; 
-                config.ExpectedEarlinessPenalty = 0;
+                config.ExpectedEarlinessPenalty = 10;
                 config.ExpectedLatenessPenalty = 10;
-                config.AdjustDeterministicEarlyArrivalToTWStart = false;
-                config.AllowEarlyArrival = true;
-                config.PenalizeEarlyArrival = false;
-                config.CheckOperatorScores = false;
+                
+                config.AllowEarlyArrival = false;
+                config.PenalizeEarlyArrival = true;
+
+
+                config.CheckOperatorScores = true;
                 config.SaveRoutesBeforeOperator = false;
                 config.ScaleEarlinessPenaltyWithTemperature = true;
                 config.ScaleLatenessPenaltyWithTemperature = true;
@@ -128,8 +133,16 @@ namespace SA_ILP
                 config.UseMeanOfDistributionForScore = false;
 
                 config.IgnoreWaitingDuringDistributionAddition = true;
+
+
+                config.AdjustDeterministicEarlyArrivalToTWStart = false;
                 config.AdjustEarlyArrivalToTWStart = false;
 
+
+                //config.DefaultDistribution = new Gamma(0, 10);//new Normal(0, 0);
+                config.DefaultDistribution = new Normal(0, 0);
+                
+                
                 return config; } }
 
 

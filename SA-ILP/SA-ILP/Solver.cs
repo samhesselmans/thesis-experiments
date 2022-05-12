@@ -270,7 +270,7 @@ namespace SA_ILP
                             }
                         }
                     }
-                    Console.WriteLine($"On time performance: {avg / total} worst: {worst} at {worstCust} at {worstIndex}");
+                    Console.WriteLine($"{route}: On time performance: {avg / total} worst: {worst} at {worstCust} at {worstIndex}");
                     
                     var res = route.Simulate(1000000);
                     totalDist += res.AverageTravelTime;

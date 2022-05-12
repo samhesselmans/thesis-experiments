@@ -230,14 +230,25 @@ namespace SA_ILP
             //double onTimeP = 1 - (dist.CumulativeDistribution(cust.TWEnd - minArrrivalTime) - dist.CumulativeDistribution(cust.TWStart - minArrrivalTime));
             //Console.WriteLine($"Called {cust.TWStart - minArrrivalTime} for dist {dist}");
             double toLateP = 1;
+            double cutOff =  dist.CumulativeDistribution(0);
             if (cust.TWEnd - minArrrivalTime >= 0)
-                toLateP = 1 - dist.CumulativeDistribution(cust.TWEnd - minArrrivalTime);
+                if (cutOff < 1)
+                    toLateP = (1 - dist.CumulativeDistribution(cust.TWEnd - minArrrivalTime)) / (1 - cutOff);
+                else
+                    toLateP = 0;
+
             double toEarlyP = 0;
             if (cust.TWStart - minArrrivalTime >= 0)
-                toEarlyP = dist.CumulativeDistribution(cust.TWStart - minArrrivalTime);
+                if (cutOff < 1)
+                    toEarlyP = (dist.CumulativeDistribution(cust.TWStart - minArrrivalTime) - cutOff) / (1 - cutOff);
+                else
+                    toEarlyP = 1;
 
             if (Double.IsNaN(toLateP))
                 toLateP = 0;
+
+            if (Double.IsNaN(toEarlyP) && dist.Mean == cust.TWStart - minArrrivalTime && dist.StdDev == 0)
+                toEarlyP = 0;
 
             double res = toLateP * parent.Config.ExpectedLatenessPenalty + toEarlyP * parent.Config.ExpectedEarlinessPenalty;
 
@@ -261,7 +272,7 @@ namespace SA_ILP
                 double arrivalTime = startTime;
                 for (int i = 0; i < route.Count - 1; i++)
                 {
-                    (double dist, IContinuousDistribution distribution) = CustomerDist(route[i], route[i + 1],load);
+                    (double dist, IContinuousDistribution distribution) = CustomerDist(route[i], route[i + 1],load,true);
                     load -= route[i + 1].Demand;
 
                     double tt = dist + distribution.Sample();
@@ -421,10 +432,35 @@ namespace SA_ILP
 
         private Normal AddNormalDistributions(Normal left, Normal right, double diffWithLowerTimeWindow)
         {
-            if (parent.Config.IgnoreWaitingDuringDistributionAddition)
-                return new Normal(left.Mean + right.Mean, Math.Sqrt(left.Variance + right.Variance));
 
-            throw new NotImplementedException();
+            var dist = new Normal(left.Mean + right.Mean, Math.Sqrt(left.Variance + right.Variance));
+            if (parent.Config.IgnoreWaitingDuringDistributionAddition || diffWithLowerTimeWindow < 0)
+                return dist;
+
+            var standardNormal = new Normal(0, 1);
+
+
+
+
+            //double theta = Math.Sqrt();
+            double expected = dist.Mean * standardNormal.CumulativeDistribution((dist.Mean - diffWithLowerTimeWindow) / dist.StdDev)
+                            + diffWithLowerTimeWindow * standardNormal.CumulativeDistribution((diffWithLowerTimeWindow - dist.Mean) / dist.StdDev)
+                            + dist.StdDev * standardNormal.Density((dist.Mean - diffWithLowerTimeWindow) / dist.StdDev);
+
+            double expectedSquared =  (dist.Variance + Math.Pow(dist.Mean,2)) * standardNormal.CumulativeDistribution((dist.Mean - diffWithLowerTimeWindow) / dist.StdDev)
+                                    + Math.Pow(diffWithLowerTimeWindow ,2)* standardNormal.CumulativeDistribution((diffWithLowerTimeWindow - dist.Mean) / dist.StdDev)
+                                    + (dist.Mean + diffWithLowerTimeWindow) * dist.StdDev * standardNormal.Density((dist.Mean - diffWithLowerTimeWindow) / dist.StdDev);
+
+            double newVariance = expectedSquared - Math.Pow(expected, 2);
+
+            //TEMP
+            if (newVariance < 0)
+                newVariance = 0;
+
+
+            return new Normal(expected, Math.Sqrt(newVariance));
+
+            //throw new NotImplementedException();
         }
 
 
@@ -468,7 +504,7 @@ namespace SA_ILP
             double arrivalTime = startTime;
 
             //TODO: rate halen uit distributies
-            IContinuousDistribution total = new Gamma(0, 10);
+            IContinuousDistribution total = parent.Config.DefaultDistribution;
             for (int i = 0; i < route.Count - 1; i++)
             {
                 (double dist, IContinuousDistribution distribution) = this.CustomerDist(route[i], route[i + 1], totalWeight);
@@ -552,7 +588,7 @@ namespace SA_ILP
             double load = used_capacity;
             arrival_times[0] = newArriveTime;
 
-            IContinuousDistribution total = new Gamma(0, 10);
+            IContinuousDistribution total = parent.Config.DefaultDistribution;
 
             for (int i = 1, actualIndex = 1; i < route.Count; i++, actualIndex++)
             {
@@ -621,7 +657,7 @@ namespace SA_ILP
             double objectiveValue = 0;
 
             //TODO: Get paramter from actual distributions
-            IContinuousDistribution total = new Gamma(0, 10);
+            IContinuousDistribution total = parent.Config.DefaultDistribution;
 
             for (int i = 0; i < route.Count - 1; i++)
             {
@@ -727,7 +763,7 @@ namespace SA_ILP
             }
 
             //int actualIndex = 0;
-            IContinuousDistribution total = new Gamma(0, 10);
+            IContinuousDistribution total = parent.Config.DefaultDistribution;
             double arrivalTime = OptimizeStartTime(route, load, toAdd: cust, pos: pos, skip: skip, ignore: ignore);
             for (int i = 0, actualIndex = 0; i < route.Count; i++, actualIndex++)
             {
@@ -1046,7 +1082,7 @@ namespace SA_ILP
             //Adding the arrival time for the depot. This is used for setting the start time of the route.
             newArrivalTimes.Add(arrivalTime);
             newDistributions.Add(null);
-            IContinuousDistribution total = new Gamma(0, 10);
+            IContinuousDistribution total = parent.Config.DefaultDistribution;
             for (int i = 0; i < newRoute.Count - 1; i++)
             {
                 (var dist, IContinuousDistribution distribution) = CustomerDist(newRoute[i], newRoute[i + 1], load);
@@ -1126,7 +1162,7 @@ namespace SA_ILP
             //int[] newArrivalTimes = new int[arrival_times.Count];
             List<double> newArrivalTimes = new List<double>(route.Count) { arrival_time };
             List<IContinuousDistribution> newDistributions = new List<IContinuousDistribution>(route.Count) { null };
-            IContinuousDistribution total = new Gamma(0, 10);
+            IContinuousDistribution total = parent.Config.DefaultDistribution;
             //Check if the action would be possible and calculate the new objective score
             for (int i = 0; i < route.Count - 1; i++)
             {
@@ -1227,7 +1263,7 @@ namespace SA_ILP
             double newObjectiveValue = 0;
             double load = used_capacity - route[i].Demand;
             double arrival_time = OptimizeStartTime(route, load, toRemove: route[i]);
-            IContinuousDistribution total = new Gamma(0, 10);
+            IContinuousDistribution total = parent.Config.DefaultDistribution;
             for (int j = 0, actualIndex = 0; j < route.Count - 1; j++, actualIndex++)
             {
                 double time;
@@ -1336,7 +1372,7 @@ namespace SA_ILP
             double newArrivalTime = OptimizeStartTime(route, used_capacity, toAdd: cust, pos: pos);
             startTime = newArrivalTime;
 
-            IContinuousDistribution total = new Gamma(0, 10);
+            IContinuousDistribution total = parent.Config.DefaultDistribution;
 
             IContinuousDistribution? newCustDistribution = null;
             for (int i = 0, actualIndex = 0; i < route.Count; i++, actualIndex++)
@@ -1462,7 +1498,7 @@ namespace SA_ILP
             bool failed = false;
             double usedCapacity = 0;
             double load = route.Sum(x => x.Demand);
-            IContinuousDistribution total = new Gamma(0, 10);
+            IContinuousDistribution total = parent.Config.DefaultDistribution;
             if (load > max_capacity)
             {
                 failed = true;
