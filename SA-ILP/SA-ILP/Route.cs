@@ -224,7 +224,7 @@ namespace SA_ILP
         public double CalculateUncertaintyPenaltyTerm(IContinuousDistribution dist, Customer cust, double minArrrivalTime)
         {
             //double onTimeP = 1 - (dist.CumulativeDistribution(cust.TWEnd - minArrrivalTime) - dist.CumulativeDistribution(cust.TWStart - minArrrivalTime));
-
+            //Console.WriteLine($"Called {cust.TWStart - minArrrivalTime} for dist {dist}");
             double toLateP = 1;
             if (cust.TWEnd - minArrrivalTime >= 0)
                 toLateP = 1 - dist.CumulativeDistribution(cust.TWEnd - minArrrivalTime);
@@ -306,6 +306,11 @@ namespace SA_ILP
             if (parent.Config.IgnoreWaitingDuringDistributionAddition)
                 return new Gamma(left.Shape + right.Shape, right.Rate);
 
+            const double maxShape = 167;
+
+
+            //if (left.Shape == 0 || left.Rate == 0)
+            //    Console.WriteLine("Wut");
 
             //First add the two distributions
             Gamma? newDist = null;
@@ -331,6 +336,14 @@ namespace SA_ILP
                 double newAlpha = Math.Pow(mu, 2) / betaSquared;
                 double newBeta = betaSquared / mu;
 
+                //if (newAlpha > maxShape)
+                //{
+                //    double factor = newAlpha / maxShape;
+
+                //    newAlpha = newAlpha / factor;
+                //    newBeta = newBeta * factor;
+                //}
+
                 newDist = new Gamma(newAlpha, 1 / newBeta);
 
             }
@@ -339,6 +352,14 @@ namespace SA_ILP
             //If the deterministic arrival time is later than the lower timewindow we do not need to use the approximation of the max between a constant and a distribution
             if (diffWithLowerTimeWindow <= 0)
                 return newDist;
+
+            double factor = 1;
+            if(newDist.Shape > maxShape)
+            {
+                factor = newDist.Shape / maxShape;
+
+                newDist = new Gamma(newDist.Shape / factor, newDist.Rate * factor);
+            }
 
             //double Pc = newDist.CumulativeDistribution(diffWithLowerTimeWindow);
             double expected = diffWithLowerTimeWindow - diffWithLowerTimeWindow * SpecialFunctions.GammaUpperIncomplete(newDist.Shape, diffWithLowerTimeWindow / newDist.Scale) / SpecialFunctions.Gamma(newDist.Shape) + newDist.Scale * SpecialFunctions.GammaUpperIncomplete(newDist.Shape + 1, diffWithLowerTimeWindow / newDist.Scale) / SpecialFunctions.Gamma(newDist.Shape);
@@ -354,17 +375,17 @@ namespace SA_ILP
             double variance = expectedSquared - Math.Pow(expected, 2);
 
 
-            if (newDist.CumulativeDistribution(diffWithLowerTimeWindow) >= 0.95 && (Double.IsNaN(expected) || double.IsNaN(expectedSquared)))
-            {
-                expected = diffWithLowerTimeWindow;
-                variance = 1e-10;
-            }
+            //if (newDist.CumulativeDistribution(diffWithLowerTimeWindow) >= 0.99 && (Double.IsNaN(expected) || double.IsNaN(expectedSquared)))
+            //{
+            //    expected = diffWithLowerTimeWindow;
+            //    variance = 1e-10;
+            //}
 
 
-            if (newDist.CumulativeDistribution(diffWithLowerTimeWindow) < 1e-20 && (Double.IsNaN(expected) || double.IsNaN(expectedSquared)))
-            {
-                return newDist;
-            }
+            //if (newDist.CumulativeDistribution(diffWithLowerTimeWindow) < 1e-5 && (Double.IsNaN(expected) || double.IsNaN(expectedSquared)))
+            //{
+            //    return newDist;
+            //}
 
 
             if (variance <= 0)
@@ -372,6 +393,18 @@ namespace SA_ILP
 
             double finalAlpha = Math.Pow(expected, 2) / variance;
             double finalBeta = variance / expected;
+
+
+            //finalAlpha = finalAlpha * factor;
+            //finalBeta = finalBeta/factor;
+
+            //if(finalAlpha > maxShape)
+            //{
+            //    double factor = finalAlpha / maxShape;
+
+            //    finalAlpha = finalAlpha / factor;
+            //    finalBeta = finalBeta * factor;
+            //}
 
 
             if (double.IsInfinity(finalBeta) || double.IsInfinity(finalAlpha))
@@ -1312,6 +1345,10 @@ namespace SA_ILP
                     
                     newArrivalTime += dist + cust.ServiceTime;
                     total = AddDistributions(total, distribution,route[i].TWStart - newArrivalTime);
+
+
+
+
                     if (parent.Config.UseMeanOfDistributionForTravelTime)
                         newArrivalTime += distribution.Mean;
 
