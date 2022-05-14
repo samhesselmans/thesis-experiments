@@ -94,8 +94,8 @@ namespace SA_ILP
             random = new Random(seed);
             var os = new OperatorSelector(random);
 
-            os.Add(Operators.AddRandomRemovedCustomer, 1, "add",4); //repeated 1 time
-            os.Add(Operators.RemoveRandomCustomer, 1, "remove",4); //repeated 1 time
+            os.Add(Operators.AddRandomRemovedCustomer, 1, "add",1); //repeated 1 time
+            os.Add(Operators.RemoveRandomCustomer, 1, "remove",1); //repeated 1 time
             os.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move",4); //repeated 1 time
             os.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best"); //repeated 1 time
             os.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route",1); //repeated 4 times
