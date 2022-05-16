@@ -531,7 +531,7 @@ namespace SA_ILP
                         if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                             arrivalTime = route[i + 1].TWStart;
                     }
-                    else
+                    else if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                     {
                         arrivalTime = route[i + 1].TWStart;
                     }
@@ -611,7 +611,7 @@ namespace SA_ILP
                             if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                                 newArriveTime = c.TWStart;
                         }
-                        else
+                        else if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                         {
                             startTime = c.TWStart - newArriveTime;
                             arrival_times[0] = startTime;
@@ -692,7 +692,7 @@ namespace SA_ILP
                         if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                             arrival_time = currentCust.TWStart;
                     }
-                    else
+                    else if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                     {
                         arrival_time = currentCust.TWStart;
                     }
@@ -791,7 +791,7 @@ namespace SA_ILP
                             if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                                 arrivalTime = cust.TWStart;
                         }
-                        else
+                        else if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                         {
                             arrivalTime = cust.TWStart;
                         }
@@ -856,7 +856,7 @@ namespace SA_ILP
                         if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                             arrivalTime = route[i].TWStart;
                     }
-                    else
+                    else if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                     {
                         arrivalTime = route[i].TWStart;
                     }
@@ -1111,7 +1111,7 @@ namespace SA_ILP
                         else
                             return (false, double.MinValue, newArrivalTimes, newDistributions, false, false);
                     }
-                    else
+                    else if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                     {
                         newArrivalTimes[0] = newRoute[i + 1].TWStart - arrivalTime;
                         arrivalTime = newRoute[i + 1].TWStart;
@@ -1222,7 +1222,7 @@ namespace SA_ILP
                             arrival_time = nextCust.TWStart;
                         violatesLowerTimeWindow = true;
                     }
-                    else
+                    else if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                     {
                         newArrivalTimes[0] = nextCust.TWStart - arrival_time;
                         arrival_time = nextCust.TWStart;
@@ -1314,7 +1314,7 @@ namespace SA_ILP
                         if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                             arrival_time = nextCust.TWStart;
                     }
-                    else
+                    else if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                     {
                         arrival_time = nextCust.TWStart;
                     }
@@ -1387,7 +1387,7 @@ namespace SA_ILP
                                 newArrivalTime = cust.TWStart;
                             ViolatesLowerTimeWindow = true;
                         }
-                        else
+                        else if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                         {
                             this.startTime = cust.TWStart - newArrivalTime;
                             arrival_times[0] = startTime;
@@ -1429,7 +1429,7 @@ namespace SA_ILP
                             newArrivalTime = route[i].TWStart;
                         ViolatesLowerTimeWindow = true;
                     }
-                    else
+                    else if (parent.Config.AdjustDeterministicEarlyArrivalToTWStart)
                     {
                         startTime = route[i].TWStart - newArrivalTime;
                         arrival_times[0] = startTime;

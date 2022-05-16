@@ -123,8 +123,8 @@ namespace SA_ILP
                 config.PenalizeEarlyArrival = false;
 
 
-                config.CheckOperatorScores = true;
-                config.SaveRoutesBeforeOperator = true;
+                config.CheckOperatorScores = false;
+                config.SaveRoutesBeforeOperator = false;
                 config.ScaleEarlinessPenaltyWithTemperature = true;
                 config.ScaleLatenessPenaltyWithTemperature = true;
 
