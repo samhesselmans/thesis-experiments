@@ -116,15 +116,15 @@ namespace SA_ILP
 
         public static LocalSearchConfiguration VRPSLTT { get { 
                 var config = VRPLTT; 
-                config.ExpectedEarlinessPenalty = 10;
+                config.ExpectedEarlinessPenalty = 0;
                 config.ExpectedLatenessPenalty = 10;
                 
-                config.AllowEarlyArrival = false;
-                config.PenalizeEarlyArrival = true;
+                config.AllowEarlyArrival = true;
+                config.PenalizeEarlyArrival = false;
 
 
                 config.CheckOperatorScores = true;
-                config.SaveRoutesBeforeOperator = false;
+                config.SaveRoutesBeforeOperator = true;
                 config.ScaleEarlinessPenaltyWithTemperature = true;
                 config.ScaleLatenessPenaltyWithTemperature = true;
 
@@ -132,11 +132,11 @@ namespace SA_ILP
                 config.UseMeanOfDistributionForTravelTime = false;
                 config.UseMeanOfDistributionForScore = false;
 
-                config.IgnoreWaitingDuringDistributionAddition = true;
+                config.IgnoreWaitingDuringDistributionAddition = false;
 
 
                 config.AdjustDeterministicEarlyArrivalToTWStart = false;
-                config.AdjustEarlyArrivalToTWStart = false;
+                config.AdjustEarlyArrivalToTWStart = true;
 
 
                 //config.DefaultDistribution = new Gamma(0, 10);//new Normal(0, 0);
