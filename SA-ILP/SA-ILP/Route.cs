@@ -21,9 +21,12 @@ namespace SA_ILP
 
         public double[] CustomerOnTimePercentage { get; private set; }
 
-        public RouteSimmulationResult(double totalTravelTime,int numSimmulations, int totalSimmulations, int totalToEarly, int totalToLate,int[] customerToLate,int[] customerToEarly)
+        public double AverageWaitingTime { get;private set; }
+
+        public RouteSimmulationResult(double totalTravelTime,int numSimmulations, int totalSimmulations, int totalToEarly, int totalToLate,int[] customerToLate,int[] customerToEarly,double totalWaitingTime)
         {
             AverageTravelTime = totalTravelTime / numSimmulations;
+            AverageWaitingTime = totalWaitingTime / numSimmulations;
             TotalSimmulations = totalSimmulations;
             TotalToEarly = totalToEarly;
             TotalToLate = totalToLate;
@@ -264,6 +267,7 @@ namespace SA_ILP
             int toLate = 0;
             int toEarly = 0;
             double totalTravelTime = 0;
+            double totalWaitingTime = 0;
             int[] toLateCount = new int[route.Count];
             int[] toEarlyCount = new int[route.Count];
             for (int x = 0; x < numSimulations; x++)
@@ -297,7 +301,12 @@ namespace SA_ILP
                         }
 
                         if (parent.Config.AdjustEarlyArrivalToTWStart)
+                        {
+                            
+                            totalWaitingTime += route[i + 1].TWStart - arrivalTime;
                             arrivalTime = route[i + 1].TWStart;
+
+                        }
 
                     }
                     timesTotal++;
@@ -310,7 +319,7 @@ namespace SA_ILP
 
             //Console.WriteLine($"Average travel time: {totalTravelTime / numSimulations}. Score: {Score}");
 
-            return new RouteSimmulationResult(totalTravelTime,numSimulations, timesTotal, toEarly, toLate,toLateCount,toEarlyCount);
+            return new RouteSimmulationResult(totalTravelTime,numSimulations, timesTotal, toEarly, toLate,toLateCount,toEarlyCount,totalWaitingTime);
 
         }
 

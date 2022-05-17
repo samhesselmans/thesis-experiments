@@ -100,7 +100,7 @@ if (args.Length >= 1)
 
 
 //_extra_tiny_tw
-solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "sydney_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 1000 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350,config:LocalSearchConfigs.VRPSLTT);
+solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "pittsburgh_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 1000 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350,config:LocalSearchConfigs.VRPSLTT);
 //await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 500000000, timelimit: 1000 * 1000, numThreads: 4, numStarts: 16, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
 
 //const LocalSearchConfiguration config = LocalSearchConfigs.VRPLTT;

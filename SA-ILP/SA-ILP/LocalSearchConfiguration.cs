@@ -117,7 +117,7 @@ namespace SA_ILP
         public static LocalSearchConfiguration VRPSLTT { get { 
                 var config = VRPLTT; 
                 config.ExpectedEarlinessPenalty = 0;
-                config.ExpectedLatenessPenalty = 10;
+                config.ExpectedLatenessPenalty = 1000;
                 
                 config.AllowEarlyArrival = true;
                 config.PenalizeEarlyArrival = false;
@@ -132,10 +132,10 @@ namespace SA_ILP
                 config.UseMeanOfDistributionForTravelTime = false;
                 config.UseMeanOfDistributionForScore = false;
 
-                config.IgnoreWaitingDuringDistributionAddition = false;
+                config.IgnoreWaitingDuringDistributionAddition = true;
 
 
-                config.AdjustDeterministicEarlyArrivalToTWStart = false;
+                config.AdjustDeterministicEarlyArrivalToTWStart = true;
                 config.AdjustEarlyArrivalToTWStart = true;
 
 

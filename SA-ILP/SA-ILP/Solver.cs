@@ -220,6 +220,7 @@ namespace SA_ILP
             (var colums, var sol, var value) = ls.LocalSearchInstance(0, "", customers.Count, bikeMaxMass - bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix,distributionMatrix,approximationMatrix, numInterations: numIterations, checkInitialSolution: false, timeLimit: timelimit);
 
             double totalDist = 0;
+            double totalWait = 0;
             double totalOntimePercentage = 0;
             int numRoutes = 0;
             foreach (var route in sol)
@@ -274,6 +275,7 @@ namespace SA_ILP
                     
                     var res = route.Simulate(1000000);
                     totalDist += res.AverageTravelTime;
+                    totalWait += res.AverageWaitingTime;
                     totalOntimePercentage += res.OnTimePercentage;
 
                     int minIndex = -1;
@@ -294,6 +296,7 @@ namespace SA_ILP
             }
 
             Console.WriteLine($"Average solution travel time: {totalDist} with OTP: {totalOntimePercentage/numRoutes}");
+            Console.WriteLine($"Average solution waiting time: {totalWait}");
 
             //CheckRouteQualityVRPLTT(sol, matrix, bikeMaxMass - bikeMinMass);
 
