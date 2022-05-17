@@ -221,10 +221,12 @@ namespace SA_ILP
             double totalRouteLength = 0;
             HashSet<int> visitedCustomers = new HashSet<int>();
             bool failed = false;
+            List<Route> Solution = new List<Route>();
             foreach (RouteStore rs in ilpSol)
             {
                 var ls = new LocalSearch((LocalSearchConfiguration)config, random.Next());
                 Route r = new Route(customers, rs, customers[0], matrix, bikeMaxMass - bikeMinMass, ls);
+                Solution.Add(r);
                 checkValue += r.CalcObjective();
                 totalStartTime += r.arrival_times[0];
                 totalRouteLength += r.arrival_times[r.arrival_times.Count - 1] - r.route.Sum(x => x.ServiceTime);
@@ -259,6 +261,10 @@ namespace SA_ILP
             Console.WriteLine($"Recalculated score: {checkValue}");
             Console.WriteLine($"Total start time {totalStartTime}");
             Console.WriteLine($"Total waiting time: {totalWaitingTime} over {numViolations} customers");
+
+
+            //CheckRouteQualityVRPLTT(Solution, matrix, bikeMaxMass - bikeMinMass);
+
             //(List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads, numIterations);
             return (failed,ilpSol,ilpVal,ilpTime,lsTime,lsVal, solutionJSON);
         }
