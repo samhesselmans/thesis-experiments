@@ -38,12 +38,16 @@ colors = [    "tab:red",
 ]
 
 def ConvertToPlanarCoordinates( latitude,  longitude,  centralLatitude,  centralLongitude):
-    X = longitude / 180 * math.pi* math.cos(centralLatitude / 180 * math.pi)
-    Y = latitude
+    X = 6371 * (longitude / 180 * math.pi -centralLongitude /180 * math.pi )* math.cos(centralLatitude / 180 * math.pi)
+    Y = 6371 * (latitude / 180 * math.pi - centralLatitude /180 * math.pi)
     return (X, Y)
 
 
 def plot(solution, instance):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_aspect('equal', adjustable='box')
+
     customers = pvi.ParseInstance(instance)
 
     minLatitude = Infinity
@@ -81,7 +85,9 @@ def plot(solution, instance):
     pos=nx.get_node_attributes(G,'pos')
     col = [G[u][v]['color'] for u,v in G.edges()]
     nx.draw(G,pos,edge_color=col)
-    plt.figure()
+    #plt.set_aspect('equal', adjustable='box')
+    
+
     
 #solution with wind power 3 with directeion (1,2) fukuoka 50
 solution = [(0,20,19,28,44,13,21,17,49,31,45,15,0),
@@ -217,11 +223,20 @@ solution13 = [
 (0,82,93,72,14,30,55,79,8,92,91,53,84,0),
 (0,56,48,83,90,4,66,3,45,57,50,33,73,77,76,0),
 (0,34,15,49,26,59,87,20,0),
-#(0,80,68,54,25,86,13,17,43,38,88,85,74,46,42,18,52,0)
+(0,80,68,54,25,86,13,17,43,38,88,85,74,46,42,18,52,0)
 ]
 
+#Soltion with wind power , direction 0,1 for madrid 100 but with truly fixed conversion to planar coordinates.
+solution14 = [(0,80,68,81,54,90,4,66,58,95,41,9,16,29,15,78,0),
+(0,82,55,86,13,28,24,75,61,32,27,22,96,3,46,74,85,0),
+(0,2,23,37,65,25,91,53,52,18,87,20,69,36,0),
+(0,56,39,70,1,51,10,31,45,50,57,59,26,49,76,0),
+(0,40,47,83,48,19,44,60,7,11,99,33,73,77,34,0),
+(0,67,5,71,100,43,38,88,97,35,12,89,98,64,94,0),
+(0,62,21,63,6,30,14,72,93,79,8,17,92,42,84,0),
+]
 
-plot(solution12,instance_madrid_full)
+plot(solution14,instance_madrid_full)
 plot(solution13,instance_madrid_full)
 plt.show()
 

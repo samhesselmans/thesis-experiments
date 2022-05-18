@@ -63,20 +63,21 @@ namespace SA_ILP
         //https://stackoverflow.com/questions/16266809/convert-from-latitude-longitude-to-x-y
         public static (double, double) ConvertToPlanarCoordinates(double latitude, double longitude, double centralLatitude, double centralLongitude)
         {
-            double X = longitude / 180 * Math.PI * Math.Cos(centralLatitude / 180 * Math.PI);
-            double Y = latitude;
+            double X = (longitude / 180 * Math.PI - centralLongitude / 180 * Math.PI) * Math.Cos(centralLatitude / 180 * Math.PI);
+            double Y = (latitude/180 * Math.PI - centralLatitude/180 * Math.PI);
             return (X, Y);
         }
 
-        public static (double[,,],Gamma[,,]) CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput)
+        public static (double[,,],Gamma[,,]) CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput,double windSpeed=0,double[] vec = null)
         {
             double[,,] matrix = new double[customers.Count, customers.Count, numLoadLevels];
             Gamma[,,] distributionMatrix = new Gamma[customers.Count,customers.Count, numLoadLevels];
             //List<(double, double, double)> plotData = new List<(double, double, double)>();
 
-            double windSpeed = 0;
+            //double windSpeed = 3;
             var V = Vector<double>.Build;
-            double[] vec = {1,2 };
+            if(vec == null)
+            vec = new double[]{0,2 };
             var v = V.DenseOfArray(vec);
             v = v.Divide(v.L2Norm());
 
