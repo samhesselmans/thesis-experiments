@@ -224,6 +224,9 @@ namespace SA_ILP
         {
             //double onTimeP = 1 - (dist.CumulativeDistribution(cust.TWEnd - minArrrivalTime) - dist.CumulativeDistribution(cust.TWStart - minArrrivalTime));
 
+            if (parent.Config.ExpectedLatenessPenalty == 0 && parent.Config.ExpectedEarlinessPenalty == 0)
+                return 0;
+
             double toLateP = 1;
             if (cust.TWEnd - minArrrivalTime >= 0)
                 toLateP = 1 - dist.CumulativeDistribution(cust.TWEnd - minArrrivalTime);
@@ -302,6 +305,9 @@ namespace SA_ILP
 
         private Gamma AddDistributions(Gamma left, Gamma right)
         {
+            if (parent.Config.ExpectedLatenessPenalty == 0 && parent.Config.ExpectedEarlinessPenalty == 0)
+                return left;
+
             return new Gamma(left.Shape + right.Shape, right.Rate);
         }
 

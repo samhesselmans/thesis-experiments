@@ -112,9 +112,9 @@ namespace SA_ILP
                 var config = VRPLTT; 
                 config.ExpectedEarlinessPenalty = 0;
                 config.ExpectedLatenessPenalty = 0;
-                config.AdjustEarlyArrivalToTWStart = false;
-                config.AllowEarlyArrival = false;
-                config.PenalizeEarlyArrival = true;
+                config.AdjustEarlyArrivalToTWStart = true;
+                config.AllowEarlyArrival = true;
+                config.PenalizeEarlyArrival = false;
                 config.CheckOperatorScores = false;
                 config.SaveRoutesBeforeOperator = false;
                 config.ScaleEarlinessPenaltyWithTemperature = true;
