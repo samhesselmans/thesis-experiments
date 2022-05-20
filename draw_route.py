@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 
 instance_madrid_full = "vrpltt_instances/large/madrid_full.csv"
+instance_utrecht_full = "vrpltt_instances/large/utrecht_full.csv"
 # customers = pvi.ParseInstance(instance)
 
 
@@ -236,8 +237,30 @@ solution14 = [(0,80,68,81,54,90,4,66,58,95,41,9,16,29,15,78,0),
 (0,62,21,63,6,30,14,72,93,79,8,17,92,42,84,0),
 ]
 
-plot(solution14,instance_madrid_full)
-plot(solution13,instance_madrid_full)
+#Solution with wind power 3, direction 0,1 for utrecht 100 with tryl fixed planar projection
+solution15 = [(0,9,95,31,29,93,5,81,78,56,34,33,98,4,52,0),
+(0,85,77,35,43,91,57,88,92,80,65,62,73,58,50,0),
+(0,53,25,8,70,99,51,3,41,82,87,64,83,67,24,84,0),
+(0,66,75,14,45,42,28,10,23,20,40,12,44,94,97,0),
+(0,55,7,47,1,90,22,15,11,18,59,71,0),
+(0,74,39,38,63,16,26,2,69,13,37,49,79,17,21,96,0),
+(0,30,19,27,86,60,32,72,89,68,36,61,46,76,6,48,54,0)]
+
+#Same as 15, but executed using 16 starts and ILP optimization
+solution16 = [(0,25,53,24,84,59,18,71,0),
+(0,85,35,77,61,46,69,13,37,49,79,17,21,96,0),
+(0,30,19,27,86,60,32,72,89,68,36,16,2,26,54,0),
+(0,38,63,91,43,57,92,88,80,65,62,73,58,20,40,44,0),
+(0,7,55,47,1,11,22,15,78,76,6,48,97,0),
+(0,9,95,29,93,5,81,31,56,33,34,98,4,90,52,0),
+(0,74,39,10,23,28,12,42,45,3,41,51,99,70,0),
+(0,8,66,14,67,75,83,64,87,82,50,94,0)]
+
+# plot(solution14,instance_madrid_full)
+# plot(solution13,instance_madrid_full)
+plot(solution15,instance_utrecht_full)
+plot(solution16,instance_utrecht_full)
+
 plt.show()
 
 
