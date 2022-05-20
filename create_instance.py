@@ -1,36 +1,28 @@
 from random import randrange
-from re import I
-import re
-from pandas import read_sql_query
-
-from pyrsistent import b
-from scipy import rand
 import parse_vrpltt_instance as psi
 import random
 import json
 import requests
 
-res = psi.ParseInstance("vrpltt_instances/large/madrid_full.csv")
 
-base_url = "http://samhesselmans.com:5000/table/v1/bike/"
 
 
 #points generated using: http://www.geomidpoint.com/random/
+points_file = "utrecht.csv"
+output_file = "utrecht_full.csv"
 
 customers = []
-with open("utrecht.csv") as file:
+with open(points_file) as file:
     lines = file.readlines()
     for line in lines:
         split = line.split(',')
         customers.append({"breedte":split[1],"lengte":split[3]})
 
-max_breedte = 52.091478
-min_breedte = 52.086885
 
+#Create distance API request. This is not permanently hosted
 
-max_lengte = 5.108419
-min_lengte = 5.088787
-#with open("utrecht.csv","w") as file:
+base_url = "http://samhesselmans.com:5000/table/v1/bike/"
+
 for cust in customers:
     base_url += cust["lengte"] + "," + cust["breedte"] + ";"
     #file.write(str(lengte) + "," + str(breedte)  + "\n")
@@ -42,12 +34,16 @@ print(base_url )
 response = requests.get(base_url)
 parsed = json.loads(response.text)
 
-
+#Only supports requests of 100 points at the same time
 base_elevation_url = "https://api.opentopodata.org/v1/eudem25m?locations="
+
+#Create the elevation API request
 request = base_elevation_url
 for dest in parsed["destinations"]:
     request += str(dest["location"][1]) + "," + str(dest["location"][0]) + "|"
 request = request[:-1]
+
+
 response_elevation = requests.get(request)
 parsed_elevation = json.loads(response_elevation.text)
 print(parsed_elevation)
@@ -55,7 +51,7 @@ print(parsed_elevation)
 
 length = len(parsed["destinations"])
 #GENERATE THE VRPLTT INSTANCE
-with open("utrecht_full.csv","w") as outfile: 
+with open(output_file,"w") as outfile: 
     outfile.write(f",x,y,elevatiom,demand,tw a, tw b,s,{','.join(str(x) for x in range( length))}\n")
     for i in range(length):
         customer_id = str(i)
