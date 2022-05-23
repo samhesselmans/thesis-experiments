@@ -68,7 +68,7 @@ namespace SA_ILP
             return (X, Y);
         }
 
-        public static (double[,,],Gamma[,,]) CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput,double windSpeed=0,double[] vec = null)
+        public static (double[,,],Gamma[,,]) CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput,double windSpeed=0,double[] windVec = null)
         {
             double[,,] matrix = new double[customers.Count, customers.Count, numLoadLevels];
             Gamma[,,] distributionMatrix = new Gamma[customers.Count,customers.Count, numLoadLevels];
@@ -76,10 +76,10 @@ namespace SA_ILP
 
             //double windSpeed = 3;
             var V = Vector<double>.Build;
-            if(vec == null)
-            vec = new double[]{0,2 };
-            var v = V.DenseOfArray(vec);
-            v = v.Divide(v.L2Norm());
+            if(windVec == null)
+            windVec = new double[]{0,2 };
+            var wd = V.DenseOfArray(windVec);
+            wd = wd.Divide(wd.L2Norm());
 
 
             double minLatitude = double.MaxValue;
@@ -127,8 +127,8 @@ namespace SA_ILP
                     
 
                     double[] custVec = {xDirection, yDirection};
-                    var cv = V.DenseOfArray(custVec);
-                    cv = cv.Divide(cv.L2Norm());
+                    var td = V.DenseOfArray(custVec);
+                    td = td.Divide(td.L2Norm());
 
 
 
@@ -136,7 +136,7 @@ namespace SA_ILP
                     //var test = cv.PointwiseMultiply(v);
 
                     //https://math.stackexchange.com/questions/286391/find-the-component-of-veca-along-vecb
-                    double vComponentAlongCV = (v * cv) / cv.L2Norm();
+                    double vComponentAlongCV = (wd * td) / td.L2Norm();
                     //Math.Sign(test.Sum()) * test.L2Norm()
                     //if (j == 13 && i == 44)
                     //    Console.WriteLine("yes");
