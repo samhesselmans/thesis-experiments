@@ -11,16 +11,16 @@ namespace SA_ILP
 {
     internal static class VRPLTT
     {
-        private static double CalculateSpeed(double heightDiff, double length, double vehicleMass,double powerInput,double windSpeed)
+        private static double CalculateSpeed(double heightDiff, double length, double vehicleMass, double powerInput, double windSpeed)
         {
             double speed = 25;
             //double slope = Math.Atan(heightDiff / length);// * Math.PI / 180;
             double slope = Math.Asin(heightDiff / length);// * Math.PI / 180;
-            double requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope,windSpeed);
+            double requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope, windSpeed);
             double orignalPow = requiredPow;
             if (powerInput >= requiredPow)
             {
-                    return speed;
+                return speed;
             }
             while (speed > 0)
             {
@@ -32,26 +32,26 @@ namespace SA_ILP
                 }
 
                 speed -= 0.01;
-                requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope,windSpeed);
+                requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope, windSpeed);
             }
             return 0;
         }
 
-        public static double CalculateTravelTime(double heightDiff, double length, double vehicleMass, double powerInput,double windSpeed)
+        public static double CalculateTravelTime(double heightDiff, double length, double vehicleMass, double powerInput, double windSpeed)
         {
             if (length == 0)
                 return 0;
             length *= 1000;
             //Speed in m/s
-            double speed = CalculateSpeed(heightDiff, length, vehicleMass, powerInput,windSpeed)/3.6;
+            double speed = CalculateSpeed(heightDiff, length, vehicleMass, powerInput, windSpeed) / 3.6;
 
             //Return travel time in minutes
-            return length  / speed /60;
+            return length / speed / 60;
         }
 
         public static Gamma CreateTravelTimeDistribution(double weight, double traveltime)
         {
-            double shape = 1.5 + traveltime * 0.5 + weight/(290);
+            double shape = 1.5 + traveltime * 0.5 + weight / (290);
             //RATE moet zelfde blijven, niet shape
             double rate = 10;// (1 / (traveltime * 0.1 / 8))/(1 + weight/(290*3));
             var gamma = new Gamma(shape, rate);
@@ -64,21 +64,21 @@ namespace SA_ILP
         public static (double, double) ConvertToPlanarCoordinates(double latitude, double longitude, double centralLatitude, double centralLongitude)
         {
             double X = (longitude / 180 * Math.PI - centralLongitude / 180 * Math.PI) * Math.Cos(centralLatitude / 180 * Math.PI);
-            double Y = (latitude/180 * Math.PI - centralLatitude/180 * Math.PI);
+            double Y = (latitude / 180 * Math.PI - centralLatitude / 180 * Math.PI);
             return (X, Y);
         }
 
-                public static (double[,,],Gamma[,,],IContinuousDistribution[,,]) CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput,double windSpeed=0,double[] windVec = null)
+        public static (double[,,], Gamma[,,], IContinuousDistribution[,,]) CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput, double windSpeed = 0, double[] windVec = null)
         {
             double[,,] matrix = new double[customers.Count, customers.Count, numLoadLevels];
-            Gamma[,,] distributionMatrix = new Gamma[customers.Count,customers.Count, numLoadLevels];
+            Gamma[,,] distributionMatrix = new Gamma[customers.Count, customers.Count, numLoadLevels];
             IContinuousDistribution[,,] approximationMatrix = new IContinuousDistribution[customers.Count, customers.Count, numLoadLevels];
             //List<(double, double, double)> plotData = new List<(double, double, double)>();
 
             //double windSpeed = 3;
             var V = Vector<double>.Build;
-            if(windVec == null)
-            windVec = new double[]{0,2 };
+            if (windVec == null)
+                windVec = new double[] { 0, 2 };
             var wd = V.DenseOfArray(windVec);
             wd = wd.Divide(wd.L2Norm());
 
@@ -88,15 +88,15 @@ namespace SA_ILP
             double minLongtitude = double.MaxValue;
             double maxLongitude = double.MinValue;
 
-            foreach(var c in customers)
+            foreach (var c in customers)
             {
-                if(c.X < minLatitude)
+                if (c.X < minLatitude)
                     minLatitude = c.X;
-                if(c.X > maxLatitude)
+                if (c.X > maxLatitude)
                     maxLatitude = c.X;
-                if(c.Y < minLongtitude)
+                if (c.Y < minLongtitude)
                     minLongtitude = c.Y;
-                if(c.Y > maxLongitude)
+                if (c.Y > maxLongitude)
                     maxLongitude = c.Y;
             }
 
@@ -122,12 +122,12 @@ namespace SA_ILP
                     (double X1, double Y1) = ConvertToPlanarCoordinates(customers[j].X, customers[j].Y, centralLatitude, centralLongitude);
                     (double X2, double Y2) = ConvertToPlanarCoordinates(customers[i].X, customers[i].Y, centralLatitude, centralLongitude);
 
-                    double xDirection = X1 -X2;
+                    double xDirection = X1 - X2;
                     double yDirection = Y1 - Y2;
 
 
 
-                    double[] custVec = {xDirection, yDirection};
+                    double[] custVec = { xDirection, yDirection };
                     var td = V.DenseOfArray(custVec);
                     td = td.Divide(td.L2Norm());
 
@@ -161,63 +161,47 @@ namespace SA_ILP
                     }
                 }
 
-            }); // (int i = 0; i < customers.Count; i++)
-
-            //for (int i = 0; i < customers.Count; i++)
-            //    for (int j = 0; j < customers.Count; j++)
-            //        for (int l = 0; l < numLoadLevels; l++)
-            //        {
-            //            double loadLevelWeight = minWeight + ((maxWeight - minWeight) / numLoadLevels) * l + ((maxWeight - minWeight) / numLoadLevels) / 2;
-
-            //            double dist;
-            //            if (i < j)
-            //                dist = distanceMatrix[i, j];
-            //            else
-            //                dist = distanceMatrix[j, i];
-
-            //            matrix[i, j, l] = VRPLTT.CalculateTravelTime(customers[i].Elevation - customers[j].Elevation, dist, loadLevelWeight, powerInput);
-            //        }
-
+            }); 
 
             Gamma gam = null;
 
             double longest = 0;
 
-            using(StreamWriter w = new StreamWriter("data.txt"))
+            using (StreamWriter w = new StreamWriter("data.txt"))
 
-            for (int i = 0; i < customers.Count; i++)
-                for (int j = 0; j < customers.Count; j++)
-                    for (int l = 0; l < numLoadLevels; l++)
-                    {
+                for (int i = 0; i < customers.Count; i++)
+                    for (int j = 0; j < customers.Count; j++)
+                        for (int l = 0; l < numLoadLevels; l++)
+                        {
                             if (matrix[i, j, l] > longest)
                             {
                                 longest = matrix[i, j, l];
                                 gam = distributionMatrix[i, j, l];
                             }
-                            w.WriteLine($"{matrix[i,j,l]};{distributionMatrix[i,j,l].Mean};{distributionMatrix[i, j, l].Mode}");
-                    }
+                            w.WriteLine($"{matrix[i, j, l]};{distributionMatrix[i, j, l].Mean};{distributionMatrix[i, j, l].Mode}");
+                        }
             Console.WriteLine($"{gam.Shape};{gam.Rate}");
-        return (matrix,distributionMatrix,approximationMatrix);
+            return (matrix, distributionMatrix, approximationMatrix);
         }
 
-        public static (double[,] distances,List<Customer> customers) ParseVRPLTTInstance(string file)
+        public static (double[,] distances, List<Customer> customers) ParseVRPLTTInstance(string file)
         {
             List<Customer> customers = new List<Customer>();
 
-            using(StreamReader sr = new StreamReader(file))
+            using (StreamReader sr = new StreamReader(file))
             {
                 var len = sr.ReadLine().Split(',').Length - 8;
 
                 double[,] distances = new double[len, len];
                 string line = "";
-                while((line = sr.ReadLine()) != null)
+                while ((line = sr.ReadLine()) != null)
                 {
                     var lineSplit = line.Split(',');
                     int id = int.Parse(lineSplit[0]);
                     double x = double.Parse(lineSplit[1], NumberStyles.Any, CultureInfo.InvariantCulture);
                     double y = double.Parse(lineSplit[2], NumberStyles.Any, CultureInfo.InvariantCulture);
                     double elevation = double.Parse(lineSplit[3], NumberStyles.Any, CultureInfo.InvariantCulture);
-                    double demand, twstart, twend,serviceTime;
+                    double demand, twstart, twend, serviceTime;
                     if (lineSplit[4] != "")
                         demand = double.Parse(lineSplit[4], NumberStyles.Any, CultureInfo.InvariantCulture);
                     else
@@ -239,14 +223,14 @@ namespace SA_ILP
                         serviceTime = 0;
 
                     //double serviceTime = double.Parse(lineSplit[7]);
-                    var customer = new Customer(id,x,y,demand,twstart,twend,serviceTime,elevation);
-                    for(int i = 8; i< lineSplit.Length; i++)
+                    var customer = new Customer(id, x, y, demand, twstart, twend, serviceTime, elevation);
+                    for (int i = 8; i < lineSplit.Length; i++)
                     {
                         distances[id, i - 8] = double.Parse(lineSplit[i], NumberStyles.Any, CultureInfo.InvariantCulture);
                     }
                     customers.Add(customer);
                 }
-                return (distances,customers);
+                return (distances, customers);
             }
 
         }

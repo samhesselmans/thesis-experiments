@@ -117,7 +117,7 @@ namespace SA_ILP
         public static LocalSearchConfiguration VRPSLTT { get {
                 var config = VRPLTT;
                 config.ExpectedEarlinessPenalty = 0;
-                config.ExpectedLatenessPenalty = 1000;
+                config.ExpectedLatenessPenalty = 0;
 
                 config.AllowEarlyArrival = true;
                 config.PenalizeEarlyArrival = false;
