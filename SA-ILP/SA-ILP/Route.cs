@@ -47,9 +47,9 @@ namespace SA_ILP
         public List<Customer> route;
         public List<double> arrival_times;
         public List<IContinuousDistribution> customerDistributions;
-        public double[,,] objective_matrix;
-        public Gamma[,,] distributionMatrix;
-        public IContinuousDistribution[,,] distributionApproximationMatrix;
+        public readonly double[,,] objective_matrix;
+        public readonly Gamma[,,] distributionMatrix;
+        public readonly IContinuousDistribution[,,] distributionApproximationMatrix;
         public double startTime = 0;
 
         public int numLoadLevels;
@@ -563,7 +563,11 @@ namespace SA_ILP
         public static long numDistCalls = 0;
         public (double deterministicDistance, IContinuousDistribution dist) CustomerDist(Customer start, Customer finish, double weight,bool provide_actualDistribution=false)
         {
-            int loadLevel = (int)((Math.Max(0, weight - 0.000001) / max_capacity) * numLoadLevels);
+            int loadLevel = (int)((weight / max_capacity) * numLoadLevels);
+
+            //The upperbound is inclusive
+            if (weight % (max_capacity / numLoadLevels) == 0 && weight != 0)
+                loadLevel--;
 
             //This happens if the vehicle is fully loaded. It wants to check the next loadlevel
             if (loadLevel == numLoadLevels)
