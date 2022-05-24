@@ -153,17 +153,19 @@ namespace SA_ILP
 
         public async Task<(bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal)> SolveVRPLTTInstanceAsync(string fileName, int numIterations = 3000000, double bikeMinMass = 140, double bikeMaxMass = 290, int numLoadLevels = 10, double inputPower = 350, int timelimit = 30000, int numThreads = 4, int numStarts=4,LocalSearchConfiguration? config = null)
         {
+            if (config == null)
+                config = LocalSearchConfigs.VRPLTT;
+
             (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(fileName);
             Stopwatch w = new Stopwatch();
             w.Start();
             Console.WriteLine("Calculating travel time matrix");
-            (double[,,] matrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
+            (double[,,] matrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower,((LocalSearchConfiguration)config).WindSpeed, ((LocalSearchConfiguration)config).WindDirection);
             Console.WriteLine($"Created distance matrix in {((double)w.ElapsedMilliseconds/1000).ToString("0.00")}s");
             //(var colums, var sol, _, var value) = await LocalSearchInstancAsync("", customers.Count, bikeMaxMass - bikeMinMass, customers, matrix, 1, numIterations, timelimit);//LocalSearchInstance(-1, "", customers.Count, bikeMaxMass-bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix,random.Next(), numInterations: numIterations,checkInitialSolution:true,timeLimit:timelimit,printExtendedInfo:true);
             //Route.objective_matrix = matrix;
 
-            if (config == null)
-                config = LocalSearchConfigs.VRPLTT;
+
 
             (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync("", customers.Count, bikeMaxMass - bikeMinMass, customers, matrix,distributionMatrix,approximationMatrix, numThreads,numStarts, numIterations, (LocalSearchConfiguration)config, timeLimit: timelimit);
 
@@ -211,12 +213,15 @@ namespace SA_ILP
 
         public double SolveVRPLTTInstance(string fileName, int numIterations = 3000000, double bikeMinMass = 150, double bikeMaxMass = 350, int numLoadLevels = 10, double inputPower = 400, int timelimit = 30000,LocalSearchConfiguration? config = null)
         {
-            (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(fileName);
 
             if (config == null)
                 config = LocalSearchConfigs.VRPLTTDebug;
 
-            (double[,,] matrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
+            (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(fileName);
+
+
+
+            (double[,,] matrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower, ((LocalSearchConfiguration)config).WindSpeed, ((LocalSearchConfiguration)config).WindDirection);
             var ls = new LocalSearch((LocalSearchConfiguration)config, random.Next());
             //ls.config.ScaleLatenessPenaltyWithTemperature = true;
             (var colums, var sol, var value) = ls.LocalSearchInstance(0, "", customers.Count, bikeMaxMass - bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix,distributionMatrix,approximationMatrix, numInterations: numIterations, checkInitialSolution: false, timeLimit: timelimit);
@@ -276,32 +281,32 @@ namespace SA_ILP
                             }
                         }
                     }
-                    Console.WriteLine($"{route}: On time performance: {avg / total} worst: {worst} at {worstCust} at {worstIndex}");
+                    //Console.WriteLine($"{route}: On time performance: {avg / total} worst: {worst} at {worstCust} at {worstIndex}");
 
-                    var res = route.Simulate(1000000);
-                    totalDist += res.AverageTravelTime;
-                    totalWait += res.AverageWaitingTime;
-                    totalOntimePercentage += res.OnTimePercentage;
+                    //var res = route.Simulate(1000000);
+                    //totalDist += res.AverageTravelTime;
+                    //totalWait += res.AverageWaitingTime;
+                    //totalOntimePercentage += res.OnTimePercentage;
 
-                    int minIndex = -1;
-                    double min = double.MaxValue;
-                    for(int j =0;j<res.CustomerOnTimePercentage.Length;j++)
-                    {
-                        if (res.CustomerOnTimePercentage[j] < min)
-                        {
-                            min = res.CustomerOnTimePercentage[j];
-                            minIndex = j;
-                        }
+                    //int minIndex = -1;
+                    //double min = double.MaxValue;
+                    //for(int j =0;j<res.CustomerOnTimePercentage.Length;j++)
+                    //{
+                    //    if (res.CustomerOnTimePercentage[j] < min)
+                    //    {
+                    //        min = res.CustomerOnTimePercentage[j];
+                    //        minIndex = j;
+                    //    }
 
-                    }
+                    //}
 
-                    Console.WriteLine($"Simmulated on time perfomance: {res.OnTimePercentage} worst: {min} at {minIndex}\n");
+                    //Console.WriteLine($"Simmulated on time perfomance: {res.OnTimePercentage} worst: {min} at {minIndex}\n");
                 }
 
             }
 
-            Console.WriteLine($"Average solution travel time: {totalDist} with OTP: {totalOntimePercentage/numRoutes}");
-            Console.WriteLine($"Average solution waiting time: {totalWait}");
+            //Console.WriteLine($"Average solution travel time: {totalDist} with OTP: {totalOntimePercentage/numRoutes}");
+            //Console.WriteLine($"Average solution waiting time: {totalWait}");
 
             //CheckRouteQualityVRPLTT(sol, matrix, bikeMaxMass - bikeMinMass);
 

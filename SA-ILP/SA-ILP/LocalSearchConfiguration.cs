@@ -54,6 +54,18 @@ namespace SA_ILP
         public bool UseMeanOfDistributionForScore { get; set; }
         public bool IgnoreWaitingDuringDistributionAddition { get; set; }
 
+        public double WindSpeed { get; set; }
+
+        public double[] WindDirection { get; set; }
+
+        public int NumRestarts { get; set; }
+
+        public int IterationsPerAlphaChange { get; set; }
+
+        public int NumIterationsOfNoChangeBeforeRestarting { get; set; }
+
+        public double RestartTemperatureBound { get; set; }
+
         public IContinuousDistribution DefaultDistribution { get; set; }
         public override string ToString()
         {
@@ -111,7 +123,11 @@ namespace SA_ILP
             UseMeanOfDistributionForTravelTime = false,
             ScaleEarlinessPenaltyWithTemperature = true,
             ScaleLatenessPenaltyWithTemperature = true,
-            IgnoreWaitingDuringDistributionAddition = true
+            IgnoreWaitingDuringDistributionAddition = true,
+            IterationsPerAlphaChange = 10000,
+            NumIterationsOfNoChangeBeforeRestarting = 600000,
+            RestartTemperatureBound = 0.02,
+            NumRestarts = 7
         };
 
         public static LocalSearchConfiguration VRPSLTT { get {

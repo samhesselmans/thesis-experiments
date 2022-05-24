@@ -65,7 +65,7 @@ namespace SA_ILP
 
 
 
-                    List<Customer> newRoute = new List<Customer>(routes[routeIndex].route.Count);
+                    List<Customer> newRoute = new List<Customer>(routes[routeIndex].route.Capacity);
 
                     for (int i = 0; i < routes[routeIndex].route.Count; i++)
                     {

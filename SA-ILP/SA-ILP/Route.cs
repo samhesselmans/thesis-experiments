@@ -103,9 +103,9 @@ namespace SA_ILP
 #endif
         public Route(Customer depot, double[,,] distanceMatrix, Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix, double maxCapacity, int seed, LocalSearch parent)
         {
-            this.route = new List<Customer>() { depot, depot };
-            this.arrival_times = new List<double>() { 0, 0 };
-            this.customerDistributions = new List<IContinuousDistribution>() { null, null };
+            this.route = new List<Customer>(20) { depot, depot };
+            this.arrival_times = new List<double>(20) { 0, 0 };
+            this.customerDistributions = new List<IContinuousDistribution>(20) { null, null };
             objective_matrix = distanceMatrix;
             this.numX = distanceMatrix.GetLength(0);
             this.numY = distanceMatrix.GetLength(1);
@@ -560,7 +560,7 @@ namespace SA_ILP
             CachedObjective = totalObjectiveValue;
             return totalObjectiveValue;
         }
-
+        public static long numDistCalls = 0;
         public (double deterministicDistance, IContinuousDistribution dist) CustomerDist(Customer start, Customer finish, double weight,bool provide_actualDistribution=false)
         {
             int loadLevel = (int)((Math.Max(0, weight - 0.000001) / max_capacity) * numLoadLevels);
@@ -568,7 +568,7 @@ namespace SA_ILP
             //This happens if the vehicle is fully loaded. It wants to check the next loadlevel
             if (loadLevel == numLoadLevels)
                 loadLevel--;
-
+            numDistCalls += 1;
             var val = objective_matrix[start.Id, finish.Id, loadLevel];
             //var val2 = objeciveMatrix1d[cust1.Id + cust2.Id * numX + loadLevel * numX * numY];
             //if (val != val2)
@@ -1086,8 +1086,8 @@ namespace SA_ILP
             double newObjectiveValue = 0;
             bool violatesLowerTimeWindow = false;
             bool violatesUpperTimeWindow = false;
-            List<double> newArrivalTimes = new List<double>(newRoute.Count) { };
-            List<IContinuousDistribution> newDistributions = new List<IContinuousDistribution>(newRoute.Count);
+            List<double> newArrivalTimes = new List<double>(newRoute.Capacity) { };
+            List<IContinuousDistribution> newDistributions = new List<IContinuousDistribution>(newRoute.Capacity);
             //List<double> systemOfEquationsLower = new List<double>(newRoute.Count);
             //List<double> systemOfEquationsUpper = new List<double>(newRoute.Count);
 

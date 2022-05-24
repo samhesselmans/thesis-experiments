@@ -234,17 +234,23 @@ namespace SA_ILP
             Stopwatch printTimer = new Stopwatch();
             printTimer.Start();
 
-
+            //Used to keep track of the routes which contain customers. This speeds up execution as this only needs to be updated when a change is applied
             List<int> viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
 
-            int lastChangeExceptedOnIt = 0;
+            int lastChangeAcceptedOnIt = 0;
+
+            //All saved columns
             HashSet<RouteStore> Columns = new HashSet<RouteStore>();
+
+            //The best found solution so far
             List<Route> BestSolution = routes.ConvertAll(i => i.CreateDeepCopy());
             List<Customer> BestSolutionRemoved = removed.ConvertAll(x => x);
 
             List<(int, double)> SearchScores = new List<(int, double)>();
             List<(int, double)> BestSolutionScores = new List<(int, double)>();
 
+
+            //Dictionaries used for tracking the performance of the different operators. These are only used if the option is enabled in the configuration
             Dictionary<string, int> OPImprovementCount = new Dictionary<string, int>();
             Dictionary<string, double> OPImprovementTotal = new Dictionary<string, double>();
             Dictionary<string, double> OPBestImprovement = new Dictionary<string, double>();
@@ -355,7 +361,7 @@ namespace SA_ILP
 
 
                         amtImp += 1;
-                        lastChangeExceptedOnIt = iteration;
+                        lastChangeAcceptedOnIt = iteration;
 
                     }
 
@@ -389,7 +395,7 @@ namespace SA_ILP
                             if (id == 0 && Config.SaveScoreDevelopment)
                                 SearchScores.Add((iteration, currentValue));
 
-                            lastChangeExceptedOnIt = iteration;
+                            lastChangeAcceptedOnIt = iteration;
                         }
                         //else if (OS.LastOperator == "remove")
                         //{
@@ -402,7 +408,7 @@ namespace SA_ILP
                     OPNotPossible[OS.LastOperator] += 1;
                     amtNotDone += 1;
                 }
-                if (iteration % 10000 == 0 && iteration != 0)
+                if (iteration % Config.IterationsPerAlphaChange == 0 && iteration != 0)
                 {
                     Temperature *= Config.Alpha;
 
@@ -411,7 +417,8 @@ namespace SA_ILP
                     currentValue = Solver.CalcTotalDistance(routes, removed, this);
                     bestSolValue = Solver.CalcTotalDistance(BestSolution, BestSolutionRemoved, this);
                 }
-                if (iteration - restartPreventionIteration > 600000 && Temperature < 0.02 && numRestarts < 3) //&& iteration - lastChangeExceptedOnIt > 1000
+                //Check if the restart conditions are met
+                if (iteration - restartPreventionIteration > Config.NumIterationsOfNoChangeBeforeRestarting && Temperature < Config.RestartTemperatureBound && numRestarts < Config.NumRestarts) //&& iteration - lastChangeExceptedOnIt > 1000
                 {
                     numRestarts += 1;
                     restartPreventionIteration = iteration;
@@ -422,11 +429,13 @@ namespace SA_ILP
                     routes = BestSolution.ConvertAll(i => i.CreateDeepCopy());
                     viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                     removed = BestSolutionRemoved.ConvertAll(x => x);
+
+                    //Reset the scores
                     currentValue = Solver.CalcTotalDistance(routes, removed, this);
                     bestSolValue = Solver.CalcTotalDistance(BestSolution, new List<Customer>(), this);
                     Console.WriteLine($"{id}:Best solution changed to long ago a T: {oldTemp}. Restarting from best solution with T: {Temperature}");
                 }
-                else if (Temperature < 0.02 && numRestarts >= 3)
+                else if (Temperature < 0.02 && numRestarts >= Config.NumRestarts)
                     break;
                 if (printTimer.ElapsedMilliseconds > 3 * 1000)
                 {
@@ -435,7 +444,7 @@ namespace SA_ILP
                     double itsPerSecond = (iteration - previousUpdateIteration) / ((double)elapsed / 1000);
                     previousUpdateIteration = iteration;
                     int cnt = routes.Count(x => x.route.Count > 2);
-                    Console.WriteLine($"{id}: T: {Temperature.ToString("0.000")}, S: {Solver.CalcTotalDistance(routes, removed, this).ToString("0.000")}, TS: {currentValue.ToString("0.000")}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeExceptedOnIt}, B: {bestSolValue},{Solver.CalcTotalDistance(BestSolution,BestSolutionRemoved,this)}, BI: {bestImprovedIteration}, IT/s: {itsPerSecond.ToString("0.00")}/s");
+                    Console.WriteLine($"{id}: T: {Temperature.ToString("0.000")}, S: {Solver.CalcTotalDistance(routes, removed, this).ToString("0.000")}, TS: {currentValue.ToString("0.000")}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeAcceptedOnIt}, B: {bestSolValue},{Solver.CalcTotalDistance(BestSolution,BestSolutionRemoved,this)}, BI: {bestImprovedIteration}, IT/s: {itsPerSecond.ToString("0.00")}/s");
                     //foreach (var rout in BestSolution)
                     //    if(rout.route.Count > 2)
                     //    Console.WriteLine(rout);
