@@ -191,7 +191,7 @@ namespace SA_ILP
                 r.CheckRouteValidity();
                 for (int i = 0; i < r.route.Count - 1; i++)
                 {
-                    (var dist, IContinuousDistribution distribution) = r.CustomerDist(r.route[i], r.route[i + 1], load);
+                    (var dist, IContinuousDistribution distribution) = r.CustomerDist(r.route[i], r.route[i + 1], load, false);
                     load -= r.route[i + 1].Demand;
                     if (r.arrival_times[i] + dist + r.route[i].ServiceTime < r.route[i + 1].TWStart)
                     {
@@ -317,7 +317,7 @@ namespace SA_ILP
                 var load = r.used_capacity;
                 for (int i = 0; i < r.route.Count - 1; i++)
                 {
-                    (var dist, IContinuousDistribution distribution) = r.CustomerDist(r.route[i], r.route[i + 1], load);
+                    (var dist, IContinuousDistribution distribution) = r.CustomerDist(r.route[i], r.route[i + 1], load, false);
                     load -= r.route[i + 1].Demand;
                     if (r.arrival_times[i] + dist + r.route[i].ServiceTime < r.route[i + 1].TWStart)
                     {

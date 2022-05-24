@@ -92,7 +92,7 @@ namespace SA_ILP
             {
                 if (customers.Count == 0)
                     break;
-                (double arrivalTime, IContinuousDistribution distribution) = route.CustomerDist(depot, seed, route.max_capacity);
+                (double arrivalTime, IContinuousDistribution distribution) = route.CustomerDist(depot, seed, route.max_capacity, false);
 
                 if (inserted.Contains(seed))
                     Console.WriteLine("Gaat fout buiten while");
@@ -116,7 +116,7 @@ namespace SA_ILP
 
                     Customer? next = customers.MinBy(x =>
                     {
-                       ( double dist, IContinuousDistribution distribution) = route.CustomerDist(seed, x, route.max_capacity);
+                       ( double dist, IContinuousDistribution distribution) = route.CustomerDist(seed, x, route.max_capacity, false);
 
                         if (arrivalTime + dist < x.TWEnd)
                             if (arrivalTime + dist < x.TWStart)
@@ -126,7 +126,7 @@ namespace SA_ILP
                         else return double.MaxValue;
 
                     });
-                    (double dist, IContinuousDistribution d) = route.CustomerDist(seed, next, route.max_capacity);
+                    (double dist, IContinuousDistribution d) = route.CustomerDist(seed, next, route.max_capacity, false);
                     if (arrivalTime + dist > next.TWEnd || route.used_capacity + next.Demand > route.max_capacity)
                     {
                         seed = customers.MinBy(x => x.TWEnd);
