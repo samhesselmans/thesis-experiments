@@ -212,15 +212,18 @@ namespace SA_ILP
 
         public double CustomerDist(Customer start, Customer finish, double weight)
         {
-            int loadLevel = (int)((Math.Max(0,weight) / max_capacity) * numLoadLevels);
+
+            double ll = ((weight / max_capacity) * numLoadLevels);
+
+            int loadLevel = (int)ll;
 
 
-            if (weight % (max_capacity / numLoadLevels) == 0 && weight != 0)
+            if (ll == loadLevel && weight != 0)
                 loadLevel--;
 
-            //This happens if the vehicle is fully loaded. It wants to check the next loadlevel
-            if (loadLevel == numLoadLevels)
-                loadLevel--;
+            ////This happens if the vehicle is fully loaded. It wants to check the next loadlevel
+            //if (loadLevel == numLoadLevels)
+            //    loadLevel--;
 
             var val = objective_matrix[start.Id, finish.Id, loadLevel];
             //var val2 = objeciveMatrix1d[cust1.Id + cust2.Id * numX + loadLevel * numX * numY];
