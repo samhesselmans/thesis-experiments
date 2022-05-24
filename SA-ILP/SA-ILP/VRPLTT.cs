@@ -68,10 +68,11 @@ namespace SA_ILP
             return (X, Y);
         }
 
-        public static (double[,,],Gamma[,,]) CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput,double windSpeed=0,double[] windVec = null)
+                public static (double[,,],Gamma[,,],IContinuousDistribution[,,]) CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput,double windSpeed=0,double[] windVec = null)
         {
             double[,,] matrix = new double[customers.Count, customers.Count, numLoadLevels];
             Gamma[,,] distributionMatrix = new Gamma[customers.Count,customers.Count, numLoadLevels];
+            IContinuousDistribution[,,] approximationMatrix = new IContinuousDistribution[customers.Count, customers.Count, numLoadLevels];
             //List<(double, double, double)> plotData = new List<(double, double, double)>();
 
             //double windSpeed = 3;
@@ -124,7 +125,7 @@ namespace SA_ILP
                     double xDirection = X1 -X2;
                     double yDirection = Y1 - Y2;
 
-                    
+
 
                     double[] custVec = {xDirection, yDirection};
                     var td = V.DenseOfArray(custVec);
@@ -151,10 +152,12 @@ namespace SA_ILP
                     {
                         double loadLevelWeight = minWeight + ((maxWeight - minWeight) / numLoadLevels) * l + ((maxWeight - minWeight) / numLoadLevels) / 2;
 
-                        
+
 
                         matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput, vComponentAlongCV * windSpeed);
                         distributionMatrix[i, j, l] = CreateTravelTimeDistribution(loadLevelWeight, matrix[i, j, l]);
+                        approximationMatrix[i, j, l] = new Normal(distributionMatrix[i, j, l].Mean, distributionMatrix[i, j, l].StdDev); // //
+                        //approximationMatrix[i, j, l] = distributionMatrix[i, j, l];
                     }
                 }
 
@@ -194,13 +197,13 @@ namespace SA_ILP
                             w.WriteLine($"{matrix[i,j,l]};{distributionMatrix[i,j,l].Mean};{distributionMatrix[i, j, l].Mode}");
                     }
             Console.WriteLine($"{gam.Shape};{gam.Rate}");
-        return (matrix,distributionMatrix);
+        return (matrix,distributionMatrix,approximationMatrix);
         }
 
         public static (double[,] distances,List<Customer> customers) ParseVRPLTTInstance(string file)
         {
             List<Customer> customers = new List<Customer>();
-            
+
             using(StreamReader sr = new StreamReader(file))
             {
                 var len = sr.ReadLine().Split(',').Length - 8;

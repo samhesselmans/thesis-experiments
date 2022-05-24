@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MathNet.Numerics.Distributions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -28,8 +29,10 @@ namespace SA_ILP
         public bool PenalizeEarlyArrival { get; set; }
         public bool PenalizeLateArrival { get; set; }
 
-        public bool AdjustEarlyArrivalToTWStart { get; set; }
+        public bool AdjustDeterministicEarlyArrivalToTWStart { get; set; }
 
+        //Only used in simmulations so far
+        public bool AdjustEarlyArrivalToTWStart { get; set; }
 
         public bool CheckOperatorScores { get; set; }
 
@@ -49,7 +52,9 @@ namespace SA_ILP
         public bool ScaleLatenessPenaltyWithTemperature { get; set; }
 
         public bool UseMeanOfDistributionForScore { get; set; }
+        public bool IgnoreWaitingDuringDistributionAddition { get; set; }
 
+        public IContinuousDistribution DefaultDistribution { get; set; }
         public override string ToString()
         {
             LocalSearchConfiguration obj = this;
@@ -57,7 +62,7 @@ namespace SA_ILP
 
         .Select(info =>
         {
-            
+
             return (info.Name, Value: info.GetValue(obj, null) ?? "(null)");
         })
         .Aggregate(
@@ -95,7 +100,7 @@ namespace SA_ILP
 
             PenalizeEarlyArrival = false,
             PenalizeLateArrival = true,
-            AdjustEarlyArrivalToTWStart = true,
+            AdjustDeterministicEarlyArrivalToTWStart = true,
             CheckOperatorScores = false,
             SaveRoutesBeforeOperator = false,
 
@@ -105,16 +110,19 @@ namespace SA_ILP
             ExpectedLatenessPenalty =0,
             UseMeanOfDistributionForTravelTime = false,
             ScaleEarlinessPenaltyWithTemperature = true,
-            ScaleLatenessPenaltyWithTemperature = true
+            ScaleLatenessPenaltyWithTemperature = true,
+            IgnoreWaitingDuringDistributionAddition = true
         };
 
-        public static LocalSearchConfiguration VRPSLTT { get { 
-                var config = VRPLTT; 
+        public static LocalSearchConfiguration VRPSLTT { get {
+                var config = VRPLTT;
                 config.ExpectedEarlinessPenalty = 0;
-                config.ExpectedLatenessPenalty = 0;
-                config.AdjustEarlyArrivalToTWStart = true;
+                config.ExpectedLatenessPenalty = 1000;
+
                 config.AllowEarlyArrival = true;
                 config.PenalizeEarlyArrival = false;
+
+
                 config.CheckOperatorScores = false;
                 config.SaveRoutesBeforeOperator = false;
                 config.ScaleEarlinessPenaltyWithTemperature = true;
@@ -123,6 +131,18 @@ namespace SA_ILP
                 //This does not work with the checks currently!
                 config.UseMeanOfDistributionForTravelTime = false;
                 config.UseMeanOfDistributionForScore = false;
+
+                config.IgnoreWaitingDuringDistributionAddition = true;
+
+
+                config.AdjustDeterministicEarlyArrivalToTWStart = true;
+                config.AdjustEarlyArrivalToTWStart = true;
+
+
+                //config.DefaultDistribution = new Gamma(0, 10);//new Normal(0, 0);
+                config.DefaultDistribution = new Normal(0, 0);
+
+
                 return config; } }
 
 
@@ -145,7 +165,7 @@ namespace SA_ILP
             SaveColumnsAfterAllImprovements = false,
             PenalizeEarlyArrival = false,
             PenalizeLateArrival = true,
-            AdjustEarlyArrivalToTWStart = true,
+            AdjustDeterministicEarlyArrivalToTWStart = true,
             CheckOperatorScores = true,
             SaveRoutesBeforeOperator = false,
             SaveColumnsAfterWorse = true,
@@ -155,7 +175,8 @@ namespace SA_ILP
             ExpectedLatenessPenalty = 0,
             UseMeanOfDistributionForTravelTime = false,
             ScaleEarlinessPenaltyWithTemperature = true,
-            ScaleLatenessPenaltyWithTemperature = true
+            ScaleLatenessPenaltyWithTemperature = true,
+            IgnoreWaitingDuringDistributionAddition = true
         };
 
 

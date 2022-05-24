@@ -14,49 +14,7 @@ namespace SA_ILP
         private static readonly object ConsoleWriterLock = new object();
 
         public double Temperature { get; private set; }
-        //public double InitialTemperature { get; private set; }
 
-        //public bool AllowLateArrivalDuringSearch { get; private set; }
-        //public bool AllowEarlyArrivalDuringSearch { get; private set; }
-
-        //public bool AllowLateArrival { get; private set; }
-        //public bool AllowEarlyArrival { get; private set; }
-
-        ////public static readonly double BaseRemovedCustomerPenalty = 150;
-        ////public static readonly double BaseRemovedCustomerPenaltyPow = 1.5;
-
-        //public double BaseRemovedCustomerPenalty { get; private set; }
-        //public double BaseRemovedCustomerPenaltyPow { get; private set; }
-
-        //public double BaseEarlyArrivalPenalty { get; private set; }
-        //public double BaseLateArrivalPenalty { get; private set; }
-
-        //public double Alpha { get; private set; }
-
-        //public bool SaveColumnsAfterAllImprovements { get; private set; }
-
-        //public bool SaveColumnsAfterWorse { get; private set; }
-
-        //public double SaveColumnThreshold { get; private set; }
-
-        //public bool PenalizeEarlyArrival { get; private set; }
-        //public bool PenalizeLateArrival { get; private set; }
-
-        //public bool AdjustEarlyArrivalToTWStart { get; private set; }
-
-        //public bool CheckOperatorScores { get; private set; }
-
-        //public bool SaveRoutesBeforeOperator { get; private set; }
-
-        //public bool PrintExtendedInfo { get; private set; }
-
-        //public bool SaveScoreDevelopment { get; private set; }
-
-        //public double ExpectedEarlinessPenalty { get; private set; }
-        //public double ExpectedLatenessPenalty { get; private set; }
-        //public bool UseMeanOfDistributionForTravelTime { get; private set; }
-        //public bool ScaleEarlinessPenaltyWithTemperature { get; private set; }
-        //public bool ScaleLatenessPenaltyWithTemperature { get; private set; }
 
         public readonly LocalSearchConfiguration Config;
 
@@ -75,29 +33,6 @@ namespace SA_ILP
         private void Init(LocalSearchConfiguration config, int seed, OperatorSelector os)
         {
             Temperature = config.InitialTemperature;
-            //InitialTemperature = config.InitialTemperature;
-            //this.AllowEarlyArrival = config.AllowEarlyArrival;
-            //this.AllowLateArrival = config.AllowLateArrival;
-            //AllowEarlyArrivalDuringSearch = config.AllowEarlyArrivalDuringSearch;
-            //AllowLateArrivalDuringSearch = config.AllowLateArrivalDuringSearch;
-            //BaseRemovedCustomerPenalty = config.BaseRemovedCustomerPenalty;
-            //BaseRemovedCustomerPenaltyPow = config.BaseRemovedCustomerPenaltyPow;
-            //BaseEarlyArrivalPenalty = config.BaseEarlyArrivalPenalty;
-            //BaseLateArrivalPenalty = config.BaseLateArrivalPenalty;
-            //PenalizeLateArrival = config.PenalizeLateArrival;
-            //PenalizeEarlyArrival = config.PenalizeEarlyArrival;
-            //AdjustEarlyArrivalToTWStart = config.AdjustEarlyArrivalToTWStart;
-            //CheckOperatorScores = config.CheckOperatorScores;
-            //SaveRoutesBeforeOperator = config.SaveRoutesBeforeOperator;
-            //SaveColumnsAfterAllImprovements = config.SaveColumnsAfterAllImprovements;
-            //SaveColumnsAfterWorse = config.SaveColumnsAfterWorse;
-            //SaveColumnThreshold = config.SaveColumnThreshold;
-            //PrintExtendedInfo = config.PrintExtendedInfo;
-            //Alpha = config.Alpha;
-            //SaveScoreDevelopment = config.SaveScoreDevelopment;
-            //ExpectedEarlinessPenalty = config.ExpectedEarlinessPenalty;
-            //ExpectedLatenessPenalty = config.ExpectedLatenessPenalty;
-            //UseMeanOfDistributionForTravelTime = config.UseMeanOfDistributionForTravelTime;
             OS = os;
         }
 
@@ -110,10 +45,13 @@ namespace SA_ILP
             //os.Add(Operators.RemoveRandomCustomer, 1, "remove");
             //os.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move");
             //os.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move",100);
+
             os.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best");
             os.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route");
             os.Add((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap");
             os.Add((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route");
+
+
             os.Add((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse");
             os.Add((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble");
             os.Add((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails");
@@ -154,7 +92,7 @@ namespace SA_ILP
             {
                 if (customers.Count == 0)
                     break;
-                (double arrivalTime, Gamma distribution) = route.CustomerDist(depot, seed, route.max_capacity);
+                (double arrivalTime, IContinuousDistribution distribution) = route.CustomerDist(depot, seed, route.max_capacity);
 
                 if (inserted.Contains(seed))
                     Console.WriteLine("Gaat fout buiten while");
@@ -178,7 +116,7 @@ namespace SA_ILP
 
                     Customer? next = customers.MinBy(x =>
                     {
-                       ( double dist, Gamma distribution) = route.CustomerDist(seed, x, route.max_capacity);
+                       ( double dist, IContinuousDistribution distribution) = route.CustomerDist(seed, x, route.max_capacity);
 
                         if (arrivalTime + dist < x.TWEnd)
                             if (arrivalTime + dist < x.TWStart)
@@ -188,7 +126,7 @@ namespace SA_ILP
                         else return double.MaxValue;
 
                     });
-                    (double dist, Gamma d) = route.CustomerDist(seed, next, route.max_capacity);
+                    (double dist, IContinuousDistribution d) = route.CustomerDist(seed, next, route.max_capacity);
                     if (arrivalTime + dist > next.TWEnd || route.used_capacity + next.Demand > route.max_capacity)
                     {
                         seed = customers.MinBy(x => x.TWEnd);
@@ -254,7 +192,7 @@ namespace SA_ILP
                 if (Math.Round(Solver.CalcTotalDistance(routes, removed, this), 6) != Math.Round(expectedVal, 6))
                     Solver.ErrorPrint($"{id}: ERROR expected {expectedVal} not equal to {Solver.CalcTotalDistance(routes, removed, this)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, this)} , OP: {OS.LastOperator}");
         }
-        public (HashSet<RouteStore>, List<Route>, double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers, double[,,] distanceMatrix,Gamma[,,] distributionMatrix, int numInterations = 3000000, int timeLimit = 30000, bool checkInitialSolution = false)
+        public (HashSet<RouteStore>, List<Route>, double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers, double[,,] distanceMatrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix, int numInterations = 3000000, int timeLimit = 30000, bool checkInitialSolution = false)
         {
             Console.WriteLine("Starting local search");
             //customers.Sort(1, customers.Count - 1, delegate (Customer x, Customer y) { x.TWEnd.CompareTo(y.TWEnd); });
@@ -271,7 +209,7 @@ namespace SA_ILP
 
             //Generate routes
             for (int i = 0; i < numVehicles; i++)
-                routes.Add(new Route(customers[0], distanceMatrix,distributionMatrix, vehicleCapacity,seed: random.Next(), this));
+                routes.Add(new Route(customers[0], distanceMatrix,distributionMatrix, approximationMatrix, vehicleCapacity,seed: random.Next(), this));
 
             CreateSmartInitialSolution(routes, customers, removed);
 
@@ -385,7 +323,7 @@ namespace SA_ILP
                             SearchScores.Add((iteration, currentValue));
 
 
-                        if (currentValue < bestSolValue && removed.Count == 0 && IsValidSolution(routes, removed))
+                        if (Math.Round(currentValue,6) < Math.Round(bestSolValue,6) && removed.Count == 0 && IsValidSolution(routes, removed))
                         {
                             //New best solution found
                             bestSolValue = currentValue;
@@ -497,7 +435,10 @@ namespace SA_ILP
                     double itsPerSecond = (iteration - previousUpdateIteration) / ((double)elapsed / 1000);
                     previousUpdateIteration = iteration;
                     int cnt = routes.Count(x => x.route.Count > 2);
-                    Console.WriteLine($"{id}: T: {Temperature.ToString("0.000")}, S: {Solver.CalcTotalDistance(routes, removed, this).ToString("0.000")}, TS: {currentValue.ToString("0.000")}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeExceptedOnIt}, B: {bestSolValue.ToString("0.000")}, BI: {bestImprovedIteration}, IT/s: {itsPerSecond.ToString("0.00")}/s");
+                    Console.WriteLine($"{id}: T: {Temperature.ToString("0.000")}, S: {Solver.CalcTotalDistance(routes, removed, this).ToString("0.000")}, TS: {currentValue.ToString("0.000")}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeExceptedOnIt}, B: {bestSolValue},{Solver.CalcTotalDistance(BestSolution,BestSolutionRemoved,this)}, BI: {bestImprovedIteration}, IT/s: {itsPerSecond.ToString("0.00")}/s");
+                    //foreach (var rout in BestSolution)
+                    //    if(rout.route.Count > 2)
+                    //    Console.WriteLine(rout);
                 }
             }
 
