@@ -98,7 +98,7 @@ if (args.Length >= 1)
 
 //await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
 
-solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 1000 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350,config:LocalSearchConfigs.VRPSLTT);
+solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 1000 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350,config:LocalSearchConfigs.VRPLTT);
 Console.WriteLine(Route.numDistCalls);
 //await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 500000000, timelimit: 1000 * 1000, numThreads: 4, numStarts: 16, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
 
@@ -243,7 +243,7 @@ async Task RunVRPSLTTTests(string dir, string solDir, int numRepeats, Options op
         {
             csvWriter.WriteLine("SEP=;");
             csvWriter.WriteLine("Instance;Uncertanty penalty;UseMean;Score;N;ILP time;LS time;LS score;ILP imp(%);avg simulation distance;avg sim OTP; avg sim worst OTP;worst sim OTP;worst sim route;worst sim cust index;avg est OTP; avg est worst OTP;worst est OTP;worst est route;worst est cust index");
-            LocalSearchConfiguration config = LocalSearchConfigs.VRPSLTT;
+            LocalSearchConfiguration config = LocalSearchConfigs.VRPSLTTWithoutWaiting;
 
 
             for (int test = 0; test < 3; test++)

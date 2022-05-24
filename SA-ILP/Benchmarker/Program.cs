@@ -25,22 +25,25 @@ namespace MyApp // Note: actual namespace depends on the project name.
             var toBenchGammaPDF = () => { gamma.Density(0.7); };
             var toBenchRandomNumber = () => { random.Next(100); };
 
-            
-            for (int i = 0; i < testList.Capacity; i++)
-                testList.Add(random.Next());
 
-            objective_matrix =  new double[100,100,10];
-            distributionApproximationMatrix = new IContinuousDistribution[100, 100, 10];
-            distributionMatrix = new IContinuousDistribution[100,100, 10];
+            uint test = 0;
+            test--;
+            Console.WriteLine(test);
+            //for (int i = 0; i < testList.Capacity; i++)
+            //    testList.Add(random.Next());
 
-            for(int i = 0; i< 100;i++)
-                for(int j =0; j < 100; j++)
-                    for( int l =0; l < 10; l++)
-                {
-                        objective_matrix[i, j, l] = random.NextDouble();
-                        distributionMatrix[i, j, l] = new Gamma(random.NextDouble(), random.NextDouble());
-                        distributionApproximationMatrix[i, j, l] = new Gamma(random.NextDouble(), random.NextDouble());
-                    }
+            //objective_matrix =  new double[100,100,10];
+            //distributionApproximationMatrix = new IContinuousDistribution[100, 100, 10];
+            //distributionMatrix = new IContinuousDistribution[100,100, 10];
+
+            //for(int i = 0; i< 100;i++)
+            //    for(int j =0; j < 100; j++)
+            //        for( int l =0; l < 10; l++)
+            //    {
+            //            objective_matrix[i, j, l] = random.NextDouble();
+            //            distributionMatrix[i, j, l] = new Gamma(random.NextDouble(), random.NextDouble());
+            //            distributionApproximationMatrix[i, j, l] = new Gamma(random.NextDouble(), random.NextDouble());
+            //        }
 
 
             //var list = new List<Gamma>(100 * 100 * 150);
@@ -60,28 +63,28 @@ namespace MyApp // Note: actual namespace depends on the project name.
             //Benchmark(() => { testList.Add(random.Next()); testList.Add(random.Next()); testList.Add(random.Next()); }, "3", 1000000);
             //Benchmark(() => { testList.Add(random.Next()); testList.Add(random.Next()); testList.Add(random.Next()); testList.Add(random.Next()); testList.Add(random.Next()); testList.Add(random.Next()); }, "6", 1000000);
 
-            Benchmark(() => { Console.WriteLine(testHeap()); }, "heap", 1);
-            Benchmark(() => { Console.WriteLine(testStack(testList)); }, "stack", 1);
-            Benchmark(() => { Console.WriteLine(testHeap()); }, "heap", 1);
-            Benchmark(() => { Console.WriteLine(testStack(testList)); }, "stack", 1);
-            //Benchmark(() => { FunctionToTest2(); }, "Value tuple", 1799051249);
-            double total = 0;
-            Benchmark(() => {
-                var objective_matrix = Program.objective_matrix;
-                for (int i = 0; i < 1799051249; i++)
-                {
-                    int loadLevel = (int)((Math.Max(0, 9 - 0.000001) / max_capacity) * numLoadLevels);
+            //Benchmark(() => { Console.WriteLine(testHeap()); }, "heap", 1);
+            //Benchmark(() => { Console.WriteLine(testStack(testList)); }, "stack", 1);
+            //Benchmark(() => { Console.WriteLine(testHeap()); }, "heap", 1);
+            //Benchmark(() => { Console.WriteLine(testStack(testList)); }, "stack", 1);
+            ////Benchmark(() => { FunctionToTest2(); }, "Value tuple", 1799051249);
+            //double total = 0;
+            //Benchmark(() => {
+            //    var objective_matrix = Program.objective_matrix;
+            //    for (int i = 0; i < 1799051249; i++)
+            //    {
+            //        int loadLevel = (int)((Math.Max(0, 9 - 0.000001) / max_capacity) * numLoadLevels);
 
-                    //This happens if the vehicle is fully loaded. It wants to check the next loadlevel
-                    if (loadLevel == numLoadLevels)
-                        loadLevel--;
-                    //numDistCalls += 1;
+            //        //This happens if the vehicle is fully loaded. It wants to check the next loadlevel
+            //        if (loadLevel == numLoadLevels)
+            //            loadLevel--;
+            //        //numDistCalls += 1;
 
-                    total += objective_matrix[8, 10, loadLevel];
-                }
+            //        total += objective_matrix[8, 10, loadLevel];
+            //    }
             
             
-            }, "CustomerDistNoDisCustom", 1);
+            //}, "CustomerDistNoDisCustom", 1);
             //Benchmark(() => { total += CustomerDistNoDist(8, 10, 9); }, "CustomerDistNoDist", 1799051249);
             //Benchmark(() => { total += CustomerDist(8,10,9).deterministicDistance;  }, "CustomerDist", 1799051249);
             //Benchmark(() => { TestFunction1(140, 150, 10);}, "llcalc", 1799051249); 

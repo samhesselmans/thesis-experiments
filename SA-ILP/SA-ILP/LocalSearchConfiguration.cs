@@ -113,13 +113,14 @@ namespace SA_ILP
             PenalizeEarlyArrival = false,
             PenalizeLateArrival = true,
             AdjustDeterministicEarlyArrivalToTWStart = true,
+            AdjustEarlyArrivalToTWStart = true,
             CheckOperatorScores = false,
             SaveRoutesBeforeOperator = false,
 
             PrintExtendedInfo = false,
             SaveScoreDevelopment = false,
             ExpectedEarlinessPenalty = 0,
-            ExpectedLatenessPenalty =0,
+            ExpectedLatenessPenalty = 0,
             UseMeanOfDistributionForTravelTime = false,
             ScaleEarlinessPenaltyWithTemperature = true,
             ScaleLatenessPenaltyWithTemperature = true,
@@ -127,16 +128,20 @@ namespace SA_ILP
             IterationsPerAlphaChange = 10000,
             NumIterationsOfNoChangeBeforeRestarting = 600000,
             RestartTemperatureBound = 0.02,
-            NumRestarts = 7
+            NumRestarts = 7,
+            WindSpeed = 0
         };
 
-        public static LocalSearchConfiguration VRPSLTT { get {
+        public static LocalSearchConfiguration VRPSLTTWithoutWaiting
+        {
+            get
+            {
                 var config = VRPLTT;
-                config.ExpectedEarlinessPenalty = 0;
-                config.ExpectedLatenessPenalty = 0;
+                config.ExpectedEarlinessPenalty = 10;
+                config.ExpectedLatenessPenalty = 10;
 
-                config.AllowEarlyArrival = true;
-                config.PenalizeEarlyArrival = false;
+                config.AllowEarlyArrival = false;
+                config.PenalizeEarlyArrival = true;
 
 
                 config.CheckOperatorScores = false;
@@ -151,7 +156,7 @@ namespace SA_ILP
                 config.IgnoreWaitingDuringDistributionAddition = true;
 
 
-                config.AdjustDeterministicEarlyArrivalToTWStart = true;
+                config.AdjustDeterministicEarlyArrivalToTWStart = false;
                 config.AdjustEarlyArrivalToTWStart = true;
 
 
@@ -159,7 +164,25 @@ namespace SA_ILP
                 config.DefaultDistribution = new Normal(0, 0);
 
 
-                return config; } }
+                return config;
+            }
+        }
+
+        public static LocalSearchConfiguration VRPSLTTWithWaiting
+        {
+            get
+            {
+                var config = VRPSLTTWithoutWaiting;
+                config.AllowEarlyArrival = true;
+                config.PenalizeEarlyArrival = false;
+                config.ExpectedEarlinessPenalty = 0;
+
+                return config;
+            }
+        }
+
+
+
 
 
         public static LocalSearchConfiguration VRPLTTDebug { get { var config = VRPLTT; config.PrintExtendedInfo = true; return config; } }

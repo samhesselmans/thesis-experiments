@@ -563,15 +563,18 @@ namespace SA_ILP
         public static long numDistCalls = 0;
         public (double deterministicDistance, IContinuousDistribution dist) CustomerDist(Customer start, Customer finish, double weight,bool provide_actualDistribution=false)
         {
-            int loadLevel = (int)((weight / max_capacity) * numLoadLevels);
+            double ll = (weight / max_capacity) * numLoadLevels;
+            int loadLevel = (int)ll;
 
             //The upperbound is inclusive
-            if (weight % (max_capacity / numLoadLevels) == 0 && weight != 0)
+            if (ll == loadLevel && weight != 0)
                 loadLevel--;
 
-            //This happens if the vehicle is fully loaded. It wants to check the next loadlevel
-            if (loadLevel == numLoadLevels)
-                loadLevel--;
+            //int loadLevel = (int)((Math.Max(0, weight - 0.000001) / max_capacity) * numLoadLevels);
+
+            ////This happens if the vehicle is fully loaded. It wants to check the next loadlevel
+            //if (loadLevel == numLoadLevels)
+            //    loadLevel--;
             numDistCalls += 1;
             var val = objective_matrix[start.Id, finish.Id, loadLevel];
             //var val2 = objeciveMatrix1d[cust1.Id + cust2.Id * numX + loadLevel * numX * numY];
@@ -1486,8 +1489,8 @@ namespace SA_ILP
             arrival_times.Insert(pos, newCustArrivalTime);
             route.Insert(pos, cust);
 
-            if (newCustDistribution == null)
-                throw new Exception("Wrong distribution");
+            //if (newCustDistribution == null)
+            //    throw new Exception("Wrong distribution");
 
             customerDistributions.Insert(pos, newCustDistribution);
             ResetCache();
