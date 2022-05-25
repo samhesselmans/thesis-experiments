@@ -182,7 +182,17 @@ namespace SA_ILP
         }
 
 
+        public static LocalSearchConfiguration VRPLTTWithWind
+        {
+            get
+            {
+                var config = VRPLTT;
+                config.WindDirection = new double[] { 0, 1 };
+                config.WindSpeed = -30;
 
+                return config;
+            }
+        }
 
 
         public static LocalSearchConfiguration VRPLTTDebug { get { var config = VRPLTT; config.PrintExtendedInfo = true; return config; } }

@@ -102,7 +102,7 @@ if (args.Length >= 1)
 
 //await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
 
-solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 1000 * 1000, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350, config: LocalSearchConfigs.VRPLTT);
+solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 1000 * 1000, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350, config: LocalSearchConfigs.VRPLTTWithWind);
 Console.WriteLine(Route.numDistCalls);
 //await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 500000000, timelimit: 1000 * 1000, numThreads: 4, numStarts: 16, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
 
@@ -249,6 +249,49 @@ async Task RunVRPLTTWindtests(string dir, string solDir, int numRepeats, Options
         {
             csvWriter.WriteLine("SEP=;");
             csvWriter.WriteLine("Instance;Windspeed;WindDirection;Score;N;ILP time;LS time;LS score;ILP imp;TimeCycledAgainstWind");
+
+            LocalSearchConfiguration config = LocalSearchConfigs.VRPLTT;
+
+            for (int test = 0; test < 4; test++)
+            {
+                if(test == 1)
+                {
+                    config.WindDirection = new double[] { 0, -1 };
+                }
+                else if(test == 2)
+                {
+                    config.WindDirection = new double[] { 1,0 };
+                }
+                else if (test == 3)
+                {
+                    config.WindDirection = new double[] {-1, 0 };
+                }
+
+                foreach (var file in Directory.GetFiles(dir))
+                {
+                    for (int repeat = 0; repeat < numRepeats; repeat++)
+                    {
+                        //Running the test
+                        (bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveVRPLTTInstanceAsync(file, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads, config: config);//solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations, timeLimit: 30 * 1000);
+
+                        VRPLTT.CalculateWindCyclingTime(file, opts.BikeMinWeight, opts.BikeMaxWeight, opts.NumLoadLevels, opts.BikePower, config.WindDirection, ilpSol);
+
+                        using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileNameWithoutExtension(file) + $"_{test}_{repeat}.txt")))
+                        {
+                            if (failed)
+                                writer.Write("FAIL did not meet check");
+                            writer.WriteLine($"Score: {ilpVal}, ilpTime: {ilpTime}, lsTime: {lsTime}, Early arrival allowed {config.AllowEarlyArrival}");
+                            foreach (var route in ilpSol)
+                            {
+                                writer.WriteLine($"{route}");
+                            }
+                        }
+                        if (failed)
+                            totalWriter.Write("FAIL did not meet check");
+                    }
+                }
+            }
+
         }
     }
 

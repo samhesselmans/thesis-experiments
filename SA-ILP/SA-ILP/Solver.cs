@@ -310,6 +310,8 @@ namespace SA_ILP
 
             //CheckRouteQualityVRPLTT(sol, matrix, bikeMaxMass - bikeMinMass);
 
+            VRPLTT.CalculateWindCyclingTime(fileName, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower, ((LocalSearchConfiguration)config).WindDirection, sol);
+
             double totalWaitingTime = 0;
             int numViolations = 0;
             foreach (Route r in sol)

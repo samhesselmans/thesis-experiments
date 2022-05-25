@@ -239,5 +239,33 @@ namespace SA_ILP
 
             return ((Cd * A * Ro * Math.Pow(v + windSpeed, 2) / 2) + Cr * mass * g * Math.Cos(Math.Atan(slope)) + mass * g * Math.Sin(Math.Atan(slope))) * v / 0.95;
         }
+
+        public static void CalculateWindCyclingTime(string file, double bikeMinWeight, double bikeMaxWeight,int numLoadlevels, double bikePower, double[] windDirection,List<Route> solution)
+        {
+            //Calculate the load dependent time matrix with no wind to analyze the mount of time is spend cycling against the wind.
+            var parsed = VRPLTT.ParseVRPLTTInstance(file);
+            (double[,,] matrix, _, _, double[,] windpart) = VRPLTT.CalculateLoadDependentTimeMatrix(parsed.customers, parsed.distances, bikeMinWeight ,bikeMaxWeight,numLoadlevels, bikePower, 0, windDirection);
+
+
+            double timeCyclingAgainstWind = 0;
+            foreach(var route in solution)
+                if(route.route.Count >2)
+                {
+                    double weight = route.used_capacity;
+                    for(int i = 0; i < route.route.Count-1; i++)
+                    {
+                        double ll = (weight / route.max_capacity) * numLoadlevels;
+                        int loadLevel = (int)ll;
+
+                        //The upperbound is inclusive
+                        if (ll == loadLevel && weight != 0)
+                            loadLevel--;
+                        timeCyclingAgainstWind += matrix[route.route[i].Id,route.route[i+1].Id,loadLevel] * windpart[route.route[i].Id,route.route[i+1].Id];
+                    }
+                }
+
+            Console.WriteLine($"Total cycling against wind {timeCyclingAgainstWind}");
+
+        }
     }
 }
