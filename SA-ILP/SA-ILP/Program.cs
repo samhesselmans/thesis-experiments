@@ -49,13 +49,17 @@ if (args.Length >= 1)
         await solver.SolveSolomonInstanceAsync(opts.Instance, numIterations: opts.Iterations, timeLimit: opts.TimeLimitLS * 1000, numStarts: opts.NumStarts, numThreads: opts.NumThreads);
 
     }
-    else if(opts.Mode == "allvrpltt")
+    else if (opts.Mode == "allvrpltt")
     {
-        await RunVRPLTTTests(opts.Instance,Path.Join("Solutions",DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")),5,opts);
+        await RunVRPLTTTests(opts.Instance, Path.Join("Solutions", DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")), 5, opts);
     }
     else if (opts.Mode == "allvrpsltt")
     {
         await RunVRPSLTTTests(opts.Instance, Path.Join("Solutions", DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")), 5, opts);
+    }
+    else if (opts.Mode == "allvrlttWind")
+    {
+
     }
     else
     {
@@ -98,7 +102,7 @@ if (args.Length >= 1)
 
 //await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
 
-solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 1000 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350,config:LocalSearchConfigs.VRPLTT);
+solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 1000 * 1000, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350, config: LocalSearchConfigs.VRPLTT);
 Console.WriteLine(Route.numDistCalls);
 //await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 500000000, timelimit: 1000 * 1000, numThreads: 4, numStarts: 16, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
 
@@ -160,10 +164,10 @@ async Task RunTestAsync()
 
     for (int i = 0; i < num; i++)
     {
-        (bool failed, _, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000,timelimit:30000);
+        (bool failed, _, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 30000);
         if (ilpVal < best)
             best = ilpVal;
-        if(ilpVal > worst)
+        if (ilpVal > worst)
             worst = ilpVal;
         total += ilpVal;
     }
@@ -179,7 +183,8 @@ async Task RunVRPLTTTests(string dir, string solDir, int numRepeats, Options opt
     using (var totalWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.txt")))
     {
         totalWriter.WriteLine(opts.ToString());
-        using(var csvWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.csv"))) {
+        using (var csvWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.csv")))
+        {
             csvWriter.WriteLine("SEP=;");
             csvWriter.WriteLine("Instance;AllowWaiting;Score;N;ILP time;LS time;LS score;ILP imp(%)");
             foreach (var file in Directory.GetFiles(dir))
@@ -192,7 +197,7 @@ async Task RunVRPLTTTests(string dir, string solDir, int numRepeats, Options opt
                     continue;
 
                 //string append = "Waiting allowed";
-                for (int i = 0; i < numRepeats ; i++)
+                for (int i = 0; i < numRepeats; i++)
                 {
                     //if (i == numRepeats)
                     //{
@@ -202,7 +207,7 @@ async Task RunVRPLTTTests(string dir, string solDir, int numRepeats, Options opt
                     //    config.PenalizeEarlyArrival = true;
                     //    //append = "Waiting not allowed";
                     //}
-                    (bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveVRPLTTInstanceAsync(file, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads,config:config);//solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations, timeLimit: 30 * 1000);
+                    (bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveVRPLTTInstanceAsync(file, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads, config: config);//solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations, timeLimit: 30 * 1000);
                     using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileNameWithoutExtension(file) + $"_{i}.txt")))
                     {
                         if (failed)
@@ -229,7 +234,25 @@ async Task RunVRPLTTTests(string dir, string solDir, int numRepeats, Options opt
     }
 }
 
+async Task RunVRPLTTWindtests(string dir, string solDir, int numRepeats, Options opts)
+{
+    Console.WriteLine("Testing with wind on all vrpltt instances");
 
+    if (!Directory.Exists(solDir))
+        Directory.CreateDirectory(solDir);
+
+    using (var totalWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.txt")))
+    {
+        totalWriter.WriteLine(opts.ToString());
+        totalWriter.Flush();
+        using (var csvWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.csv")))
+        {
+            csvWriter.WriteLine("SEP=;");
+            csvWriter.WriteLine("Instance;Windspeed;WindDirection;Score;N;ILP time;LS time;LS score;ILP imp;TimeCycledAgainstWind");
+        }
+    }
+
+}
 async Task RunVRPSLTTTests(string dir, string solDir, int numRepeats, Options opts)
 {
     Console.WriteLine("Testing on all vrpltt instances");
@@ -274,12 +297,12 @@ async Task RunVRPSLTTTests(string dir, string solDir, int numRepeats, Options op
                     config.UseMeanOfDistributionForTravelTime = false;
                 }
                 foreach (var file in Directory.GetFiles(dir))
-            {
-                Console.WriteLine($"Testing on { Path.GetFileNameWithoutExtension(file)}");
-                double totalValue = 0.0;
-                bool newInstance = false;
-                if (Path.GetExtension(file) != ".csv")
-                    continue;
+                {
+                    Console.WriteLine($"Testing on { Path.GetFileNameWithoutExtension(file)}");
+                    double totalValue = 0.0;
+                    bool newInstance = false;
+                    if (Path.GetExtension(file) != ".csv")
+                        continue;
 
 
 
@@ -425,9 +448,9 @@ async Task RunVRPSLTTTests(string dir, string solDir, int numRepeats, Options op
 
 
 
-async Task SolveAllAsync(string dir,string solDir,List<String> skip, int numThreads = 4, int numIterations = 3000000)
+async Task SolveAllAsync(string dir, string solDir, List<String> skip, int numThreads = 4, int numIterations = 3000000)
 {
-    if(!Directory.Exists(solDir))
+    if (!Directory.Exists(solDir))
         Directory.CreateDirectory(solDir);
 
     var solver = new Solver();
@@ -447,13 +470,13 @@ async Task SolveAllAsync(string dir,string solDir,List<String> skip, int numThre
 
             if (!Path.GetFileName(file).StartsWith(fileNameStart))
             {
-                totalWriter.WriteLine($"AVERAGE {fileNameStart}: {totalValue/total}");
+                totalWriter.WriteLine($"AVERAGE {fileNameStart}: {totalValue / total}");
                 totalValue = 0;
                 total = 0;
-                fileNameStart = Path.GetFileName(file).Substring(0,2);
+                fileNameStart = Path.GetFileName(file).Substring(0, 2);
             }
 
-                (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime,double lsVal) = await solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations,timeLimit:30*1000);
+            (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations, timeLimit: 30 * 1000);
             using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileName(file))))
             {
                 if (failed)
@@ -471,7 +494,7 @@ async Task SolveAllAsync(string dir,string solDir,List<String> skip, int numThre
             totalValue += ilpVal;
             total++;
 
-            totalWriter.WriteLine($"Instance: {Path.GetFileName(file)}, Score: {Math.Round(ilpVal,3)}, Vehicles: {ilpSol.Count}, ilpTime: {Math.Round(ilpTime,3)}, lsTime: {Math.Round(lsTime,3)}, lsVal: {Math.Round(lsVal,3)}, ilpImp: {Math.Round((lsVal-ilpVal)/lsVal * 100,3)}%");
+            totalWriter.WriteLine($"Instance: {Path.GetFileName(file)}, Score: {Math.Round(ilpVal, 3)}, Vehicles: {ilpSol.Count}, ilpTime: {Math.Round(ilpTime, 3)}, lsTime: {Math.Round(lsTime, 3)}, lsVal: {Math.Round(lsVal, 3)}, ilpImp: {Math.Round((lsVal - ilpVal) / lsVal * 100, 3)}%");
             totalWriter.Flush();
         }
     }
@@ -503,7 +526,7 @@ class Options
     [Value(0, MetaName = "mode", HelpText = "Program mode.\n\tOptions:\n\t\t- vrpltt\n\t\t- vrptw\n\t\t- vrplttmt\n\t\t- vrptwmt\n\t\t- allvrpltt")]
     public string Mode { get; set; }
 
-    [Value(1,MetaName = "instance", HelpText ="Path to instance")]
+    [Value(1, MetaName = "instance", HelpText = "Path to instance")]
     public string Instance { get; set; }
 
     [Option("iterations", Default = 50000000, HelpText = "LS timelimit.")]
@@ -515,7 +538,7 @@ class Options
     [Option("starts", Default = 4, HelpText = "Number of starts in multithreaded modes.")]
     public int NumStarts { get; set; }
 
-    [Option("lstl", Default =60, HelpText = "LS timelimit.")]
+    [Option("lstl", Default = 60, HelpText = "LS timelimit.")]
     public int TimeLimitLS { get; set; }
 
     [Option("ilptl", Default = 3600, HelpText = "ILP timelimit.")]

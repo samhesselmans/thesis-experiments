@@ -59,23 +59,25 @@ namespace SA_ILP
             return gamma;
         }
 
-
+        //
         //https://stackoverflow.com/questions/16266809/convert-from-latitude-longitude-to-x-y
-        public static (double, double) ConvertToPlanarCoordinates(double latitude, double longitude, double centralLatitude, double centralLongitude)
+        public static (double, double) EquirectangularProjection(double latitude, double longitude, double centralLatitude, double centralLongitude)
         {
             double X = (longitude / 180 * Math.PI - centralLongitude / 180 * Math.PI) * Math.Cos(centralLatitude / 180 * Math.PI);
             double Y = (latitude / 180 * Math.PI - centralLatitude / 180 * Math.PI);
             return (X, Y);
         }
 
-        public static (double[,,], Gamma[,,], IContinuousDistribution[,,]) CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput, double windSpeed = 0, double[] windVec = null)
+        //Calculate the load dependent time matrix, the gamma distribtued delay variable and some approximation of this gamma distribution to use during execution. It also returns the component of the windvector along the travel direction.
+        public static (double[,,], Gamma[,,], IContinuousDistribution[,,],double[,] partOfWindTaken) CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput, double windSpeed = 0, double[] windVec = null)
         {
             double[,,] matrix = new double[customers.Count, customers.Count, numLoadLevels];
+            double[,] partOfWindTaken = new double[customers.Count, customers.Count];
             Gamma[,,] distributionMatrix = new Gamma[customers.Count, customers.Count, numLoadLevels];
             IContinuousDistribution[,,] approximationMatrix = new IContinuousDistribution[customers.Count, customers.Count, numLoadLevels];
-            //List<(double, double, double)> plotData = new List<(double, double, double)>();
 
-            //double windSpeed = 3;
+
+            //Create the wind vector
             var V = Vector<double>.Build;
             if (windVec == null)
                 windVec = new double[] { 0, 2 };
@@ -83,6 +85,7 @@ namespace SA_ILP
             wd = wd.Divide(wd.L2Norm());
 
 
+            //Calculate the average latitude and longitude for the projection
             double minLatitude = double.MaxValue;
             double maxLatitude = double.MinValue;
             double minLongtitude = double.MaxValue;
@@ -104,6 +107,7 @@ namespace SA_ILP
             double centralLongitude = (minLongtitude + maxLongitude) / 2;
 
 
+            //Calculate the various matrices.
             Parallel.For(0, customers.Count, i =>
             {
                 for (int j = 0; j < customers.Count; j++)
@@ -116,17 +120,15 @@ namespace SA_ILP
                     double heightDiff = customers[j].Elevation - customers[i].Elevation;
 
 
-                    //TODO: lattitude longtitude omzetten in daadwerkelijke 2d vectors! Anders werkt de wind richting natuurlijk niet
-
-
-                    (double X1, double Y1) = ConvertToPlanarCoordinates(customers[j].X, customers[j].Y, centralLatitude, centralLongitude);
-                    (double X2, double Y2) = ConvertToPlanarCoordinates(customers[i].X, customers[i].Y, centralLatitude, centralLongitude);
+                    //Convert the latitute and longitude coordinates of the customers to carthesian coordinates using equirectangular projection
+                    (double X1, double Y1) = EquirectangularProjection(customers[j].X, customers[j].Y, centralLatitude, centralLongitude);
+                    (double X2, double Y2) = EquirectangularProjection(customers[i].X, customers[i].Y, centralLatitude, centralLongitude);
 
                     double xDirection = X1 - X2;
                     double yDirection = Y1 - Y2;
 
 
-
+                    //Create and normalize vector from the indivial values
                     double[] custVec = { xDirection, yDirection };
                     var td = V.DenseOfArray(custVec);
                     td = td.Divide(td.L2Norm());
@@ -134,27 +136,18 @@ namespace SA_ILP
 
 
 
-                    //var test = cv.PointwiseMultiply(v);
 
                     //https://math.stackexchange.com/questions/286391/find-the-component-of-veca-along-vecb
-                    double vComponentAlongCV = (wd * td) / td.L2Norm();
-                    //Math.Sign(test.Sum()) * test.L2Norm()
-                    //if (j == 13 && i == 44)
-                    //    Console.WriteLine("yes");
-                    //if (j == 44 && i == 13)
-                    //    Console.WriteLine("yes");
-                    //double slope = Math.Atan(heightDiff /( dist * 1000));
-                    //if (dist == 0)
-                    //    slope = 0;
-                    ////if(j > i)
-                    //total += Math.Abs(slope);
+                    double windComponentAlongTravelDirection = (wd * td) / td.L2Norm();
+                    partOfWindTaken[i,j] = windComponentAlongTravelDirection;
+        
                     for (int l = 0; l < numLoadLevels; l++)
                     {
                         double loadLevelWeight = minWeight + ((maxWeight - minWeight) / numLoadLevels) * l + ((maxWeight - minWeight) / numLoadLevels) / 2;
 
 
 
-                        matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput, vComponentAlongCV * windSpeed);
+                        matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput, windComponentAlongTravelDirection * windSpeed);
                         distributionMatrix[i, j, l] = CreateTravelTimeDistribution(loadLevelWeight, matrix[i, j, l]);
                         approximationMatrix[i, j, l] = new Normal(distributionMatrix[i, j, l].Mean, distributionMatrix[i, j, l].StdDev); // //
                         //approximationMatrix[i, j, l] = distributionMatrix[i, j, l];
@@ -181,7 +174,7 @@ namespace SA_ILP
                             w.WriteLine($"{matrix[i, j, l]};{distributionMatrix[i, j, l].Mean};{distributionMatrix[i, j, l].Mode}");
                         }
             Console.WriteLine($"{gam.Shape};{gam.Rate}");
-            return (matrix, distributionMatrix, approximationMatrix);
+            return (matrix, distributionMatrix, approximationMatrix,partOfWindTaken);
         }
 
         public static (double[,] distances, List<Customer> customers) ParseVRPLTTInstance(string file)
