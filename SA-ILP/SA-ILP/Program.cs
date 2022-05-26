@@ -103,7 +103,6 @@ if (args.Length >= 1)
 //await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
 
 solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 1000 * 1000, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350, config: LocalSearchConfigs.VRPLTTWithWind);
-Console.WriteLine(Route.numDistCalls);
 //await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 500000000, timelimit: 1000 * 1000, numThreads: 4, numStarts: 16, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350);
 
 //const LocalSearchConfiguration config = LocalSearchConfigs.VRPLTT;
@@ -274,7 +273,10 @@ async Task RunVRPLTTWindtests(string dir, string solDir, int numRepeats, Options
                         //Running the test
                         (bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveVRPLTTInstanceAsync(file, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads, config: config);//solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations, timeLimit: 30 * 1000);
 
-                        VRPLTT.CalculateWindCyclingTime(file, opts.BikeMinWeight, opts.BikeMaxWeight, opts.NumLoadLevels, opts.BikePower, config.WindDirection, ilpSol);
+                        var windResult = VRPLTT.CalculateWindCyclingTime(file, opts.BikeMinWeight, opts.BikeMaxWeight, opts.NumLoadLevels, opts.BikePower, config.WindDirection, ilpSol);
+
+
+                        csvWriter.WriteLine($"{Path.GetFileNameWithoutExtension(file)};{config.WindSpeed};({config.WindDirection[0]},{config.WindDirection[1]});{ilpVal};{ilpTime};{lsTime};{lsVal};{(ilpVal-lsVal)/lsVal * 100};{windResult}");
 
                         using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileNameWithoutExtension(file) + $"_{test}_{repeat}.txt")))
                         {

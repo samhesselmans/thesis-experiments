@@ -598,7 +598,6 @@ namespace SA_ILP
             ////This happens if the vehicle is fully loaded. It wants to check the next loadlevel
             //if (loadLevel == numLoadLevels)
             //    loadLevel--;
-            numDistCalls += 1;
             var val = objective_matrix[start.Id, finish.Id, loadLevel];
             //var val2 = objeciveMatrix1d[cust1.Id + cust2.Id * numX + loadLevel * numX * numY];
             //if (val != val2)
@@ -624,7 +623,6 @@ namespace SA_ILP
             ////This happens if the vehicle is fully loaded. It wants to check the next loadlevel
             //if (loadLevel == numLoadLevels)
             //    loadLevel--;
-            numDistCalls += 1;
             var val = objective_matrix[start.Id, finish.Id, loadLevel];
 
             return (val, null);

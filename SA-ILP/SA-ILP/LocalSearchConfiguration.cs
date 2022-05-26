@@ -187,8 +187,8 @@ namespace SA_ILP
             get
             {
                 var config = VRPLTT;
-                config.WindDirection = new double[] { 0, 1 };
-                config.WindSpeed = -30;
+                config.WindDirection = new double[] { 1, 0 };
+                config.WindSpeed = 10;
 
                 return config;
             }
