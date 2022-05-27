@@ -1,4 +1,5 @@
 from random import randrange
+from time import sleep
 import parse_vrpltt_instance as psi
 import random
 import json
@@ -8,7 +9,7 @@ import requests
 
 
 #points generated using: http://www.geomidpoint.com/random/
-points_file = "utrecht.csv"
+points_file = "utrecht.csv" #File with comma separated data from geomidpoint's random generator
 output_file = "utrecht_full.csv"
 
 customers = []
@@ -23,30 +24,60 @@ with open(points_file) as file:
 
 base_url = "http://samhesselmans.com:5000/table/v1/bike/"
 
+request = base_url
+
+
 for cust in customers:
-    base_url += cust["lengte"] + "," + cust["breedte"] + ";"
+    request += cust["lengte"] + "," + cust["breedte"] + ";"
     #file.write(str(lengte) + "," + str(breedte)  + "\n")
-base_url = base_url[:-1]
-base_url += "?annotations=distance"
-print(base_url )
+request = request[:-1]
+request += "?annotations=distance"
+print(request )
 
 
-response = requests.get(base_url)
+response = requests.get(request)
 parsed = json.loads(response.text)
 
 #Only supports requests of 100 points at the same time
 base_elevation_url = "https://api.opentopodata.org/v1/eudem25m?locations="
 
+#Elevation API only supports calls of 100 customers at a time
+elevationAPI_results = []
+
 #Create the elevation API request
 request = base_elevation_url
+
+count = 0
+
 for dest in parsed["destinations"]:
     request += str(dest["location"][1]) + "," + str(dest["location"][0]) + "|"
+    count += 1
+    if(count == 100):
+        requests.get(request)
+        response_elevation = requests.get(request)
+        parsed_elevation = json.loads(response_elevation.text)
+        elevationAPI_results.append(parsed_elevation)
+        request = base_elevation_url
+        #API only allows one call every second
+        sleep(1)
+
 request = request[:-1]
 
 
 response_elevation = requests.get(request)
 parsed_elevation = json.loads(response_elevation.text)
+elevationAPI_results.append(parsed_elevation)
 print(parsed_elevation)
+
+
+
+fixedElevations = []
+
+index = 0
+for result in elevationAPI_results:
+    for res in result["results"]:
+        fixedElevations.append(res)
+        #index+= 1
 
 
 length = len(parsed["destinations"])
@@ -57,7 +88,7 @@ with open(output_file,"w") as outfile:
         customer_id = str(i)
         latitude = str(parsed["destinations"][i]["location"][1])
         longitude = str(parsed["destinations"][i]["location"][0])
-        elevation = str(parsed_elevation["results"][i]["elevation"])
+        elevation = str(fixedElevations[i]["elevation"])
         service_time = str(5)
         demand = str(random.randint(5,15))
         tw_lb = random.uniform(0,100)
