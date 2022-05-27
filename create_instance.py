@@ -8,7 +8,7 @@ import requests
 
 
 
-#points generated using: http://www.geomidpoint.com/random/
+#points generated using: http://www.geomidpoint.com/random/ with a 2km radius from Neude square
 points_file = "utrecht.csv" #File with comma separated data from geomidpoint's random generator
 output_file = "utrecht_full.csv"
 
