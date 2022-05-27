@@ -99,11 +99,9 @@ namespace SA_ILP
 
 
         public Func<Customer, Customer, double, bool, (double, IContinuousDistribution)> CustomerDist;
+        public Func<IContinuousDistribution, IContinuousDistribution, double, IContinuousDistribution> AddDistributions;
+        public Func<IContinuousDistribution, Customer, double, double> CalculateUncertaintyPenaltyTerm;
 
-#if DEBUG
-        public long bestFitCacheHit = 0;
-        public long bestFitCacheMiss = 0;
-#endif
         public Route(Customer depot, double[,,] distanceMatrix, Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix, double maxCapacity, int seed, LocalSearch parent)
         {
             this.route = new List<Customer>(20) { depot, depot };
@@ -128,7 +126,7 @@ namespace SA_ILP
             ResetCache();
 
 
-            SetCutstomerDistFunction();
+            SetFunctions();
         }
 
 
@@ -169,7 +167,7 @@ namespace SA_ILP
             //BestCustomerPos = new Dictionary<int, (int, double)>();
             ResetCache();
 
-            SetCutstomerDistFunction();
+            SetFunctions();
         }
 
         public Route(List<Customer> customers, RouteStore routeStore, Customer depot, double[,,] distanceMatrix, Gamma[,,] distributionMatrix, IContinuousDistribution[,,] approximationMatrix, double maxCapacity, LocalSearch parent)
@@ -194,7 +192,7 @@ namespace SA_ILP
 
             ResetCache();
 
-            SetCutstomerDistFunction();
+            SetFunctions();
 
             foreach (int cust in routeStore.Route)
             {
@@ -209,12 +207,20 @@ namespace SA_ILP
         {
             return parent.Config.ExpectedLatenessPenalty != 0 || parent.Config.ExpectedEarlinessPenalty != 0;
         }
-        private void SetCutstomerDistFunction()
+        private void SetFunctions()
         {
             if (UsesStochasticImplementation())
+            {
+                AddDistributions = AddDistributionsStochastic;
+                CalculateUncertaintyPenaltyTerm = CalculateUncertaintyPenaltyTermStochastic;
                 CustomerDist = CustomerDistWithDistributions;
+            }
             else
+            {
+                AddDistributions = AddDistributionsDeterministic;
+                CalculateUncertaintyPenaltyTerm = CalculateUncertaintyPenaltyTermDeterministic;
                 CustomerDist = CustomerDistNoDistributions;
+            }
 
         }
 
@@ -251,12 +257,15 @@ namespace SA_ILP
                 return (parent.Config.BaseLateArrivalPenalty + arrivalTime - timeWindowEnd) / scale;
             }
         }
-        public double CalculateUncertaintyPenaltyTerm(IContinuousDistribution dist, Customer cust, double minArrrivalTime)
+        public double CalculateUncertaintyPenaltyTermStochastic(IContinuousDistribution dist, Customer cust, double minArrrivalTime)
         {
             //double onTimeP = 1 - (dist.CumulativeDistribution(cust.TWEnd - minArrrivalTime) - dist.CumulativeDistribution(cust.TWStart - minArrrivalTime));
 
-            if (parent.Config.ExpectedLatenessPenalty == 0 && parent.Config.ExpectedEarlinessPenalty == 0)
-                return 0;
+            //return 0;
+
+
+            //if (!UsesStochasticImplementation())
+            //    return 0;
 
             double toLateP = 1;
             double cutOff =  dist.CumulativeDistribution(0);
@@ -284,6 +293,11 @@ namespace SA_ILP
 
 
             return res;
+        }
+
+        public double CalculateUncertaintyPenaltyTermDeterministic(IContinuousDistribution dist, Customer cust, double minArrrivalTime)
+        {
+            return 0;
         }
 
         public RouteSimmulationResult Simulate(int numSimulations = 1000)
@@ -499,10 +513,11 @@ namespace SA_ILP
         }
 
 
-        private IContinuousDistribution AddDistributions(IContinuousDistribution left, IContinuousDistribution right, double diffWithLowerTimeWindow = -1)
+        private IContinuousDistribution AddDistributionsStochastic(IContinuousDistribution left, IContinuousDistribution right, double diffWithLowerTimeWindow = -1)
         {
-          if (parent.Config.ExpectedLatenessPenalty == 0 && parent.Config.ExpectedEarlinessPenalty == 0)
-              return left;
+          //  return left;
+          //if (!UsesStochasticImplementation())
+          //    return left;
 
             if (left.GetType() == typeof(Gamma))
             {
@@ -514,6 +529,11 @@ namespace SA_ILP
             throw new NotImplementedException("Unsupported distribution");
 
 
+        }
+
+        private IContinuousDistribution AddDistributionsDeterministic(IContinuousDistribution left, IContinuousDistribution right, double diffWithLowerTimeWindow = -1)
+        {
+            return left;
         }
 
         public double CalcObjective()
