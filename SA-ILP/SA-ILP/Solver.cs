@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Gurobi;
+using MathNet.Numerics.Distributions;
 
 namespace SA_ILP
 {
@@ -84,7 +85,7 @@ namespace SA_ILP
 
         public static double CalcRemovedPenalty(int removedCount,LocalSearch ls)
         {
-            return Math.Pow(removedCount, ls.BaseRemovedCustomerPenaltyPow) * (ls.BaseRemovedCustomerPenalty / Math.Pow(ls.Temperature,2));
+            return Math.Pow(removedCount, ls.Config.BaseRemovedCustomerPenaltyPow) * (ls.Config.BaseRemovedCustomerPenalty / Math.Pow(ls.Temperature,2));
         }
 
 
@@ -99,54 +100,7 @@ namespace SA_ILP
             return matrix;
         }
 
-        private double[,,] CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput)
-        {
-            double[,,] matrix = new double[customers.Count, customers.Count, numLoadLevels];
-            Parallel.For(0, customers.Count, i =>
-            {
-                for (int j = 0; j < customers.Count; j++)
-                {
-                    double dist;
-                    if (i < j)
-                        dist = distanceMatrix[i, j];
-                    else
-                        dist = distanceMatrix[j, i];
-                    double heightDiff = customers[j].Elevation - customers[i].Elevation;
 
-                    //double slope = Math.Atan(heightDiff /( dist * 1000));
-                    //if (dist == 0)
-                    //    slope = 0;
-                    ////if(j > i)
-                    //total += Math.Abs(slope);
-                    for (int l = 0; l < numLoadLevels; l++)
-                    {
-                        double loadLevelWeight = minWeight + ((maxWeight - minWeight) / numLoadLevels) * l + ((maxWeight - minWeight) / numLoadLevels) / 2;
-
-  
-
-                        matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput);
-                    }
-                }
-
-            }); // (int i = 0; i < customers.Count; i++)
-            
-            //for (int i = 0; i < customers.Count; i++)
-            //    for (int j = 0; j < customers.Count; j++)
-            //        for (int l = 0; l < numLoadLevels; l++)
-            //        {
-            //            double loadLevelWeight = minWeight + ((maxWeight - minWeight) / numLoadLevels) * l + ((maxWeight - minWeight) / numLoadLevels) / 2;
-
-            //            double dist;
-            //            if (i < j)
-            //                dist = distanceMatrix[i, j];
-            //            else
-            //                dist = distanceMatrix[j, i];
-
-            //            matrix[i, j, l] = VRPLTT.CalculateTravelTime(customers[i].Elevation - customers[j].Elevation, dist, loadLevelWeight, powerInput);
-            //        }
-
-            return matrix;
-        }
 
         public static double CalculateDistanceObjective(Customer cust1, Customer cust2)
         {
@@ -168,7 +122,7 @@ namespace SA_ILP
             List<Task<(HashSet<RouteStore>, List<Route>, double)>> tasks = new List<Task<(HashSet<RouteStore>, List<Route>, double)>>();
             var distanceMatrix = CalculateDistanceMatrix(customers);
             var ls = new LocalSearch(LocalSearchConfigs.VRPTW, random.Next());
-            (var colums, var sol, var value) = ls.LocalSearchInstance(0, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, numInterations: numIterations,timeLimit:timeLimit);
+            (var colums, var sol, var value) = ls.LocalSearchInstance(0, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix,new Gamma[distanceMatrix.GetLength(0), distanceMatrix.GetLength(1), distanceMatrix.GetLength(2)], new Gamma[distanceMatrix.GetLength(0), distanceMatrix.GetLength(1), distanceMatrix.GetLength(2)], numInterations: numIterations,timeLimit:timeLimit);
             foreach (Route route in sol)
                 route.CheckRouteValidity();
 
@@ -197,21 +151,23 @@ namespace SA_ILP
             //Console.WriteLine($"Total waiting time: {totalWaitingTime} over {numViolations} customers");
         }
 
-        public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal,string solutionJSON)> SolveVRPLTTInstanceAsync(string fileName, int numIterations = 3000000, double bikeMinMass = 140, double bikeMaxMass = 290, int numLoadLevels = 10, double inputPower = 350, int timelimit = 30000, int numThreads = 4, int numStarts=4,LocalSearchConfiguration? config = null)
+        public async Task<(bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal,string solutionJSON)> SolveVRPLTTInstanceAsync(string fileName, int numIterations = 3000000, double bikeMinMass = 140, double bikeMaxMass = 290, int numLoadLevels = 10, double inputPower = 350, int timelimit = 30000, int numThreads = 4, int numStarts=4,LocalSearchConfiguration? config = null)
         {
+            if (config == null)
+                config = LocalSearchConfigs.VRPLTT;
+
             (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(fileName);
             Stopwatch w = new Stopwatch();
             w.Start();
             Console.WriteLine("Calculating travel time matrix");
-            double[,,] matrix = CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
+            (double[,,] matrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix,_) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower,((LocalSearchConfiguration)config).WindSpeed, ((LocalSearchConfiguration)config).WindDirection);
             Console.WriteLine($"Created distance matrix in {((double)w.ElapsedMilliseconds/1000).ToString("0.00")}s");
             //(var colums, var sol, _, var value) = await LocalSearchInstancAsync("", customers.Count, bikeMaxMass - bikeMinMass, customers, matrix, 1, numIterations, timelimit);//LocalSearchInstance(-1, "", customers.Count, bikeMaxMass-bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix,random.Next(), numInterations: numIterations,checkInitialSolution:true,timeLimit:timelimit,printExtendedInfo:true);
             //Route.objective_matrix = matrix;
 
-            if (config == null)
-                config = LocalSearchConfigs.VRPLTT;
 
-            (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal,string solutionJSON) = await SolveInstanceAsync("", customers.Count, bikeMaxMass - bikeMinMass, customers, matrix, numThreads,numStarts, numIterations, (LocalSearchConfiguration)config, timeLimit: timelimit);
+
+            (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal,string solutionJSON) = await SolveInstanceAsync("", customers.Count, bikeMaxMass - bikeMinMass, customers, matrix,distributionMatrix,approximationMatrix, numThreads,numStarts, numIterations, (LocalSearchConfiguration)config, timeLimit: timelimit);
 
             double totalWaitingTime = 0;
             int numViolations = 0;
@@ -219,14 +175,17 @@ namespace SA_ILP
             double checkValue = 0;
             double numCustomers = 0;
             double totalRouteLength = 0;
+
             HashSet<int> visitedCustomers = new HashSet<int>();
             bool failed = false;
             List<Route> Solution = new List<Route>();
+            using(var sw =  new StreamWriter("out.txt"))
             foreach (RouteStore rs in ilpSol)
             {
                 var ls = new LocalSearch((LocalSearchConfiguration)config, random.Next());
-                Route r = new Route(customers, rs, customers[0], matrix, bikeMaxMass - bikeMinMass, ls);
+                Route r = new Route(customers, rs, customers[0], matrix,distributionMatrix, approximationMatrix, bikeMaxMass - bikeMinMass, ls);
                 Solution.Add(r);
+                sw.WriteLine($"{r},");
                 checkValue += r.CalcObjective();
                 totalStartTime += r.arrival_times[0];
                 totalRouteLength += r.arrival_times[r.arrival_times.Count - 1] - r.route.Sum(x => x.ServiceTime);
@@ -240,10 +199,11 @@ namespace SA_ILP
                 }
                 for (int i = 0; i < r.route.Count - 1; i++)
                 {
+
                     if (i != 0 && visitedCustomers.Contains(r.route[i].Id))
                         failed = true;
                     visitedCustomers.Add(r.route[i].Id);
-                    var dist = r.CustomerDist(r.route[i], r.route[i + 1], load);
+                    (var dist, IContinuousDistribution distribution) = r.CustomerDist(r.route[i], r.route[i + 1], load, false);
                     load -= r.route[i + 1].Demand;
                     if (r.arrival_times[i] + dist + r.route[i].ServiceTime < r.route[i + 1].TWStart)
                     {
@@ -266,21 +226,110 @@ namespace SA_ILP
             //CheckRouteQualityVRPLTT(Solution, matrix, bikeMaxMass - bikeMinMass);
 
             //(List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads, numIterations);
-            return (failed,ilpSol,ilpVal,ilpTime,lsTime,lsVal, solutionJSON);
+            var parent = new LocalSearch((LocalSearchConfiguration)config, random.Next());
+            return (false,ilpSol.ConvertAll(x=>new Route(customers,x,customers[0],matrix,distributionMatrix, approximationMatrix, bikeMaxMass-bikeMinMass, parent)),ilpVal,ilpTime,lsTime,lsVal,solutionJSON);
         }
 
-        public double SolveVRPLTTInstance(string fileName, int numIterations = 3000000, double bikeMinMass = 150, double bikeMaxMass = 350, int numLoadLevels = 10, double inputPower = 400, int timelimit = 30000)
+        public double SolveVRPLTTInstance(string fileName, int numIterations = 3000000, double bikeMinMass = 150, double bikeMaxMass = 350, int numLoadLevels = 10, double inputPower = 400, int timelimit = 30000,LocalSearchConfiguration? config = null)
         {
-            (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(fileName);
-            double[,,] matrix = CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower);
-            var ls = new LocalSearch(LocalSearchConfigs.VRPLTTDebug, random.Next());
-            (var colums, var sol, var value) = ls.LocalSearchInstance(0, "", customers.Count, bikeMaxMass - bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix, numInterations: numIterations, checkInitialSolution: false, timeLimit: timelimit);
-            foreach (var route in sol)
-                if(route.route.Count != 2)
-                    Console.WriteLine($"{route}; ST {route.startTime} ; SST {route.route[1].TWStart - route.CustomerDist(route.route[0], route.route[1],route.used_capacity)}");
 
+            if (config == null)
+                config = LocalSearchConfigs.VRPLTTDebug;
+
+            (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(fileName);
+
+
+
+            (double[,,] matrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix,_) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower, ((LocalSearchConfiguration)config).WindSpeed, ((LocalSearchConfiguration)config).WindDirection);
+            var ls = new LocalSearch((LocalSearchConfiguration)config, random.Next());
+            //ls.config.ScaleLatenessPenaltyWithTemperature = true;
+            (var colums, var sol, var value) = ls.LocalSearchInstance(0, "", customers.Count, bikeMaxMass - bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix,distributionMatrix,approximationMatrix, numInterations: numIterations, checkInitialSolution: false, timeLimit: timelimit);
+
+            double totalDist = 0;
+            double totalWait = 0;
+            double totalOntimePercentage = 0;
+            int numRoutes = 0;
+            using(var sw = new StreamWriter("out.txt"))
+            foreach (var route in sol)
+            {
+                if (route.route.Count != 2)
+                {
+                        sw.WriteLine($"{route},");
+                    Console.WriteLine(route);
+                    //Console.WriteLine($"{route}; ST {route.startTime} ; SST {route.route[1].TWStart - route.CustomerDist(route.route[0], route.route[1], route.used_capacity).Item1}");
+                    numRoutes++;
+                    double avg = 0;
+                    int total = 0;
+                    double worst = double.MaxValue;
+                    Customer? worstCust = null;
+                    int worstIndex = -1;
+
+                    for (int i = 0; i < route.route.Count; i++)
+                    {
+
+                        if (route.customerDistributions[i] != null)
+                        {
+                            total += 1;
+
+                            double difUp = route.route[i].TWEnd - route.arrival_times[i];
+                            double difDown = route.route[i].TWStart - route.arrival_times[i];
+
+                            if (difUp < 0)
+                                difUp = 0;
+                            if (difDown < 0)
+                                difDown = 0;
+
+                            double pEarly = route.customerDistributions[i].CumulativeDistribution(difDown);
+
+                            double pOnTime = (route.customerDistributions[i].CumulativeDistribution(difUp));
+
+                            if (Double.IsNaN(pOnTime))
+                                pOnTime = 1;
+
+                            if (((LocalSearchConfiguration)config).AllowEarlyArrival)
+                                pEarly = 0;
+
+                            double p = pOnTime - pEarly;
+
+                            avg += p;
+                            if (p < worst)
+                            {
+                                worstCust = route.route[i];
+                                worst = p;
+                                worstIndex = i;
+                            }
+                        }
+                    }
+                    //Console.WriteLine($"{route}: On time performance: {avg / total} worst: {worst} at {worstCust} at {worstIndex}");
+
+                    //var res = route.Simulate(1000000);
+                    //totalDist += res.AverageTravelTime;
+                    //totalWait += res.AverageWaitingTime;
+                    //totalOntimePercentage += res.OnTimePercentage;
+
+                    //int minIndex = -1;
+                    //double min = double.MaxValue;
+                    //for(int j =0;j<res.CustomerOnTimePercentage.Length;j++)
+                    //{
+                    //    if (res.CustomerOnTimePercentage[j] < min)
+                    //    {
+                    //        min = res.CustomerOnTimePercentage[j];
+                    //        minIndex = j;
+                    //    }
+
+                    //}
+
+                    //Console.WriteLine($"Simmulated on time perfomance: {res.OnTimePercentage} worst: {min} at {minIndex}\n");
+                }
+
+            }
+
+            //Console.WriteLine($"Average solution travel time: {totalDist} with OTP: {totalOntimePercentage/numRoutes}");
+            //Console.WriteLine($"Average solution waiting time: {totalWait}");
 
             //CheckRouteQualityVRPLTT(sol, matrix, bikeMaxMass - bikeMinMass);
+
+            VRPLTT.CalculateWindCyclingTime(fileName, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower, ((LocalSearchConfiguration)config).WindDirection, sol);
 
             double totalWaitingTime = 0;
             int numViolations = 0;
@@ -289,7 +338,7 @@ namespace SA_ILP
                 var load = r.used_capacity;
                 for (int i = 0; i < r.route.Count - 1; i++)
                 {
-                    var dist = r.CustomerDist(r.route[i], r.route[i + 1], load);
+                    (var dist, IContinuousDistribution distribution) = r.CustomerDist(r.route[i], r.route[i + 1], load, false);
                     load -= r.route[i + 1].Demand;
                     if (r.arrival_times[i] + dist + r.route[i].ServiceTime < r.route[i + 1].TWStart)
                     {
@@ -323,7 +372,7 @@ namespace SA_ILP
         {
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
             var distanceMatrix = CalculateDistanceMatrix(customers);
-            await LocalSearchInstancAsync(name, numV, capV, customers, distanceMatrix, 4,4, numIterations, timeLimit,LocalSearchConfigs.VRPTW);
+            await LocalSearchInstancAsync(name, numV, capV, customers, distanceMatrix, new Gamma[distanceMatrix.GetLength(0), distanceMatrix.GetLength(1), distanceMatrix.GetLength(2)], new Gamma[distanceMatrix.GetLength(0), distanceMatrix.GetLength(1), distanceMatrix.GetLength(2)], 4,4, numIterations, timeLimit,LocalSearchConfigs.VRPTW);
         }
 
         public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal)> SolveSolomonInstanceAsync(string fileName, int numThreads = 1, int numStarts=4, int numIterations = 3000000, int timeLimit = 100000,LocalSearchConfiguration? config = null)
@@ -335,13 +384,13 @@ namespace SA_ILP
             if (config == null)
                 config = LocalSearchConfigs.VRPTW;
 
-            (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal,string solutionJSON) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads,numStarts, numIterations, (LocalSearchConfiguration)config, timeLimit: timeLimit);
+            (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal,string solutionJSON) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, new Gamma[distanceMatrix.GetLength(0), distanceMatrix.GetLength(1), distanceMatrix.GetLength(2)], new Gamma[distanceMatrix.GetLength(0), distanceMatrix.GetLength(1), distanceMatrix.GetLength(2)], numThreads,numStarts, numIterations, (LocalSearchConfiguration)config, timeLimit: timeLimit);
             bool failed = SolomonParser.CheckSolomonSolution(fileName, ilpSol, ilpVal);
-            ilpSol.ForEach(x=>Console.WriteLine(x));    
+            ilpSol.ForEach(x=>Console.WriteLine(x));
             return (failed, ilpSol, ilpVal, ilpTime, lsTime, lsVal);
         }
 
-        public async Task<(HashSet<RouteStore> columns, List<Route> LSSolution, double LSTime, double LSVal)> LocalSearchInstancAsync(string name, int numV, double capV, List<Customer> customers, double[,,] distanceMatrix, int numThreads,int numStarts, int numIterations, int timeLimit, LocalSearchConfiguration config)
+        public async Task<(HashSet<RouteStore> columns, List<Route> LSSolution, double LSTime, double LSVal)> LocalSearchInstancAsync(string name, int numV, double capV, List<Customer> customers, double[,,] distanceMatrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix, int numThreads,int numStarts, int numIterations, int timeLimit, LocalSearchConfiguration config)
         {
             List<Task<(HashSet<RouteStore>, List<Route>, double)>> tasks = new List<Task<(HashSet<RouteStore>, List<Route>, double)>>();
 
@@ -359,11 +408,11 @@ namespace SA_ILP
                 {
                     var id = i;
                     var ls = new LocalSearch(config, random.Next());
-                    tasks.Add(Task.Run(() => { return ls.LocalSearchInstance(id, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix.Clone() as double[,,], numInterations: numIterations, timeLimit: timeLimit); }));
-                    
+                    tasks.Add(Task.Run(() => { return ls.LocalSearchInstance(id, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix.Clone() as double[,,], distributionMatrix,approximationMatrix, numInterations: numIterations, timeLimit: timeLimit); }));
+
 
                 }
-                
+
                 foreach (var task in tasks)
                 {
                     (var columns, var solution, var value) = await task;
@@ -388,9 +437,9 @@ namespace SA_ILP
             return (allColumns, bestSolution, (double)watch.ElapsedMilliseconds / 1000, bestLSVal);
         }
 
-        public async Task<(List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal, string solutionJSON)> SolveInstanceAsync(string name, int numV, double capV, List<Customer> customers, double[,,] distanceMatrix, int numThreads,int numStarts, int numIterations, LocalSearchConfiguration configuration, int timeLimit = 30000)
+        public async Task<(List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal, string solutionJSON)> SolveInstanceAsync(string name, int numV, double capV, List<Customer> customers, double[,,] distanceMatrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix, int numThreads,int numStarts, int numIterations, LocalSearchConfiguration configuration, int timeLimit = 30000)
         {
-            (var allColumns, var bestSolution, var LSTime, var LSSCore) = await LocalSearchInstancAsync(name, numV, capV, customers, distanceMatrix, numThreads, numStarts, numIterations, timeLimit, configuration);
+            (var allColumns, var bestSolution, var LSTime, var LSSCore) = await LocalSearchInstancAsync(name, numV, capV, customers, distanceMatrix, distributionMatrix, approximationMatrix, numThreads, numStarts, numIterations, timeLimit, configuration);
             //bestSolution.ForEach(x => Console.WriteLine(x));
             PrintRoutes(bestSolution);
             (var ilpSol, double ilpVal, double time,string solutionJSON) = SolveILP(allColumns, customers, numV, bestSolution);
@@ -414,7 +463,7 @@ namespace SA_ILP
                 GRBEnv env = new GRBEnv();
                 env.LogToConsole = 0;
                 GRBModel model = new GRBModel(env);
-                
+
                 int numCust = route.route.Count - 1;
 
                 GRBVar[,] edgeX = new GRBVar[route.route.Count - 1,route.route.Count - 1];
@@ -443,13 +492,13 @@ namespace SA_ILP
                     {
                         edgeX[i,j] = model.AddVar(0,1,0,GRB.BINARY, $"X{i}_{j}"); //(0, 1, GRB.BINARY, $"X{i}_{j}"
                         edgeX[i, j].Start = 0;
-                        vehicleWeight[i, j] = model.AddVar(0, maxLoad, 0, GRB.CONTINUOUS, $"F{i}_{j}"); 
+                        vehicleWeight[i, j] = model.AddVar(0, maxLoad, 0, GRB.CONTINUOUS, $"F{i}_{j}");
                         for(int l =0 ; l < distanceMatrix.GetLength(2); l++)
                         {
                             loadLevelEdgeX[i, j, l] = model.AddVar(0, 1, distanceMatrix[route.route[i].Id, route.route[j].Id, l], GRB.BINARY, $"z{i}_{j}_{l}");
                             loadLevelEdgeX[i, j, l].Start = 0;
 
-                            //llLowerBound[l] = 
+                            //llLowerBound[l] =
 
                         }
                     }
@@ -538,7 +587,7 @@ namespace SA_ILP
                         custTotalIn.AddTerm(1, edgeX[j, i]);
                     }
 
-                    //Constraint 9 
+                    //Constraint 9
                     model.AddConstr(custTotalOut == 1, $"CustIn{route.route[i].Id}");
                     //Constraint 8
                     model.AddConstr(custTotalIn == 1, $"CustOut{route.route[i].Id}");
@@ -666,7 +715,7 @@ namespace SA_ILP
             List<RouteStore> solution = new List<RouteStore>();
             for (int i = 0; i < columnDecisions.Length; i++)
             {
-                if (Math.Round(columnDecisions[i].X,6) == 1)
+                if (Math.Round(columnDecisions[i].X, 6) == 1)
                     solution.Add(columList[i]);
             }
             //Console.WriteLine(model.GetJSONSolution());

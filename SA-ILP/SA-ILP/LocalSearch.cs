@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MathNet.Numerics.Distributions;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -13,43 +14,9 @@ namespace SA_ILP
         private static readonly object ConsoleWriterLock = new object();
 
         public double Temperature { get; private set; }
-        public double InitialTemperature { get; private set; }
 
-        public bool AllowLateArrivalDuringSearch { get; private set; }
-        public bool AllowEarlyArrivalDuringSearch { get; private set; }
 
-        public bool AllowLateArrival { get; private set; }
-        public bool AllowEarlyArrival { get; private set; }
-
-        //public static readonly double BaseRemovedCustomerPenalty = 150;
-        //public static readonly double BaseRemovedCustomerPenaltyPow = 1.5;
-
-        public double BaseRemovedCustomerPenalty { get; private set; }
-        public double BaseRemovedCustomerPenaltyPow { get; private set; }
-
-        public double BaseEarlyArrivalPenalty { get; private set; }
-        public double BaseLateArrivalPenalty { get; private set; }
-
-        public double Alpha { get; private set; }
-
-        public bool SaveColumnsAfterAllImprovements { get; private set; }
-
-        public bool SaveColumnsAfterWorse { get; private set; }
-
-        public double SaveColumnThreshold { get; private set; }
-
-        public bool PenalizeEarlyArrival { get; private set; }
-        public bool PenalizeLateArrival { get; private set; }
-
-        public bool AdjustEarlyArrivalToTWStart { get; private set; }
-
-        public bool CheckOperatorScores { get; private set; }
-
-        public bool SaveRoutesBeforeOperator { get; private set; }
-
-        public bool PrintExtendedInfo { get; private set; }
-
-        public bool SaveScoreDevelopment { get; private set; }
+        public readonly LocalSearchConfiguration Config;
 
         private Random random;
 
@@ -59,33 +26,13 @@ namespace SA_ILP
         {
             random = new Random(seed);
             Init(config, seed, os);
+            Config = config;
         }
 
 
         private void Init(LocalSearchConfiguration config, int seed, OperatorSelector os)
         {
             Temperature = config.InitialTemperature;
-            InitialTemperature = config.InitialTemperature;
-            this.AllowEarlyArrival = config.AllowEarlyArrival;
-            this.AllowLateArrival = config.AllowLateArrival;
-            AllowEarlyArrivalDuringSearch = config.AllowEarlyArrivalDuringSearch;
-            AllowLateArrivalDuringSearch = config.AllowLateArrivalDuringSearch;
-            BaseRemovedCustomerPenalty = config.BaseRemovedCustomerPenalty;
-            BaseRemovedCustomerPenaltyPow = config.BaseRemovedCustomerPenaltyPow;
-            BaseEarlyArrivalPenalty = config.BaseEarlyArrivalPenalty;
-            BaseLateArrivalPenalty = config.BaseLateArrivalPenalty;
-            PenalizeLateArrival = config.PenalizeLateArrival;
-            PenalizeEarlyArrival = config.PenalizeEarlyArrival;
-            AdjustEarlyArrivalToTWStart = config.AdjustEarlyArrivalToTWStart;
-            CheckOperatorScores = config.CheckOperatorScores;
-            SaveRoutesBeforeOperator = config.SaveRoutesBeforeOperator;
-            SaveColumnsAfterAllImprovements = config.SaveColumnsAfterAllImprovements;
-            SaveColumnsAfterWorse = config.SaveColumnsAfterWorse;
-            SaveColumnThreshold = config.SaveColumnThreshold;
-            PrintExtendedInfo = config.PrintExtendedInfo;
-            Alpha = config.Alpha;
-            SaveScoreDevelopment = config.SaveScoreDevelopment;
-
             OS = os;
         }
 
@@ -93,6 +40,11 @@ namespace SA_ILP
         {
             random = new Random(seed);
             var os = new OperatorSelector(random);
+            Config = config;
+            //os.Add(Operators.AddRandomRemovedCustomer, 1, "add");
+            //os.Add(Operators.RemoveRandomCustomer, 1, "remove");
+            //os.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move");
+            //os.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move",100);
 
             os.Add(Operators.AddRandomRemovedCustomer, 1, "add",1); //repeated 1 time
             os.Add(Operators.RemoveRandomCustomer, 1, "remove",1); //repeated 1 time
@@ -141,7 +93,7 @@ namespace SA_ILP
             {
                 if (customers.Count == 0)
                     break;
-                double arrivalTime = route.CustomerDist(depot, seed, route.max_capacity);
+                (double arrivalTime, IContinuousDistribution distribution) = route.CustomerDist(depot, seed, route.max_capacity, false);
 
                 if (inserted.Contains(seed))
                     Console.WriteLine("Gaat fout buiten while");
@@ -165,7 +117,7 @@ namespace SA_ILP
 
                     Customer? next = customers.MinBy(x =>
                     {
-                        double dist = route.CustomerDist(seed, x, route.max_capacity);
+                       ( double dist, IContinuousDistribution distribution) = route.CustomerDist(seed, x, route.max_capacity, false);
 
                         if (arrivalTime + dist < x.TWEnd)
                             if (arrivalTime + dist < x.TWStart)
@@ -175,13 +127,13 @@ namespace SA_ILP
                         else return double.MaxValue;
 
                     });
-
-                    if (arrivalTime + route.CustomerDist(seed, next, route.max_capacity) > next.TWEnd || route.used_capacity + next.Demand > route.max_capacity)
+                    (double dist, IContinuousDistribution d) = route.CustomerDist(seed, next, route.max_capacity, false);
+                    if (arrivalTime + dist > next.TWEnd || route.used_capacity + next.Demand > route.max_capacity)
                     {
                         seed = customers.MinBy(x => x.TWEnd);
                         break;
                     }
-                    arrivalTime += route.CustomerDist(seed, next, route.max_capacity);// + next.ServiceTime;
+                    arrivalTime += dist;// + next.ServiceTime;
 
                     seed = next;
 
@@ -217,31 +169,31 @@ namespace SA_ILP
             bool upperViolations = routes.Exists(x => x.ViolatesUpperTimeWindow);
             bool lowerViolations = routes.Exists(x => x.ViolatesLowerTimeWindow);
 
-            return (!upperViolations || AllowLateArrival) && (!lowerViolations || AllowEarlyArrival);
+            return (!upperViolations || Config.AllowLateArrival) && (!lowerViolations || Config.AllowEarlyArrival);
         }
 
         private bool IsValidRoute(Route route)
         {
-            return (!route.ViolatesUpperTimeWindow || AllowLateArrival) && (!route.ViolatesLowerTimeWindow || AllowEarlyArrival);
+            return (!route.ViolatesUpperTimeWindow || Config.AllowLateArrival) && (!route.ViolatesLowerTimeWindow || Config.AllowEarlyArrival);
         }
 
         private void RunAndCheckOperator(int id, List<Route> routes, List<Customer> removed, double imp, Action op)
         {
             double expectedVal = 0;
             List<Route>? beforeCopy = null;
-            if (CheckOperatorScores)
+            if (Config.CheckOperatorScores)
                 expectedVal = Solver.CalcTotalDistance(routes, removed, this) - imp;
-            if (SaveRoutesBeforeOperator)
+            if (Config.SaveRoutesBeforeOperator)
             {
                 beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
             }
 
             op();
-            if (CheckOperatorScores)
+            if (Config.CheckOperatorScores)
                 if (Math.Round(Solver.CalcTotalDistance(routes, removed, this), 6) != Math.Round(expectedVal, 6))
                     Solver.ErrorPrint($"{id}: ERROR expected {expectedVal} not equal to {Solver.CalcTotalDistance(routes, removed, this)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, this)} , OP: {OS.LastOperator}");
         }
-        public (HashSet<RouteStore>, List<Route>, double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers, double[,,] distanceMatrix, int numInterations = 3000000, int timeLimit = 30000, bool checkInitialSolution = false)
+        public (HashSet<RouteStore>, List<Route>, double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers, double[,,] distanceMatrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix, int numInterations = 3000000, int timeLimit = 30000, bool checkInitialSolution = false)
         {
             Console.WriteLine("Starting local search");
             //customers.Sort(1, customers.Count - 1, delegate (Customer x, Customer y) { x.TWEnd.CompareTo(y.TWEnd); });
@@ -258,7 +210,7 @@ namespace SA_ILP
 
             //Generate routes
             for (int i = 0; i < numVehicles; i++)
-                routes.Add(new Route(customers[0], distanceMatrix, vehicleCapacity, seed: random.Next(), this));
+                routes.Add(new Route(customers[0], distanceMatrix,distributionMatrix, approximationMatrix, vehicleCapacity,seed: random.Next(), this));
 
             CreateSmartInitialSolution(routes, customers, removed);
 
@@ -283,17 +235,23 @@ namespace SA_ILP
             Stopwatch printTimer = new Stopwatch();
             printTimer.Start();
 
-
+            //Used to keep track of the routes which contain customers. This speeds up execution as this only needs to be updated when a change is applied
             List<int> viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
 
-            int lastChangeExceptedOnIt = 0;
+            int lastChangeAcceptedOnIt = 0;
+
+            //All saved columns
             HashSet<RouteStore> Columns = new HashSet<RouteStore>();
+
+            //The best found solution so far
             List<Route> BestSolution = routes.ConvertAll(i => i.CreateDeepCopy());
             List<Customer> BestSolutionRemoved = removed.ConvertAll(x => x);
 
             List<(int, double)> SearchScores = new List<(int, double)>();
             List<(int, double)> BestSolutionScores = new List<(int, double)>();
 
+
+            //Dictionaries used for tracking the performance of the different operators. These are only used if the option is enabled in the configuration
             Dictionary<string, int> OPImprovementCount = new Dictionary<string, int>();
             Dictionary<string, double> OPImprovementTotal = new Dictionary<string, double>();
             Dictionary<string, double> OPBestImprovement = new Dictionary<string, double>();
@@ -368,7 +326,7 @@ namespace SA_ILP
                         //Console.WriteLine(p);
                         //routes.ForEach(route => route.CheckRouteValidity());
                         currentValue -= imp;
-                        if (id == 0 && SaveScoreDevelopment)
+                        if (id == 0 && Config.SaveScoreDevelopment)
                             SearchScores.Add((iteration, currentValue));
 
 
@@ -379,7 +337,7 @@ namespace SA_ILP
                             bestImprovedIteration = iteration;
                             restartPreventionIteration = iteration;
                             BestSolution = routes.ConvertAll(i => i.CreateDeepCopy());
-                            if (id == 0 && SaveScoreDevelopment)
+                            if (id == 0 && Config.SaveScoreDevelopment)
                                 BestSolutionScores.Add((iteration, bestSolValue));
 
                             //Now we know all customers are used
@@ -394,7 +352,7 @@ namespace SA_ILP
                         }
 
                         //Add columns
-                        if (SaveColumnsAfterAllImprovements && Temperature < InitialTemperature * SaveColumnThreshold)
+                        if (Config.SaveColumnsAfterAllImprovements && Temperature < Config.InitialTemperature * Config.SaveColumnThreshold)
                             foreach (Route route in routes)
                             {
                                 if (IsValidRoute(route))
@@ -404,7 +362,7 @@ namespace SA_ILP
 
 
                         amtImp += 1;
-                        lastChangeExceptedOnIt = iteration;
+                        lastChangeAcceptedOnIt = iteration;
 
                     }
 
@@ -425,7 +383,7 @@ namespace SA_ILP
                             RunAndCheckOperator(id, routes, removed, imp, act);
 
 
-                            if (SaveColumnsAfterWorse && Temperature < InitialTemperature * SaveColumnThreshold)
+                            if (Config.SaveColumnsAfterWorse && Temperature < Config.InitialTemperature * Config.SaveColumnThreshold)
                                 foreach (Route route in routes)
                                 {
                                     if (IsValidRoute(route))
@@ -435,10 +393,10 @@ namespace SA_ILP
 
                             viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                             currentValue -= imp;
-                            if (id == 0 && SaveScoreDevelopment)
+                            if (id == 0 && Config.SaveScoreDevelopment)
                                 SearchScores.Add((iteration, currentValue));
 
-                            lastChangeExceptedOnIt = iteration;
+                            lastChangeAcceptedOnIt = iteration;
                         }
                         //else if (OS.LastOperator == "remove")
                         //{
@@ -451,31 +409,34 @@ namespace SA_ILP
                     OPNotPossible[OS.LastOperator] += 1;
                     amtNotDone += 1;
                 }
-                if (iteration % 10000 == 0 && iteration != 0)
+                if (iteration % Config.IterationsPerAlphaChange == 0 && iteration != 0)
                 {
-                    Temperature *= Alpha;
+                    Temperature *= Config.Alpha;
 
                     routes.ForEach(x => x.ResetCache());
                     //TOD: Seperate penalty calculation for optimization
                     currentValue = Solver.CalcTotalDistance(routes, removed, this);
                     bestSolValue = Solver.CalcTotalDistance(BestSolution, BestSolutionRemoved, this);
                 }
-                if (iteration - restartPreventionIteration > 600000 && Temperature < 0.02 && numRestarts < 7) //&& iteration - lastChangeExceptedOnIt > 1000
+                //Check if the restart conditions are met
+                if (iteration - restartPreventionIteration > Config.NumIterationsOfNoChangeBeforeRestarting && Temperature < Config.RestartTemperatureBound && numRestarts < Config.NumRestarts) //&& iteration - lastChangeExceptedOnIt > 1000
                 {
                     numRestarts += 1;
                     restartPreventionIteration = iteration;
                     //Restart
                     var oldTemp = Temperature;
-                    Temperature += InitialTemperature / 3;
+                    Temperature += Config.InitialTemperature / 3;
                     routes.ForEach(x => x.ResetCache());
                     routes = BestSolution.ConvertAll(i => i.CreateDeepCopy());
                     viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                     removed = BestSolutionRemoved.ConvertAll(x => x);
+
+                    //Reset the scores
                     currentValue = Solver.CalcTotalDistance(routes, removed, this);
                     bestSolValue = Solver.CalcTotalDistance(BestSolution, new List<Customer>(), this);
                     Console.WriteLine($"{id}:Best solution changed to long ago a T: {oldTemp}. Restarting from best solution with T: {Temperature}");
                 }
-                else if (Temperature < 0.02 && numRestarts >= 7)
+                else if (Temperature < 0.02 && numRestarts >= Config.NumRestarts)
                     break;
                 if (printTimer.ElapsedMilliseconds > 3 * 1000)
                 {
@@ -484,7 +445,10 @@ namespace SA_ILP
                     double itsPerSecond = (iteration - previousUpdateIteration) / ((double)elapsed / 1000);
                     previousUpdateIteration = iteration;
                     int cnt = routes.Count(x => x.route.Count > 2);
-                    Console.WriteLine($"{id}: T: {Temperature.ToString("0.000")}, S: {Solver.CalcTotalDistance(routes, removed, this).ToString("0.000")}, TS: {currentValue.ToString("0.000")}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeExceptedOnIt}, B: {bestSolValue.ToString("0.000")}, BI: {bestImprovedIteration}, IT/s: {itsPerSecond.ToString("0.00")}/s");
+                    Console.WriteLine($"{id}: T: {Temperature.ToString("0.000")}, S: {Solver.CalcTotalDistance(routes, removed, this).ToString("0.000")}, TS: {currentValue.ToString("0.000")}, N: {cnt}, IT: {iteration}, LA {iteration - lastChangeAcceptedOnIt}, B: {bestSolValue},{Solver.CalcTotalDistance(BestSolution,BestSolutionRemoved,this)}, BI: {bestImprovedIteration}, IT/s: {itsPerSecond.ToString("0.00")}/s");
+                    //foreach (var rout in BestSolution)
+                    //    if(rout.route.Count > 2)
+                    //    Console.WriteLine(rout);
                 }
             }
 
@@ -495,12 +459,12 @@ namespace SA_ILP
                     Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
 
             }
-            if (id == 0 && SaveScoreDevelopment)
+            if (id == 0 && Config.SaveScoreDevelopment)
                 BestSolutionScores.Add((iteration, bestSolValue));
 
             Console.WriteLine($"DONE {id}: {name}, Score: {Solver.CalcTotalDistance(BestSolution, new List<Customer>(), this)}, Columns: {Columns.Count}. Completed {iteration} iterations in {Math.Round((double)timer.ElapsedMilliseconds / 1000, 3)}s");
 
-            if (PrintExtendedInfo)
+            if (Config.PrintExtendedInfo)
             {
                 lock (ConsoleWriterLock)
                 {
@@ -516,7 +480,7 @@ namespace SA_ILP
                 }
 
             }
-            if (id == 0 && SaveScoreDevelopment)
+            if (id == 0 && Config.SaveScoreDevelopment)
             {
                 Console.WriteLine("Saving scores");
                 System.IO.File.WriteAllLines("SearchScores.txt", SearchScores.ConvertAll(x => $"{x.Item1};{x.Item2}"));

@@ -5,7 +5,9 @@ VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SA-ILP", "SA-ILP\SA-ILP.csproj", "{ED4CE5E1-2776-4FA0-84A9-2C9066335E06}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GurobiClassLibrary", "GurobiClassLibrary\GurobiClassLibrary.csproj", "{688CBB20-4FDD-4422-8D96-B68B50286C9C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GurobiClassLibrary", "GurobiClassLibrary\GurobiClassLibrary.csproj", "{688CBB20-4FDD-4422-8D96-B68B50286C9C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmarker", "Benchmarker\Benchmarker.csproj", "{D3E3905F-8EE2-467A-A6C8-FD466788B034}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{688CBB20-4FDD-4422-8D96-B68B50286C9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{688CBB20-4FDD-4422-8D96-B68B50286C9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{688CBB20-4FDD-4422-8D96-B68B50286C9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D3E3905F-8EE2-467A-A6C8-FD466788B034}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D3E3905F-8EE2-467A-A6C8-FD466788B034}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D3E3905F-8EE2-467A-A6C8-FD466788B034}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D3E3905F-8EE2-467A-A6C8-FD466788B034}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
