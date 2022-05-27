@@ -96,7 +96,7 @@ namespace SA_ILP
             AllowLateArrivalDuringSearch = true,
 
 
-            AllowEarlyArrival = true,
+            AllowEarlyArrival = false,
             AllowLateArrival = false,
             BaseEarlyArrivalPenalty = 2,
             BaseLateArrivalPenalty = 2,
@@ -110,11 +110,11 @@ namespace SA_ILP
             SaveColumnThreshold = 0.2,
 
 
-            PenalizeEarlyArrival = false,
+            PenalizeEarlyArrival = true,
             PenalizeLateArrival = true,
             AdjustDeterministicEarlyArrivalToTWStart = true,
             AdjustEarlyArrivalToTWStart = true,
-            CheckOperatorScores = false,
+            CheckOperatorScores = true,
             SaveRoutesBeforeOperator = false,
 
             PrintExtendedInfo = false,

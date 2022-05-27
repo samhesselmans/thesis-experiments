@@ -52,6 +52,9 @@ namespace SA_ILP
         public readonly IContinuousDistribution[,,] distributionApproximationMatrix;
         public double startTime = 0;
 
+        public RouteStore RouteStore { get; set; }
+
+
         public int numLoadLevels;
         public int numX;
         public int numY;
@@ -1001,16 +1004,18 @@ namespace SA_ILP
         public (int, double) BestPossibleInsert(Customer cust)
         {
             double bestDistIncr = double.MaxValue;
-            if (BestCustomerPos.ContainsKey(cust.Id))
+            //if (BestCustomerPos.ContainsKey(cust.Id))
+            //{
+
+            //    return BestCustomerPos[cust.Id];
+            //}
+
+
+            if (RouteStore != null && parent.BestPosCache.ContainsKey((cust.Id, RouteStore)))
             {
-#if DEBUG
-                bestFitCacheHit++;
-#endif
-                return BestCustomerPos[cust.Id];
+                return parent.BestPosCache[(cust.Id, RouteStore)];
             }
-#if DEBUG
-            bestFitCacheMiss ++;
-#endif
+
             //ResetCache();
             int bestIndex = -1;
             if (this.used_capacity + cust.Demand > max_capacity)
@@ -1029,7 +1034,9 @@ namespace SA_ILP
 
 
             }
-            BestCustomerPos[cust.Id] = (bestIndex, bestDistIncr);
+            //BestCustomerPos[cust.Id] = (bestIndex, bestDistIncr);
+            if (RouteStore != null)
+                parent.BestPosCache[(cust.Id, RouteStore)] = (bestIndex, bestDistIncr);
             return (bestIndex, bestDistIncr);
         }
 

@@ -36,6 +36,8 @@ namespace SA_ILP
                 if (Route[i] != y.Route[i])
                     return false;
             }
+            if (y.Value != this.Value)
+                return false;
             return true;
         }
 

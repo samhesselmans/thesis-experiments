@@ -22,6 +22,9 @@ namespace SA_ILP
 
         private OperatorSelector OS;
 
+        public Dictionary<(int, RouteStore), (int, double)> BestPosCache;
+        public List<RouteStore> RouteStores;
+
         public LocalSearch(LocalSearchConfiguration config, int seed, OperatorSelector os)
         {
             random = new Random(seed);
@@ -193,6 +196,23 @@ namespace SA_ILP
                 if (Math.Round(Solver.CalcTotalDistance(routes, removed, this), 6) != Math.Round(expectedVal, 6))
                     Solver.ErrorPrint($"{id}: ERROR expected {expectedVal} not equal to {Solver.CalcTotalDistance(routes, removed, this)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, this)} , OP: {OS.LastOperator}");
         }
+
+        private void HandleRoutStores(List<Route> routes, HashSet<RouteStore> Columns)
+        {
+            //RouteStores = new List<RouteStore>(routes.Count);
+            foreach (Route route in routes)
+            {
+                var rs = new RouteStore(route.CreateIdList(), route.Score);
+                //RouteStores.Add(rs);
+
+                route.RouteStore = rs;
+
+                if (IsValidRoute(route))
+                    Columns.Add(rs);
+
+            }
+        }
+
         public (HashSet<RouteStore>, List<Route>, double) LocalSearchInstance(int id, string name, int numVehicles, double vehicleCapacity, List<Customer> customers, double[,,] distanceMatrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix, int numInterations = 3000000, int timeLimit = 30000, bool checkInitialSolution = false)
         {
             Console.WriteLine("Starting local search");
@@ -260,6 +280,10 @@ namespace SA_ILP
             Dictionary<string, double> OPAcceptedWorseTotal = new Dictionary<string, double>();
             Dictionary<string, int> OPNotPossible = new Dictionary<string, int>();
 
+
+            //Initialize the Caching for best position
+            BestPosCache = new Dictionary<(int, RouteStore), (int, double)>();
+
             foreach (string op in OS.OperatorList)
             {
                 OPImprovementCount[op] = 0;
@@ -305,26 +329,21 @@ namespace SA_ILP
                     //Accept all improvements
                     if (imp > 0)
                     {
-                        //double expectedVal = Solver.CalcTotalDistance(routes, removed, Temperature) - imp;
-                        //var beforeCopy = routes.ConvertAll(i => i.CreateDeepCopy());
 
 
+                        //Store operator improvement results
                         OPImprovementCount[OS.LastOperator] += 1;
                         OPImprovementTotal[OS.LastOperator] += imp;
 
                         if (imp > OPBestImprovement[OS.LastOperator])
                             OPBestImprovement[OS.LastOperator] = imp;
 
+                        //Runs and checks the operator scores. Checks only occur if configured that way
                         RunAndCheckOperator(id, routes, removed, imp, act);
 
-                        ////act();
-                        //if (Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6) != Math.Round(expectedVal, 6))
-                        //    Solver.ErrorPrint($"{id}: ERROR expected {Math.Round(expectedVal, 6)} not equal to {Math.Round(Solver.CalcTotalDistance(routes, removed, Temperature), 6)} with imp: {imp}. Diff:{expectedVal - Solver.CalcTotalDistance(routes, removed, Temperature)} , OP: {OS.LastOperator}");
-                        //Console.WriteLine($"dit gaat mis expected {expectedVal} not equal to {Solver.CalcTotalDistance(routes, removed, Temperature)}, OP: {OS.LastOperator}");
-
+                        //Need to recalculate the viable routes cache
                         viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
-                        //Console.WriteLine(p);
-                        //routes.ForEach(route => route.CheckRouteValidity());
+
                         currentValue -= imp;
                         if (id == 0 && Config.SaveScoreDevelopment)
                             SearchScores.Add((iteration, currentValue));
@@ -342,23 +361,14 @@ namespace SA_ILP
 
                             //Now we know all customers are used
                             BestSolutionRemoved = new List<Customer>();
-                            foreach (Route route in routes)
-                            {
-                                if (IsValidRoute(route))
-                                    Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
-
-                            }
+                            
+                            HandleRoutStores(routes,Columns);
 
                         }
 
                         //Add columns
                         if (Config.SaveColumnsAfterAllImprovements && Temperature < Config.InitialTemperature * Config.SaveColumnThreshold)
-                            foreach (Route route in routes)
-                            {
-                                if (IsValidRoute(route))
-                                    Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
-
-                            }
+                            HandleRoutStores(routes, Columns);
 
 
                         amtImp += 1;
@@ -384,12 +394,7 @@ namespace SA_ILP
 
 
                             if (Config.SaveColumnsAfterWorse && Temperature < Config.InitialTemperature * Config.SaveColumnThreshold)
-                                foreach (Route route in routes)
-                                {
-                                    if (IsValidRoute(route))
-                                        Columns.Add(new RouteStore(route.CreateIdList(), route.Score));
-
-                                }
+                                HandleRoutStores(routes, Columns);
 
                             viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
                             currentValue -= imp;
@@ -413,7 +418,10 @@ namespace SA_ILP
                 {
                     Temperature *= Config.Alpha;
 
+                    //Reset cache as scores could have changed
                     routes.ForEach(x => x.ResetCache());
+                    BestPosCache = new Dictionary<(int, RouteStore), (int, double)>();
+
                     //TOD: Seperate penalty calculation for optimization
                     currentValue = Solver.CalcTotalDistance(routes, removed, this);
                     bestSolValue = Solver.CalcTotalDistance(BestSolution, BestSolutionRemoved, this);
