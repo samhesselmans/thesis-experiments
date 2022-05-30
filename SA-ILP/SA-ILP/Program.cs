@@ -51,11 +51,11 @@ if (args.Length >= 1)
     }
     else if (opts.Mode == "allvrpltt")
     {
-        await RunVRPLTTTests(opts.Instance, Path.Join("Solutions", DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")), 5, opts);
+        await RunVRPLTTTests(opts.Instance, Path.Join("Solutions", DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")), opts.NumRepeats, opts);
     }
     else if (opts.Mode == "allvrpsltt")
     {
-        await RunVRPSLTTTests(opts.Instance, Path.Join("Solutions", DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")), 5, opts);
+        await RunVRPSLTTTests(opts.Instance, Path.Join("Solutions", DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")), opts.NumRepeats, opts);
     }
     else if (opts.Mode == "allvrlttWind")
     {
@@ -605,7 +605,8 @@ class Options
     [Option("loadlevels", Default = 150, HelpText = "Number of loadlevels in vrpltt.")]
     public int NumLoadLevels { get; set; }
 
-
+    [Option("repeats", Default = 5, HelpText = "Number of reptitions per instance for the selected tests. This only works for the collection of tests")]
+    public int NumRepeats { get; set; }
     public override string ToString()
     {
         return GetType().GetProperties()
