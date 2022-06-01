@@ -67,6 +67,9 @@ namespace SA_ILP
         public double RestartTemperatureBound { get; set; }
 
         public IContinuousDistribution DefaultDistribution { get; set; }
+
+        internal OperatorSelector OperatorSelector { get;set; }
+
         public override string ToString()
         {
             LocalSearchConfiguration obj = this;
@@ -188,7 +191,9 @@ namespace SA_ILP
             {
                 var config = VRPLTT;
                 config.WindDirection = new double[] { 1, 0 };
-                config.WindSpeed = 10;
+
+                //Set to the average windspeed of beaufort wind force 4
+                config.WindSpeed = 6.75;
 
                 return config;
             }
@@ -204,13 +209,13 @@ namespace SA_ILP
             AllowLateArrivalDuringSearch = true,
             AllowEarlyArrival = true,
             AllowLateArrival = false,
-            BaseEarlyArrivalPenalty = 100,
-            BaseLateArrivalPenalty = 100,
+            BaseEarlyArrivalPenalty = 10,
+            BaseLateArrivalPenalty = 10,
 
-            BaseRemovedCustomerPenalty = 400,
+            BaseRemovedCustomerPenalty = 1,
 
-            BaseRemovedCustomerPenaltyPow = 1.5,
-            Alpha = 0.992,
+            BaseRemovedCustomerPenaltyPow = 2,
+            Alpha = 0.98,
             SaveColumnsAfterAllImprovements = false,
             PenalizeEarlyArrival = false,
             PenalizeLateArrival = true,
@@ -225,7 +230,13 @@ namespace SA_ILP
             UseMeanOfDistributionForTravelTime = false,
             ScaleEarlinessPenaltyWithTemperature = true,
             ScaleLatenessPenaltyWithTemperature = true,
-            IgnoreWaitingDuringDistributionAddition = true
+            IgnoreWaitingDuringDistributionAddition = true,
+            IterationsPerAlphaChange = 10000,
+            NumIterationsOfNoChangeBeforeRestarting = 200000,
+            RestartTemperatureBound = 0.02,
+            NumRestarts = 7,
+            WindSpeed = 0
+
         };
 
 

@@ -6,6 +6,10 @@
     },
     "SA-ILP no launch parameters": {
       "commandName": "Project"
+    },
+    "SA-ILP solomon test": {
+      "commandName": "Project",
+      "commandLineArgs": "allvrp ..\\..\\..\\..\\..\\solomon_instances --threads 4 --starts 16 --lstl 480 --testname TestTest"
     }
   }
 }

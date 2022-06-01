@@ -17,6 +17,7 @@ namespace SA_ILP
         List<double> weights;
         List<String> labels;
         List<double> threshHolds;
+        List<int> repeats;
         private int last = -1;
 
         List<String> operatorHistory;
@@ -33,16 +34,21 @@ namespace SA_ILP
             labels = new List<string>();
             LastOperator = "none";
             operatorHistory = new List<string>();
+            repeats = new List<int>();
         }
 
 
         public void Add(Operator op, double weight, String label = "unnamed-operator", int numRepeats = -1)
         {
             if (numRepeats == -1)
+            {
                 operators.Add(op);
+                repeats.Add(1);
+            }
             else
             {
                 operators.Add((x, y, z, w, v) => Operators.RepeatNTimes(numRepeats, op, x, y, z, w, v));
+                repeats.Add(numRepeats);
             }
             weights.Add(weight);
             labels.Add(label);
@@ -94,6 +100,18 @@ namespace SA_ILP
         }
 
 
+
+        public override string ToString()
+        {
+            string res = "";
+            for(int i = 0; i < operators.Count; i++)
+            {
+                res += $"OP: {labels[i]} RP: {weights[i]} Repeats: {repeats[i]}\n";
+            }
+
+            return res;
+            //return base.ToString();
+        }
 
 
 

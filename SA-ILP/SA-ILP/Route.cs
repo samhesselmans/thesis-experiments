@@ -1003,14 +1003,8 @@ namespace SA_ILP
             double bestDistIncr = double.MaxValue;
             if (BestCustomerPos.ContainsKey(cust.Id))
             {
-#if DEBUG
-                bestFitCacheHit++;
-#endif
                 return BestCustomerPos[cust.Id];
             }
-#if DEBUG
-            bestFitCacheMiss ++;
-#endif
             //ResetCache();
             int bestIndex = -1;
             if (this.used_capacity + cust.Demand > max_capacity)
