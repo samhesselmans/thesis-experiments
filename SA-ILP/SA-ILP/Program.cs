@@ -32,7 +32,7 @@ if (args.Length >= 1)
 
 
     String solutionDir = Path.Join("Solutions", DateTime.Now.ToString("dd-MM-yy_HH-mm-ss") + opts.TestName);
-
+    String benchDir = Path.Join("Benchmarks", DateTime.Now.ToString("dd-MM-yy_HH-mm-ss") + opts.TestName);
     if (opts.Mode == "vrpltt")
     {
         solver.SolveVRPLTTInstance(opts.Instance, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower);
@@ -68,6 +68,10 @@ if (args.Length >= 1)
     {
         var skip = new List<string>();
         await Tests.SolveAllAsync(opts.Instance,solutionDir,skip,opts);
+    }
+    else if(opts.Mode == "benchmark")
+    {
+        await Tests.BenchmarkLocalSearchSpeed(opts.Instance, benchDir, opts.NumRepeats,opts);
     }
     else
     {

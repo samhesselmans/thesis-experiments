@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MathNet.Numerics.Distributions;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -141,6 +142,55 @@ namespace SA_ILP
             }
 
         }
+
+
+        public static async Task BenchmarkLocalSearchSpeed(string dir, string solDir,int numRepeats,Options opts)
+        {
+            Console.WriteLine("Benchmarking localsearch");
+            if (!Directory.Exists(solDir))
+                Directory.CreateDirectory(solDir);
+            var config = LocalSearchConfigs.VRPLTT;
+            var solver = new Solver();
+            using (var totalWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.txt")))
+            {
+                totalWriter.WriteLine(opts.ToString());
+                using (var csvWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.csv")))
+                {
+                    csvWriter.WriteLine("SEP=;");
+                    csvWriter.WriteLine("Instance;Score;N;LS time");
+
+                    for (int test =0; test< opts.NumRepeats;test++)
+                    foreach (var file in Directory.GetFiles(dir))
+                    {
+                        Console.WriteLine($"Testing on { Path.GetFileNameWithoutExtension(file)}");
+
+                        (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(file);
+                        Console.WriteLine("Calculating travel time matrix");
+                        (double[,,] matrix, Gamma[,,] distributionMatrix, IContinuousDistribution[,,] approximationMatrix, _) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, opts.BikeMinWeight, opts.BikeMaxWeight, opts.NumLoadLevels, opts.BikePower, ((LocalSearchConfiguration)config).WindSpeed, ((LocalSearchConfiguration)config).WindDirection);
+
+                        (var allColumns, var bestSolution, var LSTime, var LSSCore) = await solver.LocalSearchInstancAsync("", customers.Count - 1, opts.BikeMaxWeight - opts.BikeMinWeight, customers, matrix, distributionMatrix, approximationMatrix, opts.NumThreads, opts.NumStarts, opts.Iterations, opts.TimeLimitLS * 1000, config);
+
+
+                        using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileNameWithoutExtension(file) + $"_{test}.txt")))
+                        {
+                            writer.WriteLine($"Score: {LSSCore}, lsTime: {LSTime}, Early arrival allowed {config.AllowEarlyArrival}");
+                            foreach (var route in bestSolution)
+                            {
+                                if(route.route.Count > 2)
+                                    writer.WriteLine($"{route}");
+                            }
+                        }
+
+                        totalWriter.WriteLine($"Instance: { Path.GetFileNameWithoutExtension(file)},Early arrival allowed {config.AllowEarlyArrival}, Score: {Math.Round(LSSCore, 3)}, Vehicles: {bestSolution.Where(x=>x.route.Count > 2).Count()}, , lsTime: {Math.Round(LSTime, 3)}");
+                        csvWriter.WriteLine($"{ Path.GetFileNameWithoutExtension(file)};{Math.Round(LSSCore, 3)};{bestSolution.Where(x => x.route.Count > 2).Count()};{Math.Round(LSTime, 3)}");
+
+                            totalWriter.Flush();
+                            csvWriter.Flush();
+                        }
+                }
+            }
+        }
+
         public static async Task RunVRPSLTTTests(string dir, string solDir, int numRepeats, Options opts)
         {
             Console.WriteLine("Testing on all vrpltt instances");
@@ -353,46 +403,47 @@ namespace SA_ILP
                 string fileNameStart = "";
                 double totalValue = 0.0;
                 int total = 0;
-                foreach (var file in Directory.GetFiles(dir).OrderBy(f => f))
-                {
-                    Console.WriteLine(file);
-                    bool newInstance = false;
-                    if (skip.Contains(Path.GetFileName(file)))
-                        continue;
-
-                    if (!Path.GetFileName(file).StartsWith(fileNameStart))
+                for(int test= 0; test < opts.NumRepeats;test++)
+                    foreach (var file in Directory.GetFiles(dir).OrderBy(f => f))
                     {
-                        totalWriter.WriteLine($"AVERAGE {fileNameStart}: {totalValue / total}");
-                        totalValue = 0;
-                        total = 0;
-                        fileNameStart = Path.GetFileName(file).Substring(0, 2);
-                    }
+                        Console.WriteLine(file);
+                        bool newInstance = false;
+                        if (skip.Contains(Path.GetFileName(file)))
+                            continue;
 
-                    (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveSolomonInstanceAsync(file, numThreads: opts.NumThreads,numStarts:opts.NumStarts, numIterations: opts.Iterations, timeLimit: opts.TimeLimitLS * 1000);
-
-                    csvWriter.WriteLine($"{Path.GetFileNameWithoutExtension(file)};{ilpVal};{ilpSol.Count};{ilpTime};{lsTime};{lsVal};{(ilpVal - lsVal) / lsVal * 100}");
-                    
-                    using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileName(file))))
-                    {
-                        if (failed)
-                            writer.Write("FAIL did not meet check");
-                        writer.WriteLine($"Score: {ilpVal}, ilpTime: {ilpTime}, lsTime: {lsTime}");
-                        foreach (var route in ilpSol)
+                        if (!Path.GetFileName(file).StartsWith(fileNameStart))
                         {
-                            writer.WriteLine($"{route}");
+                            totalWriter.WriteLine($"AVERAGE {fileNameStart}: {totalValue / total}");
+                            totalValue = 0;
+                            total = 0;
+                            fileNameStart = Path.GetFileName(file).Substring(0, 2);
                         }
+
+                        (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveSolomonInstanceAsync(file, numThreads: opts.NumThreads,numStarts:opts.NumStarts, numIterations: opts.Iterations, timeLimit: opts.TimeLimitLS * 1000);
+
+                        csvWriter.WriteLine($"{Path.GetFileNameWithoutExtension(file)}_{test};{ilpVal};{ilpSol.Count};{ilpTime};{lsTime};{lsVal};{(ilpVal - lsVal) / lsVal * 100}");
+                    
+                        using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileNameWithoutExtension(file) + "_" + test  + ".txt")))
+                        {
+                            if (failed)
+                                writer.Write("FAIL did not meet check");
+                            writer.WriteLine($"Score: {ilpVal}, ilpTime: {ilpTime}, lsTime: {lsTime}");
+                            foreach (var route in ilpSol)
+                            {
+                                writer.WriteLine($"{route}");
+                            }
+                        }
+                        if (failed)
+                            totalWriter.Write("FAIL did not meet check");
+
+
+                        totalValue += ilpVal;
+                        total++;
+
+                        totalWriter.WriteLine($"Instance: {Path.GetFileName(file)}, Score: {Math.Round(ilpVal, 3)}, Vehicles: {ilpSol.Count}, ilpTime: {Math.Round(ilpTime, 3)}, lsTime: {Math.Round(lsTime, 3)}, lsVal: {Math.Round(lsVal, 3)}, ilpImp: {Math.Round((lsVal - ilpVal) / lsVal * 100, 3)}%");
+                        totalWriter.Flush();
+                        csvWriter.Flush();
                     }
-                    if (failed)
-                        totalWriter.Write("FAIL did not meet check");
-
-
-                    totalValue += ilpVal;
-                    total++;
-
-                    totalWriter.WriteLine($"Instance: {Path.GetFileName(file)}, Score: {Math.Round(ilpVal, 3)}, Vehicles: {ilpSol.Count}, ilpTime: {Math.Round(ilpTime, 3)}, lsTime: {Math.Round(lsTime, 3)}, lsVal: {Math.Round(lsVal, 3)}, ilpImp: {Math.Round((lsVal - ilpVal) / lsVal * 100, 3)}%");
-                    totalWriter.Flush();
-                    csvWriter.Flush();
-                }
             }
 
 
