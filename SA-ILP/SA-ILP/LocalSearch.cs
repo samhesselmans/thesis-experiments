@@ -50,11 +50,11 @@ namespace SA_ILP
             if (config.OperatorSelector == null)
             {
                 os = new OperatorSelector(random);
-                os.Add(Operators.AddRandomRemovedCustomer, 1, "add", 4); //repeated 1 time
-                os.Add(Operators.RemoveRandomCustomer, 1, "remove", 4); //repeated 1 time
-                os.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 4); //repeated 1 time
+                os.Add(Operators.AddRandomRemovedCustomer, 1, "add", 1); //repeated 1 time
+                os.Add(Operators.RemoveRandomCustomer, 1, "remove", 1); //repeated 1 time
+                os.Add((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 1); //repeated 1 time
                 os.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best"); //repeated 1 time
-                os.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route", 2); //repeated 4 times
+                os.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route", 4); //repeated 4 times
                 os.Add((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap", 4); //repeated 4 times
                 os.Add((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 4); //repeated 4 times
                 os.Add((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse"); //repeated 1 time
@@ -82,6 +82,27 @@ namespace SA_ILP
             }
 
 
+        }
+
+        private void CreateStupidInitialSolution(List<Route> routes, List<Customer> customers, List<Customer> removed)
+        {
+            foreach (Customer cust in customers)
+            {
+                Route best = null;
+                double bestVal = Double.PositiveInfinity;
+                int bestPos = 0;
+                foreach (Route route in routes)
+                {
+                    (int pos, double val) = route.BestPossibleInsert(cust);
+                    if (val < bestVal)
+                    {
+                        bestVal = val;
+                        best = route;
+                        bestPos = pos;
+                    }
+                }
+                best.InsertCust(cust, bestPos);
+            }
         }
 
         private void CreateSmartInitialSolution(List<Route> routes, List<Customer> customers, List<Customer> removed)
@@ -133,7 +154,7 @@ namespace SA_ILP
                                 return dist + route.CalculateEarlyPenaltyTerm(arrivalTime + dist, x.TWStart);
                             else
                                 return dist + random.NextDouble() * 5;
-                        else return double.MaxValue;
+                        else return double.MaxValue; //dist + route.CalculateLatePenaltyTerm(arrivalTime + dist, x.TWEnd);//
 
                     });
                     (double dist, IContinuousDistribution d) = route.CustomerDist(seed, next, route.max_capacity, false);
@@ -221,8 +242,9 @@ namespace SA_ILP
             for (int i = 0; i < numVehicles; i++)
                 routes.Add(new Route(customers[0], distanceMatrix,distributionMatrix, approximationMatrix, vehicleCapacity,seed: random.Next(), this));
 
-            CreateSmartInitialSolution(routes, customers, removed);
 
+            CreateSmartInitialSolution(routes, customers, removed);
+            //CreateStupidInitialSolution(routes, customers, removed);
 
             if (checkInitialSolution)
                 //Validate intial solution

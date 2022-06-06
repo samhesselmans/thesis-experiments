@@ -19,17 +19,23 @@ namespace SA_ILP
 
             using (var totalWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.txt")))
             {
+                totalWriter.WriteLine("Command line arguments:");
                 totalWriter.WriteLine(opts.ToString());
+                LocalSearchConfiguration config = LocalSearchConfigs.VRPLTT;
+                totalWriter.WriteLine("Config:");
+                totalWriter.WriteLine(config);
+                totalWriter.Flush();
                 using (var csvWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.csv")))
                 {
                     csvWriter.WriteLine("SEP=;");
                     csvWriter.WriteLine("Instance;AllowWaiting;Score;N;ILP time;LS time;LS score;ILP imp(%)");
+
                     foreach (var file in Directory.GetFiles(dir))
                     {
                         Console.WriteLine($"Testing on { Path.GetFileNameWithoutExtension(file)}");
                         double totalValue = 0.0;
                         bool newInstance = false;
-                        LocalSearchConfiguration config = LocalSearchConfigs.VRPLTT;
+                        
                         if (Path.GetExtension(file) != ".csv")
                             continue;
 
