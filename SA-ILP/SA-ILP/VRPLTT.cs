@@ -18,21 +18,32 @@ namespace SA_ILP
             double slope = Math.Asin(heightDiff / length);// * Math.PI / 180;
             double requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope, windSpeed);
             double orignalPow = requiredPow;
+
+            if (slope <= 0)
+                return speed;
+
+
             if (powerInput >= requiredPow)
             {
                 return speed;
             }
             while (speed > 0)
             {
-                if (powerInput >= requiredPow)
+                speed -= 0.01;
+                requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope, windSpeed);
+                if (powerInput > requiredPow)
                 {
                     if (orignalPow + requiredPow - 2 * powerInput < 0)
                         speed += 0.01;
                     return speed;
                 }
+                else
+                {
+                    orignalPow = requiredPow;
+                }
 
-                speed -= 0.01;
-                requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope, windSpeed);
+                
+                
             }
             return 0;
         }
