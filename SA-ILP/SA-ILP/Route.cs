@@ -226,7 +226,7 @@ namespace SA_ILP
 
         public double CalculateEarlyPenaltyTerm(double arrivalTime, double timewindowStart)
         {
-            if (!parent.Config.PenalizeEarlyArrival)
+            if (!parent.Config.PenalizeDeterministicEarlyArrival)
                 return 0;// 100 + timewindowStart - arrivalTime;// timewindowStart - arrivalTime;
             else
             {
@@ -334,7 +334,7 @@ namespace SA_ILP
                     }
                     else
                     {
-                        if (!parent.Config.AllowEarlyArrival)
+                        if (!parent.Config.AllowEarlyArrivalInSimulation)
                         {
                             toEarly++;
                             toEarlyCount[i+1]++;
@@ -1048,8 +1048,8 @@ namespace SA_ILP
         {
 
             //If early arrival is allowed this optimization of the start time is unneccesary.
-            if (parent.Config.AllowEarlyArrival)
-                return 0;
+            //if (parent.Config.AllowEarlyArrival)
+            //    return 0;
             lastOptimizationFailed = false;
             double startTimeLowerBound = 0;
             double startTimeUpperBound = double.MaxValue;
@@ -1607,7 +1607,7 @@ namespace SA_ILP
 
                 if (arrivalTime < route[i + 1].TWStart)
                 {
-                    if (!parent.Config.AllowEarlyArrival && i != 0)
+                    if (!parent.Config.AllowDeterministicEarlyArrival && i != 0)
                     {
                         failed = true;
                         Console.WriteLine("FAIL arrived to early at customer");

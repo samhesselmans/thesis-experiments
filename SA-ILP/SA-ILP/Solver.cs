@@ -286,7 +286,7 @@ namespace SA_ILP
                             if (Double.IsNaN(pOnTime))
                                 pOnTime = 1;
 
-                            if (((LocalSearchConfiguration)config).AllowEarlyArrival)
+                            if (((LocalSearchConfiguration)config).AllowDeterministicEarlyArrival && ((LocalSearchConfiguration)config).AllowEarlyArrivalInSimulation)
                                 pEarly = 0;
 
                             double p = pOnTime - pEarly;
@@ -300,32 +300,32 @@ namespace SA_ILP
                             }
                         }
                     }
-                    //Console.WriteLine($"{route}: On time performance: {avg / total} worst: {worst} at {worstCust} at {worstIndex}");
+                        Console.WriteLine($"{route}: On time performance: {avg / total} worst: {worst} at {worstCust} at {worstIndex}");
 
-                    //var res = route.Simulate(1000000);
-                    //totalDist += res.AverageTravelTime;
-                    //totalWait += res.AverageWaitingTime;
-                    //totalOntimePercentage += res.OnTimePercentage;
+                        var res = route.Simulate(1000000);
+                        totalDist += res.AverageTravelTime;
+                        totalWait += res.AverageWaitingTime;
+                        totalOntimePercentage += res.OnTimePercentage;
 
-                    //int minIndex = -1;
-                    //double min = double.MaxValue;
-                    //for(int j =0;j<res.CustomerOnTimePercentage.Length;j++)
-                    //{
-                    //    if (res.CustomerOnTimePercentage[j] < min)
-                    //    {
-                    //        min = res.CustomerOnTimePercentage[j];
-                    //        minIndex = j;
-                    //    }
+                        int minIndex = -1;
+                        double min = double.MaxValue;
+                        for (int j = 0; j < res.CustomerOnTimePercentage.Length; j++)
+                        {
+                            if (res.CustomerOnTimePercentage[j] < min)
+                            {
+                                min = res.CustomerOnTimePercentage[j];
+                                minIndex = j;
+                            }
 
-                    //}
+                        }
 
-                    //Console.WriteLine($"Simmulated on time perfomance: {res.OnTimePercentage} worst: {min} at {minIndex}\n");
-                }
+                        Console.WriteLine($"Simmulated on time perfomance: {res.OnTimePercentage} worst: {min} at {minIndex}. {res.TotalToEarly} times to early and {res.TotalToLate} to late\n");
+                    }
 
             }
 
-            //Console.WriteLine($"Average solution travel time: {totalDist} with OTP: {totalOntimePercentage/numRoutes}");
-            //Console.WriteLine($"Average solution waiting time: {totalWait}");
+            Console.WriteLine($"Average solution travel time: {totalDist} with OTP: {totalOntimePercentage / numRoutes}");
+            Console.WriteLine($"Average solution waiting time: {totalWait}");
 
             //CheckRouteQualityVRPLTT(sol, matrix, bikeMaxMass - bikeMinMass);
 

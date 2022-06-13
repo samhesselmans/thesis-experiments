@@ -55,7 +55,7 @@ namespace SA_ILP
                             {
                                 if (failed)
                                     writer.Write("FAIL did not meet check");
-                                writer.WriteLine($"Score: {ilpVal}, ilpTime: {ilpTime}, lsTime: {lsTime}, Early arrival allowed {config.AllowEarlyArrival}");
+                                writer.WriteLine($"Score: {ilpVal}, ilpTime: {ilpTime}, lsTime: {lsTime}, Early arrival allowed {config.AllowDeterministicEarlyArrival}");
                                 foreach (var route in ilpSol)
                                 {
                                     writer.WriteLine($"{route}");
@@ -68,8 +68,8 @@ namespace SA_ILP
 
                             totalValue += ilpVal;
 
-                            totalWriter.WriteLine($"Instance: { Path.GetFileNameWithoutExtension(file)},Early arrival allowed {config.AllowEarlyArrival}, Score: {Math.Round(ilpVal, 3)}, Vehicles: {ilpSol.Count}, ilpTime: {Math.Round(ilpTime, 3)}, lsTime: {Math.Round(lsTime, 3)}, lsVal: {Math.Round(lsVal, 3)}, ilpImp: {Math.Round((lsVal - ilpVal) / lsVal * 100, 3)}%");
-                            csvWriter.WriteLine($"{ Path.GetFileNameWithoutExtension(file)};{config.AllowEarlyArrival};{Math.Round(ilpVal, 3)};{ilpSol.Count};{Math.Round(ilpTime, 3)};{Math.Round(lsTime, 3)};{Math.Round(lsVal, 3)};{Math.Round((lsVal - ilpVal) / lsVal * 100, 3)}");
+                            totalWriter.WriteLine($"Instance: { Path.GetFileNameWithoutExtension(file)},Early arrival allowed {config.AllowDeterministicEarlyArrival}, Score: {Math.Round(ilpVal, 3)}, Vehicles: {ilpSol.Count}, ilpTime: {Math.Round(ilpTime, 3)}, lsTime: {Math.Round(lsTime, 3)}, lsVal: {Math.Round(lsVal, 3)}, ilpImp: {Math.Round((lsVal - ilpVal) / lsVal * 100, 3)}%");
+                            csvWriter.WriteLine($"{ Path.GetFileNameWithoutExtension(file)};{config.AllowDeterministicEarlyArrival};{Math.Round(ilpVal, 3)};{ilpSol.Count};{Math.Round(ilpTime, 3)};{Math.Round(lsTime, 3)};{Math.Round(lsVal, 3)};{Math.Round((lsVal - ilpVal) / lsVal * 100, 3)}");
                             totalWriter.Flush();
                             csvWriter.Flush();
                         }
@@ -132,7 +132,7 @@ namespace SA_ILP
                                 {
                                     if (failed)
                                         writer.Write("FAIL did not meet check");
-                                    writer.WriteLine($"Score: {ilpVal}, ilpTime: {ilpTime}, lsTime: {lsTime}, Early arrival allowed {config.AllowEarlyArrival}");
+                                    writer.WriteLine($"Score: {ilpVal}, ilpTime: {ilpTime}, lsTime: {lsTime}, Early arrival allowed {config.AllowDeterministicEarlyArrival}");
                                     foreach (var route in ilpSol)
                                     {
                                         writer.WriteLine($"{route}");
@@ -179,7 +179,7 @@ namespace SA_ILP
 
                         using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileNameWithoutExtension(file) + $"_{test}.txt")))
                         {
-                            writer.WriteLine($"Score: {LSSCore}, lsTime: {LSTime}, Early arrival allowed {config.AllowEarlyArrival}");
+                            writer.WriteLine($"Score: {LSSCore}, lsTime: {LSTime}, Early arrival allowed {config.AllowDeterministicEarlyArrival}");
                             foreach (var route in bestSolution)
                             {
                                 if(route.route.Count > 2)
@@ -187,7 +187,7 @@ namespace SA_ILP
                             }
                         }
 
-                        totalWriter.WriteLine($"Instance: { Path.GetFileNameWithoutExtension(file)},Early arrival allowed {config.AllowEarlyArrival}, Score: {Math.Round(LSSCore, 3)}, Vehicles: {bestSolution.Where(x=>x.route.Count > 2).Count()}, , lsTime: {Math.Round(LSTime, 3)}");
+                        totalWriter.WriteLine($"Instance: { Path.GetFileNameWithoutExtension(file)},Early arrival allowed {config.AllowDeterministicEarlyArrival}, Score: {Math.Round(LSSCore, 3)}, Vehicles: {bestSolution.Where(x=>x.route.Count > 2).Count()}, , lsTime: {Math.Round(LSTime, 3)}");
                         csvWriter.WriteLine($"{ Path.GetFileNameWithoutExtension(file)};{Math.Round(LSSCore, 3)};{bestSolution.Where(x => x.route.Count > 2).Count()};{Math.Round(LSTime, 3)}");
 
                             totalWriter.Flush();
@@ -308,7 +308,7 @@ namespace SA_ILP
                                                 if (Double.IsNaN(pOnTime))
                                                     pOnTime = 1;
 
-                                                if (((LocalSearchConfiguration)config).AllowEarlyArrival)
+                                                if (((LocalSearchConfiguration)config).AllowDeterministicEarlyArrival)
                                                     pEarly = 0;
 
                                                 double p = pOnTime - pEarly;
@@ -366,7 +366,7 @@ namespace SA_ILP
                                 {
                                     if (failed)
                                         writer.Write("FAIL did not meet check");
-                                    writer.WriteLine($"Score: {ilpVal}, ilpTime: {ilpTime}, lsTime: {lsTime}, Early arrival allowed {config.AllowEarlyArrival}");
+                                    writer.WriteLine($"Score: {ilpVal}, ilpTime: {ilpTime}, lsTime: {lsTime}, Early arrival allowed {config.AllowDeterministicEarlyArrival}");
                                     foreach (var route in ilpSol)
                                     {
                                         writer.WriteLine($"{route}");
@@ -378,7 +378,7 @@ namespace SA_ILP
 
                                 totalValue += ilpVal;
 
-                                totalWriter.WriteLine($"Instance: { Path.GetFileNameWithoutExtension(file)},Early arrival allowed {config.AllowEarlyArrival}, Score: {Math.Round(ilpVal, 3)}, Vehicles: {ilpSol.Count}, ilpTime: {Math.Round(ilpTime, 3)}, lsTime: {Math.Round(lsTime, 3)}, lsVal: {Math.Round(lsVal, 3)}, ilpImp: {Math.Round((lsVal - ilpVal) / lsVal * 100, 3)}%");
+                                totalWriter.WriteLine($"Instance: { Path.GetFileNameWithoutExtension(file)},Early arrival allowed {config.AllowDeterministicEarlyArrival}, Score: {Math.Round(ilpVal, 3)}, Vehicles: {ilpSol.Count}, ilpTime: {Math.Round(ilpTime, 3)}, lsTime: {Math.Round(lsTime, 3)}, lsVal: {Math.Round(lsVal, 3)}, ilpImp: {Math.Round((lsVal - ilpVal) / lsVal * 100, 3)}%");
                                 csvWriter.WriteLine($"{ Path.GetFileNameWithoutExtension(file)};{config.ExpectedEarlinessPenalty};{config.UseMeanOfDistributionForTravelTime};{Math.Round(ilpVal, 3)};{ilpSol.Count};{Math.Round(ilpTime, 3)};{Math.Round(lsTime, 3)};{Math.Round(lsVal, 3)};{Math.Round((lsVal - ilpVal) / lsVal * 100, 3)};{totalDist.ToString("0.000")};{totalOntimePercentage / ilpSol.Count};{averageWorstOntimePercentage / ilpSol.Count};{worstOntimePercentage};{worstRoute};{worstRouteCustomer};{estimatedTotalOntimePercentage / ilpSol.Count};{estimatedAverageWorstOntimePercentage / ilpSol.Count};{estimatedWorstOntimePercentage};{estimatedWorstRoute};{estimatedWorstRouteCustomer}");
                                 totalWriter.Flush();
                                 csvWriter.Flush();

@@ -15,7 +15,7 @@ namespace SA_ILP
         public bool AllowEarlyArrivalDuringSearch { get; set; }
 
         public bool AllowLateArrival { get; set; }
-        public bool AllowEarlyArrival { get; set; }
+        public bool AllowDeterministicEarlyArrival { get; set; }
 
         public double BaseRemovedCustomerPenalty { get; set; }
         public double BaseRemovedCustomerPenaltyPow { get; set; }
@@ -26,7 +26,7 @@ namespace SA_ILP
 
         public bool SaveColumnsAfterAllImprovements { get; set; }
 
-        public bool PenalizeEarlyArrival { get; set; }
+        public bool PenalizeDeterministicEarlyArrival { get; set; }
         public bool PenalizeLateArrival { get; set; }
 
         public bool AdjustDeterministicEarlyArrivalToTWStart { get; set; }
@@ -70,6 +70,8 @@ namespace SA_ILP
 
         internal OperatorSelector OperatorSelector { get;set; }
 
+        public bool AllowEarlyArrivalInSimulation { get; set; }
+
         public override string ToString()
         {
             LocalSearchConfiguration obj = this;
@@ -99,7 +101,7 @@ namespace SA_ILP
             AllowLateArrivalDuringSearch = true,
 
 
-            AllowEarlyArrival = true,
+            AllowDeterministicEarlyArrival = true,
             AllowLateArrival = false,
             BaseEarlyArrivalPenalty = 2,
             BaseLateArrivalPenalty = 2,
@@ -113,7 +115,7 @@ namespace SA_ILP
             SaveColumnThreshold = 0.2,
 
 
-            PenalizeEarlyArrival = false,
+            PenalizeDeterministicEarlyArrival = false,
             PenalizeLateArrival = true,
             AdjustDeterministicEarlyArrivalToTWStart = true,
             AdjustEarlyArrivalToTWStart = true,
@@ -143,9 +145,9 @@ namespace SA_ILP
                 config.ExpectedEarlinessPenalty = 10;
                 config.ExpectedLatenessPenalty = 10;
 
-                config.AllowEarlyArrival = false;
-                config.PenalizeEarlyArrival = true;
-
+                config.AllowDeterministicEarlyArrival = false;
+                config.PenalizeDeterministicEarlyArrival = true;
+                config.AllowEarlyArrivalInSimulation = false;
 
                 config.CheckOperatorScores = false;
                 config.SaveRoutesBeforeOperator = false;
@@ -160,12 +162,13 @@ namespace SA_ILP
 
 
                 config.AdjustDeterministicEarlyArrivalToTWStart = false;
-                config.AdjustEarlyArrivalToTWStart = true;
+                config.AdjustEarlyArrivalToTWStart = false;
 
 
                 //config.DefaultDistribution = new Gamma(0, 10);//new Normal(0, 0);
                 config.DefaultDistribution = new Normal(0, 0);
 
+                config.NumRestarts = 2;
 
                 return config;
             }
@@ -176,10 +179,11 @@ namespace SA_ILP
             get
             {
                 var config = VRPSLTTWithoutWaiting;
-                config.AllowEarlyArrival = true;
-                config.PenalizeEarlyArrival = false;
+                config.AllowDeterministicEarlyArrival = true;
+                config.PenalizeDeterministicEarlyArrival = false;
+                config.AdjustEarlyArrivalToTWStart = true;
                 config.ExpectedEarlinessPenalty = 0;
-
+                config.AllowEarlyArrivalInSimulation = true;
                 return config;
             }
         }
@@ -207,7 +211,7 @@ namespace SA_ILP
             InitialTemperature = 10,
             AllowEarlyArrivalDuringSearch = true,
             AllowLateArrivalDuringSearch = true,
-            AllowEarlyArrival = true,
+            AllowDeterministicEarlyArrival = true,
             AllowLateArrival = false,
             BaseEarlyArrivalPenalty = 10,
             BaseLateArrivalPenalty = 10,
@@ -217,7 +221,7 @@ namespace SA_ILP
             BaseRemovedCustomerPenaltyPow = 2,
             Alpha = 0.98,
             SaveColumnsAfterAllImprovements = false,
-            PenalizeEarlyArrival = false,
+            PenalizeDeterministicEarlyArrival = false,
             PenalizeLateArrival = true,
             AdjustDeterministicEarlyArrivalToTWStart = true,
             CheckOperatorScores = true,

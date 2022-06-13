@@ -56,7 +56,7 @@ namespace SA_ILP
                 os.Add((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best"); //repeated 1 time
                 os.Add((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route", 4); //repeated 4 times
                 os.Add((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap", 4); //repeated 4 times
-                os.Add((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 4); //repeated 4 times
+                //os.Add((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 4); //repeated 4 times
                 os.Add((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse"); //repeated 1 time
                 os.Add((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble"); //Repeated 1 time
                 os.Add((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails"); //Repeated 1 time
@@ -199,12 +199,12 @@ namespace SA_ILP
             bool upperViolations = routes.Exists(x => x.ViolatesUpperTimeWindow);
             bool lowerViolations = routes.Exists(x => x.ViolatesLowerTimeWindow);
 
-            return (!upperViolations || Config.AllowLateArrival) && (!lowerViolations || Config.AllowEarlyArrival);
+            return (!upperViolations || Config.AllowLateArrival) && (!lowerViolations || Config.AllowDeterministicEarlyArrival);
         }
 
         private bool IsValidRoute(Route route)
         {
-            return (!route.ViolatesUpperTimeWindow || Config.AllowLateArrival) && (!route.ViolatesLowerTimeWindow || Config.AllowEarlyArrival);
+            return (!route.ViolatesUpperTimeWindow || Config.AllowLateArrival) && (!route.ViolatesLowerTimeWindow || Config.AllowDeterministicEarlyArrival);
         }
 
         private void RunAndCheckOperator(int id, List<Route> routes, List<Customer> removed, double imp, Action op)
