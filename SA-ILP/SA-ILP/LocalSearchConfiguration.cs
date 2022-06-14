@@ -68,9 +68,14 @@ namespace SA_ILP
 
         public IContinuousDistribution DefaultDistribution { get; set; }
 
-        internal OperatorSelector OperatorSelector { get;set; }
 
         public bool AllowEarlyArrivalInSimulation { get; set; }
+
+        internal List<(Operator, Double,String,int)> Operators { get; set; }
+
+
+        public double RemovedCustomerTemperaturePow { get; set; }
+
 
         public override string ToString()
         {
@@ -134,7 +139,22 @@ namespace SA_ILP
             NumIterationsOfNoChangeBeforeRestarting = 600000,
             RestartTemperatureBound = 0.02,
             NumRestarts = 7,
-            WindSpeed = 0
+            WindSpeed = 0,
+            RemovedCustomerTemperaturePow = 2,
+            Operators = new List<(Operator, double, string,int)>()
+            {
+                (Operators.AddRandomRemovedCustomer, 1, "add", 1), //repeated 1 time
+                (Operators.RemoveRandomCustomer, 1, "remove", 1), //repeated 1 time
+                ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 1),//repeated 1 time
+               ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble",1), //Repeated 1 time
+                ((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails",1), //Repeated 1 time
+            }
+            
         };
 
         public static LocalSearchConfiguration VRPSLTTWithoutWaiting

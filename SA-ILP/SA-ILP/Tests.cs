@@ -11,21 +11,29 @@ namespace SA_ILP
     internal static class Tests
     {
         static Solver solver = new Solver();
-        public static async Task RunVRPLTTTests(string dir, string solDir, int numRepeats, Options opts)
+        public static async Task RunVRPLTTTests(string dir, string solDir, int numRepeats, Options opts,LocalSearchConfiguration? configInput = null)
         {
             Console.WriteLine("Testing on all vrpltt instances");
             if (!Directory.Exists(solDir))
                 Directory.CreateDirectory(solDir);
 
-            using (var totalWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.txt")))
+            using (var totalWriter = new StreamWriter(Path.Join(solDir, $"allSolutionsVRPLTT{opts.TestName}.txt")))
             {
                 totalWriter.WriteLine("Command line arguments:");
                 totalWriter.WriteLine(opts.ToString());
-                LocalSearchConfiguration config = LocalSearchConfigs.VRPLTT;
+                LocalSearchConfiguration config;
+                
+                
+                if(configInput == null)
+                 config = LocalSearchConfigs.VRPLTT;
+                else
+                    config = (LocalSearchConfiguration)configInput;
+
+
                 totalWriter.WriteLine("Config:");
                 totalWriter.WriteLine(config);
                 totalWriter.Flush();
-                using (var csvWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.csv")))
+                using (var csvWriter = new StreamWriter(Path.Join(solDir, $"allSolutionsVRPLTT{opts.TestName}.csv")))
                 {
                     csvWriter.WriteLine("SEP=;");
                     csvWriter.WriteLine("Instance;AllowWaiting;Score;N;ILP time;LS time;LS score;ILP imp(%)");
@@ -76,6 +84,157 @@ namespace SA_ILP
                     }
                 }
             }
+        }
+
+        public static async Task TestAllOperatorConfigurations(string dir,string solDir, Options opts)
+        {
+            var config = LocalSearchConfigs.VRPLTT;
+
+            //ORIGINAL
+            var newSolDir = Path.Join(solDir, "Originial");
+            var newOpts = opts;
+            newOpts.TestName = "Original";
+            await RunVRPLTTTests(dir, newSolDir, opts.NumRepeats, opts, config);
+
+
+            //NO REPEAT
+            newSolDir = Path.Join(solDir, "NoRepeat");
+            newOpts = opts;
+            newOpts.TestName = "NoRepeat";
+            config = LocalSearchConfigs.VRPLTT;
+            config.Operators = new List<(Operator, double, string, int)>()
+            {
+                (Operators.AddRandomRemovedCustomer, 1, "add", 1), //repeated 1 time
+                (Operators.RemoveRandomCustomer, 1, "remove", 1), //repeated 1 time
+                ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 1),//repeated 1 time
+               ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route", 1), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap", 1), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 1), //repeated 4 times
+                ((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble",1), //Repeated 1 time
+                ((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails",1), //Repeated 1 time
+            };
+            await RunVRPLTTTests(dir, newSolDir, opts.NumRepeats, opts, config);
+
+
+            //ONLY SIMPLE REPEAT
+            newSolDir = Path.Join(solDir, "OnlySimpleRepeat");
+            newOpts = opts;
+            newOpts.TestName = "OnlySimpleRepeat";
+            config = LocalSearchConfigs.VRPLTT;
+            config.Operators = new List<(Operator, double, string, int)>()
+            {
+                (Operators.AddRandomRemovedCustomer, 1, "add", 4), //repeated 1 time
+                (Operators.RemoveRandomCustomer, 1, "remove", 4), //repeated 1 time
+                ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 4),//repeated 1 time
+               ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route", 1), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble",1), //Repeated 1 time
+                ((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails",1), //Repeated 1 time
+            };
+            await RunVRPLTTTests(dir, newSolDir, opts.NumRepeats, opts, config);
+
+
+            //ONLY SIMPLE EXCEPT ADD REMVOE
+            newSolDir = Path.Join(solDir, "OnlySimpleRepeatExceptAddRemove");
+            newOpts = opts;
+            newOpts.TestName = "OnlySimpleRepeatExceptAddRemove";
+            config = LocalSearchConfigs.VRPLTT;
+            config.Operators = new List<(Operator, double, string, int)>()
+            {
+                (Operators.AddRandomRemovedCustomer, 1, "add", 1), //repeated 1 time
+                (Operators.RemoveRandomCustomer, 1, "remove", 1), //repeated 1 time
+                ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 4),//repeated 1 time
+               ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route", 1), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble",1), //Repeated 1 time
+                ((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails",1), //Repeated 1 time
+            };
+            await RunVRPLTTTests(dir, newSolDir, opts.NumRepeats, opts, config);
+
+            // ORIGINAL WITHOUT ADD REMOVE
+            newSolDir = Path.Join(solDir, "OriginalWithoutAddRemove");
+            newOpts = opts;
+            newOpts.TestName = "OriginalWithoutAddRemove";
+            config = LocalSearchConfigs.VRPLTT;
+            config.Operators = new List<(Operator, double, string, int)>()
+            {
+                ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 1),//repeated 1 time
+               ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble",1), //Repeated 1 time
+                ((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails",1), //Repeated 1 time
+            };
+            await RunVRPLTTTests(dir, newSolDir, opts.NumRepeats, opts, config);
+
+            // ORIGINAL GREEDY ROUTE REPEATED TWICE
+            newSolDir = Path.Join(solDir, "OriginalGreedyRoute2");
+            newOpts = opts;
+            newOpts.TestName = "OriginalGreedyRoute2";
+            config = LocalSearchConfigs.VRPLTT;
+            config.Operators = new List<(Operator, double, string, int)>()
+            {
+                (Operators.AddRandomRemovedCustomer, 1, "add", 1), //repeated 1 time
+                (Operators.RemoveRandomCustomer, 1, "remove", 1), //repeated 1 time
+                ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 1),//repeated 1 time
+               ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route", 2), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble",1), //Repeated 1 time
+                ((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails",1), //Repeated 1 time
+            };
+            await RunVRPLTTTests(dir, newSolDir, opts.NumRepeats, opts, config);
+
+
+            // ORIGINAL, BUT FASTER
+            newSolDir = Path.Join(solDir, "FasterOriginal");
+            newOpts = opts;
+            newOpts.TestName = "FasterOriginal";
+            config = LocalSearchConfigs.VRPLTT;
+            config.IterationsPerAlphaChange = 5000;
+            config.NumIterationsOfNoChangeBeforeRestarting = 200000;
+            await RunVRPLTTTests(dir, newSolDir, opts.NumRepeats, opts, config);
+
+            // ORIGINAL, HIGHER ADD REMOVE PENALTY
+            newSolDir = Path.Join(solDir, "HigherAddRemovePenalty");
+            newOpts = opts;
+            newOpts.TestName = "HigherAddRemovePenalty";
+            config = LocalSearchConfigs.VRPLTT;
+            config.BaseRemovedCustomerPenalty = 2;
+            await RunVRPLTTTests(dir, newSolDir, opts.NumRepeats, opts, config);
+
+            // ORIGINAL, LINEAR HIGHER ADD REMOVE PENALTY
+            newSolDir = Path.Join(solDir, "LinearHigherAddRemovePenalty");
+            newOpts = opts;
+            newOpts.TestName = "LinearHigherAddRemovePenalty";
+            config = LocalSearchConfigs.VRPLTT;
+            config.BaseRemovedCustomerPenalty = 4;
+            config.BaseRemovedCustomerPenaltyPow = 1;
+            await RunVRPLTTTests(dir, newSolDir, opts.NumRepeats, opts, config);
+
+
+            // ORIGINAL, LINEAR HIGHER ADD REMOVE PENALTY LINEAR temperature Pow
+            newSolDir = Path.Join(solDir, "LinearHigherAddRemovePenaltyLinearTempPow");
+            newOpts = opts;
+            newOpts.TestName = "LinearHigherAddRemovePenaltyLinearTempPow";
+            config = LocalSearchConfigs.VRPLTT;
+            config.BaseRemovedCustomerPenalty = 8;
+            config.BaseRemovedCustomerPenaltyPow = 1;
+            config.RemovedCustomerTemperaturePow = 1;
+            await RunVRPLTTTests(dir, newSolDir, opts.NumRepeats, opts, config);
+
         }
 
         public static async Task RunVRPLTTWindtests(string dir, string solDir, int numRepeats, Options opts)

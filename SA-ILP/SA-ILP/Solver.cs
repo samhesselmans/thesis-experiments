@@ -73,8 +73,6 @@ namespace SA_ILP
     internal class Solver
     {
 
-        public static readonly double BaseRemovedCustomerPenalty = 150;
-        public static readonly double BaseRemovedCustomerPenaltyPow = 1.5;
 
         Random random;
         public static double CalcTotalDistance(List<Route> routes, List<Customer> removed, LocalSearch ls)
@@ -85,7 +83,7 @@ namespace SA_ILP
 
         public static double CalcRemovedPenalty(int removedCount,LocalSearch ls)
         {
-            return Math.Pow(removedCount, ls.Config.BaseRemovedCustomerPenaltyPow) * (ls.Config.BaseRemovedCustomerPenalty / Math.Pow(ls.Temperature,2));
+            return Math.Pow(removedCount, ls.Config.BaseRemovedCustomerPenaltyPow) * (ls.Config.BaseRemovedCustomerPenalty / Math.Pow(ls.Temperature,ls.Config.RemovedCustomerTemperaturePow));
         }
 
 
@@ -153,14 +151,23 @@ namespace SA_ILP
 
         public async Task<(bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal,string solutionJSON)> SolveVRPLTTInstanceAsync(string fileName, int numIterations = 3000000, double bikeMinMass = 140, double bikeMaxMass = 290, int numLoadLevels = 10, double inputPower = 350, int timelimit = 30000, int numThreads = 4, int numStarts=4,LocalSearchConfiguration? config = null)
         {
+            LocalSearchConfiguration actualConfig;
             if (config == null)
-                config = LocalSearchConfigs.VRPLTT;
+                actualConfig = LocalSearchConfigs.VRPLTT;
+            else
+                actualConfig = (LocalSearchConfiguration)config;
+            // = (LocalSearchConfiguration)config;
+
+
+            
+
+            //c.InitialTemperature = 10;
 
             (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(fileName);
             Stopwatch w = new Stopwatch();
             w.Start();
             Console.WriteLine("Calculating travel time matrix");
-            (double[,,] matrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix,_) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower,((LocalSearchConfiguration)config).WindSpeed, ((LocalSearchConfiguration)config).WindDirection);
+            (double[,,] matrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix,_) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower,((LocalSearchConfiguration)actualConfig).WindSpeed, ((LocalSearchConfiguration)actualConfig).WindDirection);
             Console.WriteLine($"Created distance matrix in {((double)w.ElapsedMilliseconds/1000).ToString("0.00")}s");
             //(var colums, var sol, _, var value) = await LocalSearchInstancAsync("", customers.Count, bikeMaxMass - bikeMinMass, customers, matrix, 1, numIterations, timelimit);//LocalSearchInstance(-1, "", customers.Count, bikeMaxMass-bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix,random.Next(), numInterations: numIterations,checkInitialSolution:true,timeLimit:timelimit,printExtendedInfo:true);
             //Route.objective_matrix = matrix;
@@ -182,7 +189,7 @@ namespace SA_ILP
             using(var sw =  new StreamWriter("out.txt"))
             foreach (RouteStore rs in ilpSol)
             {
-                var ls = new LocalSearch((LocalSearchConfiguration)config, random.Next());
+                var ls = new LocalSearch(actualConfig, random.Next());
                 Route r = new Route(customers, rs, customers[0], matrix,distributionMatrix, approximationMatrix, bikeMaxMass - bikeMinMass, ls);
                 Solution.Add(r);
                 sw.WriteLine($"{r},");
@@ -226,7 +233,7 @@ namespace SA_ILP
             //CheckRouteQualityVRPLTT(Solution, matrix, bikeMaxMass - bikeMinMass);
 
             //(List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads, numIterations);
-            var parent = new LocalSearch((LocalSearchConfiguration)config, random.Next());
+            var parent = new LocalSearch(actualConfig, random.Next());
             return (false,ilpSol.ConvertAll(x=>new Route(customers,x,customers[0],matrix,distributionMatrix, approximationMatrix, bikeMaxMass-bikeMinMass, parent)),ilpVal,ilpTime,lsTime,lsVal,solutionJSON);
         }
 
