@@ -256,6 +256,11 @@ namespace SA_ILP
                 config.ExpectedEarlinessPenalty = 0;
                 config.AllowEarlyArrivalInSimulation = true;
                 config.CutProbabilityDistributionAt0 = false;
+
+
+                //Use distributions to estimate maximization of distribution and deterministic value
+                config.IgnoreWaitingDuringDistributionAddition = false; 
+
                 return config;
             }
         }
@@ -263,6 +268,11 @@ namespace SA_ILP
         public static LocalSearchConfiguration VRPSLTTWithWaitingCutNormal
         {
             get { var config = VRPSLTTWithWaitingNormal; config.CutProbabilityDistributionAt0 = true;return config; }
+        }
+
+        public static LocalSearchConfiguration VRPSLTTWithWaitingStupidGamma
+        {
+            get { var config = VRPSLTTWithWaitingNormal; config.DefaultDistribution = new Gamma(0, 10); config.AdjustDeterministicEarlyArrivalToTWStart = true; config.IgnoreWaitingDuringDistributionAddition = true; return config; }
         }
 
         public static LocalSearchConfiguration VRPSLTTWithWaitingJustMean

@@ -406,6 +406,12 @@ namespace SA_ILP
             opts.TestName = "WithWaitingJustMean";
             await RunVRPSLTTTest(dir, newSolDir, numRepeats, opts, config);
 
+            //Dumb gamma planning (planning with deterministic with waiting with gamma distribution on top)
+            config = LocalSearchConfigs.VRPSLTTWithWaitingStupidGamma;
+            newSolDir = Path.Join(solDir, "WithWaitingStupidGamma");
+            opts.TestName = "WithWaitingStupidGamma";
+            await RunVRPSLTTTest(dir, newSolDir, numRepeats, opts, config);
+
         }
 
         public static async Task RunVRPSLTTTest(string dir, string solDir, int numRepeats, Options opts,LocalSearchConfiguration config)
