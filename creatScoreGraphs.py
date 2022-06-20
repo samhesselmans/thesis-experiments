@@ -52,5 +52,5 @@ with open("SA-ILP/SA-ILP/bin/Debug/net6.0/data.txt") as file:
 plt.scatter(travelTime,Mean,s=1)
 plt.show()
 
-plt.scatter(travelTime,Mode)
+plt.scatter(travelTime,Mode,s=1)
 plt.show()
