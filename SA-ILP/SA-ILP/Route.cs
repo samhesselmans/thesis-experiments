@@ -205,7 +205,8 @@ namespace SA_ILP
 
         private bool UsesStochasticImplementation()
         {
-            return parent.Config.ExpectedLatenessPenalty != 0 || parent.Config.ExpectedEarlinessPenalty != 0;
+            return parent.Config.UseStochasticFunctions;
+            //return parent.Config.ExpectedLatenessPenalty != 0 || parent.Config.ExpectedEarlinessPenalty != 0;
         }
         private void SetFunctions()
         {

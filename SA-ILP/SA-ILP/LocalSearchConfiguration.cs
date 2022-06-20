@@ -76,7 +76,9 @@ namespace SA_ILP
 
         public double RemovedCustomerTemperaturePow { get; set; }
 
+        public bool CutProbabilityDistributionAt0 { get; set; }
 
+        public bool UseStochasticFunctions { get; set; }
         public override string ToString()
         {
             LocalSearchConfiguration obj = this;
@@ -142,11 +144,11 @@ namespace SA_ILP
             RestartTemperatureBound = 0.02,
             NumRestarts = 7,
             WindSpeed = 0,
-            
-            Operators = new List<(Operator, double, string,int)>()
+
+            Operators = new List<(Operator, double, string, int)>()
             {
-                (Operators.AddRandomRemovedCustomer, 1, "add", 1), //repeated 1 time
-                (Operators.RemoveRandomCustomer, 1, "remove", 1), //repeated 1 time
+                ((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v), 1, "add", 1), //repeated 1 time
+                ((x, y, z, w, v) =>Operators.RemoveRandomCustomer(x, y, z, w, v), 1, "remove", 1), //repeated 1 time
                 ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 1),//repeated 1 time
                ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
                 ((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route", 4), //repeated 4 times
@@ -156,7 +158,7 @@ namespace SA_ILP
                 ((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble",1), //Repeated 1 time
                 ((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails",1), //Repeated 1 time
             }
-            
+
         };
 
         public static LocalSearchConfiguration VRPSLTTWithoutWaiting
@@ -164,11 +166,15 @@ namespace SA_ILP
             get
             {
                 var config = VRPLTT;
+
+                //Enable the usage of the stochastic implementation
+                config.UseStochasticFunctions = true;
+
                 config.ExpectedEarlinessPenalty = 10;
                 config.ExpectedLatenessPenalty = 10;
 
-                config.AllowDeterministicEarlyArrival = false;
-                config.PenalizeDeterministicEarlyArrival = true;
+                config.AllowDeterministicEarlyArrival = true;
+                config.PenalizeDeterministicEarlyArrival = false;
                 config.AllowEarlyArrivalInSimulation = false;
 
                 config.CheckOperatorScores = false;
@@ -189,27 +195,79 @@ namespace SA_ILP
                 config.AdjustEarlyArrivalToTWStart = true;
 
 
-                //config.DefaultDistribution = new Gamma(0, 10);//new Normal(0, 0);
-                config.DefaultDistribution = new Normal(0, 0);
 
-                config.NumRestarts = 2;
+                config.CutProbabilityDistributionAt0 = true;
+
+                config.DefaultDistribution = new Gamma(0, 10);//new Normal(0, 0);
+                //config.DefaultDistribution = new Normal(0, 0);
+
+                config.NumRestarts = 3;
+
+
+                //Need to change the operator configuration, such that move and add do not have the ability to create new routes. This ends up creating way to many new routes
+                config.Operators = new List<(Operator, double, string, int)>()
+            {
+                ((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v,false), 1, "add", 1), //repeated 1 time
+                ((x, y, z, w, v) =>Operators.RemoveRandomCustomer(x, y, z, w, v), 1, "remove", 1), //repeated 1 time
+                ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random,false), 1, "move", 1),//repeated 1 time
+               ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble",1), //Repeated 1 time
+                ((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails",1), //Repeated 1 time
+            };
+
+
 
                 return config;
             }
         }
 
-        public static LocalSearchConfiguration VRPSLTTWithWaiting
+        public static LocalSearchConfiguration VRPSLTTWithoutWaitingNormal
+        {
+            get { var config = VRPSLTTWithoutWaiting; config.CutProbabilityDistributionAt0 = false; config.DefaultDistribution = new Normal(0, 0); return config; }
+        }
+
+        public static LocalSearchConfiguration VRPSLTTWithoutWaitingCutNormal
+        {
+            get { var config = VRPSLTTWithoutWaitingNormal; config.CutProbabilityDistributionAt0 = true; ; return config; }
+        }
+
+
+        public static LocalSearchConfiguration VRPSLTTWithoutWaitingJustMean
+        {
+            get { var config = VRPSLTTWithoutWaiting; config.AllowDeterministicEarlyArrival = false;config.PenalizeDeterministicEarlyArrival = true; config.ExpectedEarlinessPenalty = 0;config.ExpectedLatenessPenalty = 0;config.UseMeanOfDistributionForScore =true ;config.UseMeanOfDistributionForTravelTime = true ; return config; }
+        }
+
+        public static LocalSearchConfiguration VRPSLTTWithWaitingNormal
         {
             get
             {
                 var config = VRPSLTTWithoutWaiting;
+
+                //Need to use the normal approximation when waiting is taken into account
+                config.DefaultDistribution = new Normal(0, 0);
+
                 config.AllowDeterministicEarlyArrival = true;
                 config.PenalizeDeterministicEarlyArrival = false;
                 config.AdjustEarlyArrivalToTWStart = true;
                 config.ExpectedEarlinessPenalty = 0;
                 config.AllowEarlyArrivalInSimulation = true;
+                config.CutProbabilityDistributionAt0 = false;
                 return config;
             }
+        }
+
+        public static LocalSearchConfiguration VRPSLTTWithWaitingCutNormal
+        {
+            get { var config = VRPSLTTWithWaitingNormal; config.CutProbabilityDistributionAt0 = true;return config; }
+        }
+
+        public static LocalSearchConfiguration VRPSLTTWithWaitingJustMean
+        {
+            get { var config = VRPSLTTWithWaitingNormal; config.AllowDeterministicEarlyArrival = true; config.PenalizeDeterministicEarlyArrival = false; config.ExpectedEarlinessPenalty = 0; config.ExpectedLatenessPenalty = 0; config.UseMeanOfDistributionForScore = true; config.UseMeanOfDistributionForTravelTime = true; return config; }
         }
 
 

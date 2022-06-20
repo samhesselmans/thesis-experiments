@@ -104,7 +104,7 @@ namespace SA_ILP
             config = LocalSearchConfigs.VRPLTT;
             config.Operators = new List<(Operator, double, string, int)>()
             {
-                (Operators.AddRandomRemovedCustomer, 1, "add", 1), //repeated 1 time
+                ((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v), 1, "add", 1), //repeated 1 time
                 (Operators.RemoveRandomCustomer, 1, "remove", 1), //repeated 1 time
                 ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 1),//repeated 1 time
                ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
@@ -125,7 +125,7 @@ namespace SA_ILP
             config = LocalSearchConfigs.VRPLTT;
             config.Operators = new List<(Operator, double, string, int)>()
             {
-                (Operators.AddRandomRemovedCustomer, 1, "add", 4), //repeated 1 time
+                ((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v), 1, "add", 4), //repeated 1 time
                 (Operators.RemoveRandomCustomer, 1, "remove", 4), //repeated 1 time
                 ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 4),//repeated 1 time
                ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
@@ -146,7 +146,7 @@ namespace SA_ILP
             config = LocalSearchConfigs.VRPLTT;
             config.Operators = new List<(Operator, double, string, int)>()
             {
-                (Operators.AddRandomRemovedCustomer, 1, "add", 1), //repeated 1 time
+                ((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v), 1, "add", 1), //repeated 1 time
                 (Operators.RemoveRandomCustomer, 1, "remove", 1), //repeated 1 time
                 ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 4),//repeated 1 time
                ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
@@ -184,7 +184,7 @@ namespace SA_ILP
             config = LocalSearchConfigs.VRPLTT;
             config.Operators = new List<(Operator, double, string, int)>()
             {
-                (Operators.AddRandomRemovedCustomer, 1, "add", 1), //repeated 1 time
+                ((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v), 1, "add", 1), //repeated 1 time
                 (Operators.RemoveRandomCustomer, 1, "remove", 1), //repeated 1 time
                 ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 1),//repeated 1 time
                ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
@@ -331,7 +331,7 @@ namespace SA_ILP
 
                         (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(file);
                         Console.WriteLine("Calculating travel time matrix");
-                        (double[,,] matrix, Gamma[,,] distributionMatrix, IContinuousDistribution[,,] approximationMatrix, _) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, opts.BikeMinWeight, opts.BikeMaxWeight, opts.NumLoadLevels, opts.BikePower, ((LocalSearchConfiguration)config).WindSpeed, ((LocalSearchConfiguration)config).WindDirection);
+                        (double[,,] matrix, Gamma[,,] distributionMatrix, IContinuousDistribution[,,] approximationMatrix, _) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, opts.BikeMinWeight, opts.BikeMaxWeight, opts.NumLoadLevels, opts.BikePower, ((LocalSearchConfiguration)config).WindSpeed, ((LocalSearchConfiguration)config).WindDirection, config.DefaultDistribution is Normal);
 
                         (var allColumns, var bestSolution, var LSTime, var LSSCore) = await solver.LocalSearchInstancAsync("", customers.Count - 1, opts.BikeMaxWeight - opts.BikeMinWeight, customers, matrix, distributionMatrix, approximationMatrix, opts.NumThreads, opts.NumStarts, opts.Iterations, opts.TimeLimitLS * 1000, config);
 
@@ -358,6 +358,58 @@ namespace SA_ILP
 
         public static async Task RunVRPSLTTTests(string dir, string solDir, int numRepeats, Options opts)
         {
+            LocalSearchConfiguration config;
+
+            //WAITING NOT ALLOWED
+
+            //True distribution without waiting
+            config = LocalSearchConfigs.VRPSLTTWithoutWaiting;
+            var newSolDir = Path.Join(solDir, "WithoutWaiting");
+            opts.TestName = "WithoutWaiting";
+            await RunVRPSLTTTest(dir,newSolDir,numRepeats,opts,config);
+
+            //Normal approximation without waiting
+            config = LocalSearchConfigs.VRPSLTTWithoutWaitingNormal;
+            newSolDir = Path.Join(solDir, "WithoutWaitingNormal");
+            opts.TestName = "WithoutWaitingNormal";
+            await RunVRPSLTTTest(dir, newSolDir, numRepeats, opts, config);
+
+            //Cut normal approximation without waiting
+            config = LocalSearchConfigs.VRPSLTTWithoutWaitingCutNormal;
+            newSolDir = Path.Join(solDir, "WithoutWaitingCutNormal");
+            opts.TestName = "WithoutWaitingCutNormal";
+            await RunVRPSLTTTest(dir, newSolDir, numRepeats, opts, config);
+
+            //Just mean without waiting
+            config = LocalSearchConfigs.VRPSLTTWithoutWaitingJustMean;
+            newSolDir = Path.Join(solDir, "WithoutWaitingJustMean");
+            opts.TestName = "WithoutWaitingJustMean";
+            await RunVRPSLTTTest(dir, newSolDir, numRepeats, opts, config);
+
+            //WAITING ALLOWED
+
+            //Normal approximation with waiting
+            config = LocalSearchConfigs.VRPSLTTWithWaitingNormal;
+            newSolDir = Path.Join(solDir, "WithWaitingNormal");
+            opts.TestName = "WithWaitingNormal";
+            await RunVRPSLTTTest(dir, newSolDir, numRepeats, opts, config);
+
+            //Cut normal approximation with waiting
+            config = LocalSearchConfigs.VRPSLTTWithWaitingCutNormal;
+            newSolDir = Path.Join(solDir, "WithWaitingCutNormal");
+            opts.TestName = "WithWaitingCutNormal";
+            await RunVRPSLTTTest(dir, newSolDir, numRepeats, opts, config);
+
+            //Just mean with waiting
+            config = LocalSearchConfigs.VRPSLTTWithWaitingJustMean;
+            newSolDir = Path.Join(solDir, "WithWaitingJustMean");
+            opts.TestName = "WithWaitingJustMean";
+            await RunVRPSLTTTest(dir, newSolDir, numRepeats, opts, config);
+
+        }
+
+        public static async Task RunVRPSLTTTest(string dir, string solDir, int numRepeats, Options opts,LocalSearchConfiguration config)
+        {
             Console.WriteLine("Testing on all vrpltt instances");
             if (!Directory.Exists(solDir))
                 Directory.CreateDirectory(solDir);
@@ -369,36 +421,36 @@ namespace SA_ILP
                 {
                     csvWriter.WriteLine("SEP=;");
                     csvWriter.WriteLine("Instance;Uncertanty penalty;UseMean;Score;N;ILP time;LS time;LS score;ILP imp(%);avg simulation distance;avg sim OTP; avg sim worst OTP;worst sim OTP;worst sim route;worst sim cust index;avg est OTP; avg est worst OTP;worst est OTP;worst est route;worst est cust index");
-                    LocalSearchConfiguration config = LocalSearchConfigs.VRPSLTTWithoutWaiting;
+                    //LocalSearchConfiguration config = LocalSearchConfigs.VRPSLTTWithoutWaiting;
 
 
-                    for (int test = 0; test < 3; test++)
-                    {
+                    //for (int test = 0; test < 3; test++)
+                    //{
 
-                        if (test == 0)
-                        {
+                    //    if (test == 0)
+                    //    {
 
-                            config.ExpectedEarlinessPenalty = 0;
-                            config.ExpectedLatenessPenalty = 0;
-                            config.UseMeanOfDistributionForScore = true;
-                            config.UseMeanOfDistributionForTravelTime = true;
+                    //        config.ExpectedEarlinessPenalty = 0;
+                    //        config.ExpectedLatenessPenalty = 0;
+                    //        config.UseMeanOfDistributionForScore = true;
+                    //        config.UseMeanOfDistributionForTravelTime = true;
 
 
-                        }
-                        else if (test == 1)
-                        {
-                            config.ExpectedEarlinessPenalty = 0;
-                            config.ExpectedLatenessPenalty = 0;
-                            config.UseMeanOfDistributionForScore = false;
-                            config.UseMeanOfDistributionForTravelTime = false;
-                        }
-                        else if (test == 2)
-                        {
-                            config.ExpectedEarlinessPenalty = 10;
-                            config.ExpectedLatenessPenalty = 10;
-                            config.UseMeanOfDistributionForScore = false;
-                            config.UseMeanOfDistributionForTravelTime = false;
-                        }
+                    //    }
+                    //    else if (test == 1)
+                    //    {
+                    //        config.ExpectedEarlinessPenalty = 0;
+                    //        config.ExpectedLatenessPenalty = 0;
+                    //        config.UseMeanOfDistributionForScore = false;
+                    //        config.UseMeanOfDistributionForTravelTime = false;
+                    //    }
+                    //    else if (test == 2)
+                    //    {
+                    //        config.ExpectedEarlinessPenalty = 10;
+                    //        config.ExpectedLatenessPenalty = 10;
+                    //        config.UseMeanOfDistributionForScore = false;
+                    //        config.UseMeanOfDistributionForTravelTime = false;
+                    //    }
                         foreach (var file in Directory.GetFiles(dir))
                         {
                             Console.WriteLine($"Testing on { Path.GetFileNameWithoutExtension(file)}");
@@ -521,7 +573,7 @@ namespace SA_ILP
 
 
 
-                                using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileNameWithoutExtension(file) + $"_{test}_{r}.txt")))
+                                using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileNameWithoutExtension(file) + $"_{r}.txt")))
                                 {
                                     if (failed)
                                         writer.Write("FAIL did not meet check");
@@ -543,7 +595,7 @@ namespace SA_ILP
                                 csvWriter.Flush();
                             }
                         }
-                    }
+                    
                 }
             }
         }

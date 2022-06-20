@@ -354,15 +354,18 @@ namespace SA_ILP
 
         }
 
-        public static (double, Action?) AddRandomRemovedCustomer(List<Route> routes, List<int> viableRoutes, Random random, List<Customer> removed, LocalSearch ls)
+        public static (double, Action?) AddRandomRemovedCustomer(List<Route> routes, List<int> viableRoutes, Random random, List<Customer> removed, LocalSearch ls,bool allowNewRouteCreation = true)
         {
             if (removed.Count == 0)
                 return (double.MinValue, null);
 
             Customer cust = removed[random.Next(removed.Count)];
 
+            int extra = 0;
+            if (allowNewRouteCreation)
+                extra = 1;
 
-            int routeIndex = random.Next(viableRoutes.Count + 1);
+            int routeIndex = random.Next(viableRoutes.Count + extra);
             Route route;
             if (routeIndex >= viableRoutes.Count)
                 if (viableRoutes.Count != routes.Count)
@@ -456,7 +459,7 @@ namespace SA_ILP
                 return (bestImp, null);
         }
 
-        public static (double, Action?) MoveRandomCustomerToRandomCustomer(List<Route> routes, List<int> viableRoutes, Random random)
+        public static (double, Action?) MoveRandomCustomerToRandomCustomer(List<Route> routes, List<int> viableRoutes, Random random, bool allowNewRouteCreation=true)
         {
             if (viableRoutes.Count <= 1)
                 return (double.MinValue, null);
@@ -465,7 +468,7 @@ namespace SA_ILP
 
             //Used to allow for moving to an empty route
             int extra = 0;
-            if (viableRoutes.Count < routes.Count)
+            if (allowNewRouteCreation && viableRoutes.Count < routes.Count)
                 extra = 1;
 
             int destIndex = random.Next(viableRoutes.Count + extra);

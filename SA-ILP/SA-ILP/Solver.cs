@@ -167,7 +167,7 @@ namespace SA_ILP
             Stopwatch w = new Stopwatch();
             w.Start();
             Console.WriteLine("Calculating travel time matrix");
-            (double[,,] matrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix,_) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower,((LocalSearchConfiguration)actualConfig).WindSpeed, ((LocalSearchConfiguration)actualConfig).WindDirection);
+            (double[,,] matrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix,_) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower,((LocalSearchConfiguration)actualConfig).WindSpeed, ((LocalSearchConfiguration)actualConfig).WindDirection,actualConfig.DefaultDistribution is Normal);
             Console.WriteLine($"Created distance matrix in {((double)w.ElapsedMilliseconds/1000).ToString("0.00")}s");
             //(var colums, var sol, _, var value) = await LocalSearchInstancAsync("", customers.Count, bikeMaxMass - bikeMinMass, customers, matrix, 1, numIterations, timelimit);//LocalSearchInstance(-1, "", customers.Count, bikeMaxMass-bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix,random.Next(), numInterations: numIterations,checkInitialSolution:true,timeLimit:timelimit,printExtendedInfo:true);
             //Route.objective_matrix = matrix;
@@ -247,7 +247,7 @@ namespace SA_ILP
 
 
 
-            (double[,,] matrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix,_) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower, ((LocalSearchConfiguration)config).WindSpeed, ((LocalSearchConfiguration)config).WindDirection);
+            (double[,,] matrix,Gamma[,,] distributionMatrix,IContinuousDistribution[,,] approximationMatrix,_) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, bikeMinMass, bikeMaxMass, numLoadLevels, inputPower, ((LocalSearchConfiguration)config).WindSpeed, ((LocalSearchConfiguration)config).WindDirection, ((LocalSearchConfiguration)config).DefaultDistribution is Normal);
             var ls = new LocalSearch((LocalSearchConfiguration)config, random.Next());
             //ls.config.ScaleLatenessPenaltyWithTemperature = true;
             (var colums, var sol, var value) = ls.LocalSearchInstance(0, "", customers.Count, bikeMaxMass - bikeMinMass, customers.ConvertAll(i => new Customer(i)), matrix,distributionMatrix,approximationMatrix, numInterations: numIterations, checkInitialSolution: false, timeLimit: timelimit);

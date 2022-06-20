@@ -80,7 +80,7 @@ namespace SA_ILP
         }
 
         //Calculate the load dependent time matrix, the gamma distribtued delay variable and some approximation of this gamma distribution to use during execution. It also returns the component of the windvector along the travel direction.
-        public static (double[,,], Gamma[,,], IContinuousDistribution[,,],double[,] partOfWindTaken) CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput, double windSpeed = 0, double[] windVec = null)
+        public static (double[,,], Gamma[,,], IContinuousDistribution[,,], double[,] partOfWindTaken) CalculateLoadDependentTimeMatrix(List<Customer> customers, double[,] distanceMatrix, double minWeight, double maxWeight, int numLoadLevels, double powerInput, double windSpeed = 0, double[] windVec = null, bool UseNormalApproximation = false)
         {
             double[,,] matrix = new double[customers.Count, customers.Count, numLoadLevels];
             double[,] partOfWindTaken = new double[customers.Count, customers.Count];
@@ -119,7 +119,7 @@ namespace SA_ILP
 
 
             //Calculate the various matrices.
-            Parallel.For(0, customers.Count, i =>
+            Parallel.For(0, customers.Count,new ParallelOptions {MaxDegreeOfParallelism=16}, i =>
             {
                 for (int j = 0; j < customers.Count; j++)
                 {
@@ -160,8 +160,12 @@ namespace SA_ILP
 
                         matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput, windComponentAlongTravelDirection * windSpeed);
                         distributionMatrix[i, j, l] = CreateTravelTimeDistribution(loadLevelWeight, matrix[i, j, l]);
-                        approximationMatrix[i, j, l] = new Normal(distributionMatrix[i, j, l].Mean, distributionMatrix[i, j, l].StdDev); // //
-                        //approximationMatrix[i, j, l] = distributionMatrix[i, j, l];
+
+                        //Set the approximate distribution. 
+                        if(UseNormalApproximation)
+                            approximationMatrix[i, j, l] = new Normal(distributionMatrix[i, j, l].Mean, distributionMatrix[i, j, l].StdDev); // //
+                        else
+                            approximationMatrix[i, j, l] = distributionMatrix[i, j, l];
                     }
                 }
 
