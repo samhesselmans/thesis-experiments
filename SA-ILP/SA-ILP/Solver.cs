@@ -256,7 +256,13 @@ namespace SA_ILP
             double totalWait = 0;
             double totalOntimePercentage = 0;
             int numRoutes = 0;
-            using(var sw = new StreamWriter("out.txt"))
+
+            var simStopWatch = new Stopwatch();
+            simStopWatch.Start();
+            using (var sw = new StreamWriter("out.txt"))
+
+            
+
             foreach (var route in sol)
             {
                 if (route.route.Count != 2)
@@ -293,7 +299,7 @@ namespace SA_ILP
                             if (Double.IsNaN(pOnTime))
                                 pOnTime = 1;
 
-                            if (((LocalSearchConfiguration)config).AllowDeterministicEarlyArrival && ((LocalSearchConfiguration)config).AllowEarlyArrivalInSimulation)
+                            if (((LocalSearchConfiguration)config).AllowEarlyArrivalInSimulation)
                                 pEarly = 0;
 
                             double p = pOnTime - pEarly;
@@ -309,7 +315,7 @@ namespace SA_ILP
                     }
                         Console.WriteLine($"{route}: On time performance: {avg / total} worst: {worst} at {worstCust} at {worstIndex}");
 
-                        var res = route.Simulate(1000000);
+                        var res = route.Simulate(2000000);
                         totalDist += res.AverageTravelTime;
                         totalWait += res.AverageWaitingTime;
                         totalOntimePercentage += res.OnTimePercentage;
@@ -330,6 +336,8 @@ namespace SA_ILP
                     }
 
             }
+            simStopWatch.Stop();
+            Console.WriteLine($"Simulating took {(double)simStopWatch.ElapsedMilliseconds / 1000} s");
 
             Console.WriteLine($"Average solution travel time: {totalDist} with OTP: {totalOntimePercentage / numRoutes}");
             Console.WriteLine($"Average solution waiting time: {totalWait}");
