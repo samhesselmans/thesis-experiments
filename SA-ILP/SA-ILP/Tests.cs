@@ -496,8 +496,7 @@ namespace SA_ILP
                                         double worst = double.MaxValue;
                                         Customer? worstCust = null;
                                         int worstIndex = -1;
-
-                                        for (int i = 0; i < route.route.Count; i++)
+                                        for (int i = 0; i < route.route.Count-1; i++)
                                         {
 
                                             if (route.customerDistributions[i] != null)
@@ -519,7 +518,7 @@ namespace SA_ILP
                                                 if (Double.IsNaN(pOnTime))
                                                     pOnTime = 1;
 
-                                                if (((LocalSearchConfiguration)config).AllowDeterministicEarlyArrival)
+                                                if (((LocalSearchConfiguration)config).AllowEarlyArrivalInSimulation)
                                                     pEarly = 0;
 
                                                 double p = pOnTime - pEarly;
@@ -533,7 +532,7 @@ namespace SA_ILP
                                                 }
                                             }
                                         }
-                                        estimatedTotalOntimePercentage += avg;
+                                        estimatedTotalOntimePercentage += avg/total;
                                         estimatedAverageWorstOntimePercentage += worst;
                                         if (worst < estimatedWorstOntimePercentage)
                                         {
@@ -541,7 +540,7 @@ namespace SA_ILP
                                             estimatedWorstRoute = route;
                                             estimatedWorstRouteCustomer = worstIndex;
                                         }
-                                        Console.WriteLine($"On time performance: {avg / total} worst: {worst} at {worstCust} at {worstIndex}");
+                                        Console.WriteLine($"On time performance: {avg/total} worst: {worst} at {worstCust} at {worstIndex}");
 
                                         var res = route.Simulate(1000000);
                                         totalDist += res.AverageTravelTime;
