@@ -107,12 +107,14 @@ namespace SA_ILP
 
 
             AllowDeterministicEarlyArrival = true,
+            AllowEarlyArrivalInSimulation = true,
             AllowLateArrival = false,
             BaseEarlyArrivalPenalty = 2,
             BaseLateArrivalPenalty = 2,
 
             BaseRemovedCustomerPenalty = 0.1,
             BaseRemovedCustomerPenaltyPow = 2,
+            RemovedCustomerTemperaturePow = 2,
             Alpha = 0.99,
 
             SaveColumnsAfterAllImprovements = true,
@@ -140,7 +142,7 @@ namespace SA_ILP
             RestartTemperatureBound = 0.02,
             NumRestarts = 7,
             WindSpeed = 0,
-            RemovedCustomerTemperaturePow = 2,
+            
             Operators = new List<(Operator, double, string,int)>()
             {
                 (Operators.AddRandomRemovedCustomer, 1, "add", 1), //repeated 1 time
@@ -182,7 +184,9 @@ namespace SA_ILP
 
 
                 config.AdjustDeterministicEarlyArrivalToTWStart = false;
-                config.AdjustEarlyArrivalToTWStart = false;
+
+                //Always adhere to the customers timewindows
+                config.AdjustEarlyArrivalToTWStart = true;
 
 
                 //config.DefaultDistribution = new Gamma(0, 10);//new Normal(0, 0);

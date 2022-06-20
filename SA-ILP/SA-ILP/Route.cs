@@ -1048,8 +1048,8 @@ namespace SA_ILP
         {
 
             //If early arrival is allowed this optimization of the start time is unneccesary.
-            //if (parent.Config.AllowEarlyArrival)
-            //    return 0;
+            if (parent.Config.AllowEarlyArrivalInSimulation)
+                return 0;
             lastOptimizationFailed = false;
             double startTimeLowerBound = 0;
             double startTimeUpperBound = double.MaxValue;
