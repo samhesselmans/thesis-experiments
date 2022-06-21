@@ -497,7 +497,7 @@ namespace SA_ILP
             if (id == 0 && Config.SaveScoreDevelopment)
                 BestSolutionScores.Add((iteration, bestSolValue));
 
-            Console.WriteLine($"DONE {id}: {name}, Score: {Solver.CalcTotalDistance(BestSolution, new List<Customer>(), this)}, Columns: {Columns.Count}. Completed {iteration} iterations in {Math.Round((double)timer.ElapsedMilliseconds / 1000, 3)}s");
+            Console.WriteLine($"DONE {id}: {name}, Score: {Solver.CalcTotalDistance(BestSolution, removed, this)}, Columns: {Columns.Count}. Completed {iteration} iterations in {Math.Round((double)timer.ElapsedMilliseconds / 1000, 3)}s");
 
             if (Config.PrintExtendedInfo)
             {
