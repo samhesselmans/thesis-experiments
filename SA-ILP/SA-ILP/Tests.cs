@@ -420,10 +420,10 @@ namespace SA_ILP
             if (!Directory.Exists(solDir))
                 Directory.CreateDirectory(solDir);
 
-            using (var totalWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.txt")))
+            using (var totalWriter = new StreamWriter(Path.Join(solDir, $"allSolutionsVRPSLTT{opts.TestName}.txt")))
             {
                 totalWriter.WriteLine(opts.ToString());
-                using (var csvWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.csv")))
+                using (var csvWriter = new StreamWriter(Path.Join(solDir, $"allSolutionsVRPSLTT{opts.TestName}.csv")))
                 {
                     csvWriter.WriteLine("SEP=;");
                     csvWriter.WriteLine("Instance;Uncertanty penalty;UseMean;Score;N;ILP time;LS time;LS score;ILP imp(%);avg simulation distance;avg sim OTP; avg sim worst OTP;worst sim OTP;worst sim route;worst sim cust index;avg est OTP; avg est worst OTP;worst est OTP;worst est route;worst est cust index");
