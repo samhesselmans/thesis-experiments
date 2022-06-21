@@ -45,7 +45,7 @@ if (args.Length >= 1)
     }
     else if (opts.Mode == "vrplttmt")
     {
-        await solver.SolveVRPLTTInstanceAsync(opts.Instance, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads);
+        await solver.SolveVRPLTTInstanceAsync(opts.Instance, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads,config: LocalSearchConfigs.VRPLTT);
     }
     else if (opts.Mode == "vrptwmt")
     {

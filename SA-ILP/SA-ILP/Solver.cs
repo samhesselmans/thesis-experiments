@@ -423,7 +423,7 @@ namespace SA_ILP
                 {
                     var id = i;
                     var ls = new LocalSearch(config, random.Next());
-                    tasks.Add(Task.Run(() => { return ls.LocalSearchInstance(id, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix.Clone() as double[,,], distributionMatrix,approximationMatrix, numInterations: numIterations, timeLimit: timeLimit); }));
+                    tasks.Add(Task.Run(() => { return ls.LocalSearchInstance(id, name, numV, capV, customers.ConvertAll(i => new Customer(i)), distanceMatrix, distributionMatrix,approximationMatrix, numInterations: numIterations, timeLimit: timeLimit); }));
 
 
                 }
@@ -691,6 +691,7 @@ namespace SA_ILP
             GRBModel model = new GRBModel(env);
 
             model.Parameters.TimeLimit = 3600;
+            model.Parameters.Threads = 16;
 
             //Create decision variables
             GRBVar[] columnDecisions = new GRBVar[columList.Length];
