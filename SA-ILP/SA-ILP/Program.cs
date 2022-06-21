@@ -31,7 +31,7 @@ if (args.Length >= 1)
         return;
 
 
-    String solutionDir = Path.Join("Solutions", DateTime.Now.ToString("dd-MM-yy_HH-mm-ss") + opts.TestName);
+    String solutionDir = Path.Join(opts.SolutionDir, DateTime.Now.ToString("dd-MM-yy_HH-mm-ss") + opts.TestName);
     String benchDir = Path.Join("Benchmarks", DateTime.Now.ToString("dd-MM-yy_HH-mm-ss") + opts.TestName);
     if (opts.Mode == "vrpltt")
     {
@@ -123,7 +123,7 @@ if (args.Length >= 1)
 //await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
 
 //solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 500 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350,config: LocalSearchConfigs.VRPSLTTWithoutWaiting);
-await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "pittsburgh_50.csv"), numLoadLevels: 10, numIterations: 500000000, timelimit: 480 * 1000, numThreads: 6, numStarts: 16, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350,config:LocalSearchConfigs.VRPLTT);
+//await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "pittsburgh_50.csv"), numLoadLevels: 10, numIterations: 500000000, timelimit: 480 * 1000, numThreads: 6, numStarts: 16, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350,config:LocalSearchConfigs.VRPLTT);
 
 //const LocalSearchConfiguration config = LocalSearchConfigs.VRPLTT;
 
@@ -251,6 +251,9 @@ class Options
 
     [Option("testname", Default = "", HelpText = "Name of the test currently ran")]
     public string TestName { get; set; }
+
+    [Option("solutiondir", Default = "Solution", HelpText = "Name of the test currently ran")]
+    public string SolutionDir { get; set; }
     public override string ToString()
     {
         return GetType().GetProperties()
