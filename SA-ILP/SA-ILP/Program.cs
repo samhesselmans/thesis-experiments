@@ -5,6 +5,7 @@ using Gurobi;
 using CommandLine;
 using System.Text;
 using MathNet.Numerics.Distributions;
+using System.Reflection;
 
 string baseDir = "../../../../../";
 
@@ -54,7 +55,20 @@ if (args.Length >= 1)
     }
     else if (opts.Mode == "allvrpltt")
     {
-        await Tests.RunVRPLTTTests(opts.Instance, solutionDir, opts.NumRepeats, opts);
+
+        if (opts.Config != "")
+        {
+
+            PropertyInfo propertyInfo = typeof(LocalSearchConfigs).GetProperty(opts.Config);
+            LocalSearchConfiguration something = (LocalSearchConfiguration)propertyInfo.GetValue(null, null);
+            await Tests.RunVRPLTTTests(opts.Instance, solutionDir, opts.NumRepeats, opts,something);
+        }
+        else
+        {
+            await Tests.RunVRPLTTTests(opts.Instance, solutionDir, opts.NumRepeats, opts);
+        }
+
+        
     }
     else if (opts.Mode == "allvrpsltt")
     {
@@ -254,6 +268,9 @@ class Options
 
     [Option("solutiondir", Default = "Solution", HelpText = "Name of the test currently ran")]
     public string SolutionDir { get; set; }
+
+    [Option("config", Default = "", HelpText = "Name of the test currently ran")]
+    public string Config { get; set; }
     public override string ToString()
     {
         return GetType().GetProperties()
