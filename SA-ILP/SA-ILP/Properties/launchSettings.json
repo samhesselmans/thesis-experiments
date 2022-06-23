@@ -2,7 +2,10 @@
   "profiles": {
     "SA-ILP": {
       "commandName": "Project",
-      "commandLineArgs": "allvrpltt ..\\..\\..\\..\\..\\vrpltt_instances\\large --threads 6 --starts 16 --lstl 480 --loadlevels 10"
+      "commandLineArgs": "allvrpltt ..\\..\\..\\..\\..\\vrpltt_instances\\large --threads 6 --starts 16 --lstl 480 --loadlevels 10 --config VRPLTTNoGreedyOperators",
+      "environmentVariables": {
+        "DOTNET_gcServer": "1"
+      }
     },
     "SA-ILP no launch parameters": {
       "commandName": "Project"
