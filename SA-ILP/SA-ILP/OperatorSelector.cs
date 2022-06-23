@@ -91,7 +91,7 @@ namespace SA_ILP
                 if (p <= threshHolds[i])
                 {
                     LastOperator = labels[i];
-                    operatorHistory.Add(labels[i]);
+                    //operatorHistory.Add(labels[i]);
                     return operators[i];
                 }
             }
