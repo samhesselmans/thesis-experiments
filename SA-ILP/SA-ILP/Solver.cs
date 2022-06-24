@@ -234,7 +234,7 @@ namespace SA_ILP
 
             //(List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, numThreads, numIterations);
             var parent = new LocalSearch(actualConfig, random.Next());
-            return (false,ilpSol.ConvertAll(x=>new Route(customers,x,customers[0],matrix,distributionMatrix, approximationMatrix, bikeMaxMass-bikeMinMass, parent)),ilpVal,ilpTime,lsTime,lsVal,solutionJSON);
+            return (failed,ilpSol.ConvertAll(x=>new Route(customers,x,customers[0],matrix,distributionMatrix, approximationMatrix, bikeMaxMass-bikeMinMass, parent)),ilpVal,ilpTime,lsTime,lsVal,solutionJSON);
         }
 
         public double SolveVRPLTTInstance(string fileName, int numIterations = 3000000, double bikeMinMass = 150, double bikeMaxMass = 350, int numLoadLevels = 10, double inputPower = 400, int timelimit = 30000,LocalSearchConfiguration? config = null)

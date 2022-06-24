@@ -207,6 +207,30 @@ namespace SA_ILP
             }
         }
 
+        public static LocalSearchConfiguration VRPLTTLinearHigherAddRemovePenaltyLinearTempPow
+        {
+            get
+            {
+                var config = LocalSearchConfigs.VRPLTT;
+                config.BaseRemovedCustomerPenalty = 8;
+                config.BaseRemovedCustomerPenaltyPow = 1;
+                config.RemovedCustomerTemperaturePow = 1;
+                return config;
+            }
+        }
+
+
+        public static LocalSearchConfiguration VRPLTTLinearHigherAddRemovePenalty
+        {
+            get
+            {
+                var config = LocalSearchConfigs.VRPLTT;
+                config.BaseRemovedCustomerPenalty = 4;
+                config.BaseRemovedCustomerPenaltyPow = 1;
+                return config;
+            }
+        }
+
         public static LocalSearchConfiguration VRPSLTTWithoutWaiting
         {
             get
