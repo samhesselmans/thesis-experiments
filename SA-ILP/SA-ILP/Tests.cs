@@ -251,14 +251,17 @@ namespace SA_ILP
                 using (var csvWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.csv")))
                 {
                     csvWriter.WriteLine("SEP=;");
-                    csvWriter.WriteLine("Instance;Windspeed;WindDirection;Score;N;ILP time;LS time;LS score;ILP imp;TimeCycledAgainstWind");
+                    csvWriter.WriteLine("Instance;Windspeed;WindDirection;Score;N;ILP time;LS time;LS score;ILP imp;TimeCycledAgainstWind;TimeWithWindIncluded;NumberOfValidRoutes");
 
                     LocalSearchConfiguration config = LocalSearchConfigs.VRPLTTWithWind;
+
+                    double testWindSpeed = config.WindSpeed;
 
                     for (int test = 0; test < 5; test++)
                     {
                         if (test == 1)
                         {
+
                             config.WindDirection = new double[] { 0, -1 };
                         }
                         else if (test == 2)
@@ -284,9 +287,6 @@ namespace SA_ILP
 
                                 var windResult = VRPLTT.CalculateWindCyclingTime(file, opts.BikeMinWeight, opts.BikeMaxWeight, opts.NumLoadLevels, opts.BikePower, config.WindDirection, ilpSol);
 
-
-                                csvWriter.WriteLine($"{Path.GetFileNameWithoutExtension(file)};{config.WindSpeed};({config.WindDirection[0]},{config.WindDirection[1]});{ilpVal};{ilpTime};{lsTime};{lsVal};{(ilpVal - lsVal) / lsVal * 100};{windResult}");
-
                                 using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileNameWithoutExtension(file) + $"_{test}_{repeat}.txt")))
                                 {
                                     if (failed)
@@ -297,6 +297,40 @@ namespace SA_ILP
                                         writer.WriteLine($"{route}");
                                     }
                                 }
+                                double cycleSpeedWithWind = ilpVal;
+                                int valid = ilpSol.Count;
+                                if (config.WindSpeed == 0)
+                                {
+                                    var tempConfig = config;
+                                    tempConfig.WindSpeed = testWindSpeed;
+
+                                    tempConfig.PenalizeLateArrival = false;
+                                    tempConfig.PenalizeDeterministicEarlyArrival = false;
+                                    //If the windspeed is 0 we want to check what the travel time would be if we plan without it
+                                    (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(file);
+                                    Stopwatch w = new Stopwatch();
+                                    w.Start();
+                                    Console.WriteLine("Calculating travel time matrix");
+                                    (double[,,] matrix, Gamma[,,] distributionMatrix, IContinuousDistribution[,,] approximationMatrix, _) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, opts.BikeMinWeight, opts.BikeMaxWeight, opts.NumLoadLevels, opts.BikePower, tempConfig.WindSpeed, tempConfig.WindDirection, tempConfig.DefaultDistribution is Normal);
+                                    LocalSearch ls = new LocalSearch(tempConfig,1);
+                                    double total = 0;
+                                   ;
+                                    foreach( var r in ilpSol)
+                                    {
+                                        var rs = new RouteStore(r.CreateIdList(), 0);
+                                        var newRoute = new Route(customers, rs, customers[0], matrix, distributionMatrix, approximationMatrix, opts.BikeMaxWeight - opts.BikeMinWeight, ls);
+                                        total += newRoute.CalcObjective();
+                                        if(newRoute.CheckRouteValidity())
+                                            valid--;
+                                    }
+                                    cycleSpeedWithWind = total;
+                                }
+
+                                Console.WriteLine("------------------------------------------------------------------" + cycleSpeedWithWind + "  " + (double)valid/ilpSol.Count);
+
+                                csvWriter.WriteLine($"{Path.GetFileNameWithoutExtension(file)};{config.WindSpeed};({config.WindDirection[0]},{config.WindDirection[1]});{ilpVal};{ilpTime};{lsTime};{lsVal};{(ilpVal - lsVal) / lsVal * 100};{windResult};{cycleSpeedWithWind};{(double)valid / ilpSol.Count}");
+
+
                                 if (failed)
                                     totalWriter.Write("FAIL did not meet check");
                             }
