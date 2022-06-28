@@ -266,7 +266,7 @@ class Options
     [Option("testname", Default = "", HelpText = "Name of the test currently ran")]
     public string TestName { get; set; }
 
-    [Option("solutiondir", Default = "Solution", HelpText = "Name of the test currently ran")]
+    [Option("solutiondir", Default = "Solutions", HelpText = "Name of the test currently ran")]
     public string SolutionDir { get; set; }
 
     [Option("config", Default = "", HelpText = "Name of the test currently ran")]
