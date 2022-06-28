@@ -184,10 +184,29 @@ namespace SA_ILP
 
             }
 
+            //Not all customers could be aded using the neirest neighbor method. Insert them greedily
             if (customers.Count != 0)
             {
-                Console.WriteLine("Bad initial solution");
-                customers.ForEach(x => removed.Add(x));
+                //Console.WriteLine("Bad initial solution");
+                //customers.ForEach(x => removed.Add(x));
+
+                foreach (Customer cust in customers)
+                {
+                    Route best = null;
+                    double bestVal = Double.PositiveInfinity;
+                    int bestPos = 0;
+                    foreach (Route route in routes)
+                    {
+                        (int pos, double val) = route.BestPossibleInsert(cust);
+                        if (val < bestVal)
+                        {
+                            bestVal = val;
+                            best = route;
+                            bestPos = pos;
+                        }
+                    }
+                    best.InsertCust(cust, bestPos);
+                }
 
             }
 
@@ -452,6 +471,11 @@ namespace SA_ILP
                     //TOD: Seperate penalty calculation for optimization
                     currentValue = Solver.CalcTotalDistance(routes, removed, this);
                     bestSolValue = Solver.CalcTotalDistance(BestSolution, BestSolutionRemoved, this);
+
+
+                    //if (Temperature >= Config.RestartTemperatureBound)
+                    //    restartPreventionIteration = iteration;
+
                 }
                 //Check if the restart conditions are met
                 if (iteration - restartPreventionIteration > Config.NumIterationsOfNoChangeBeforeRestarting && Temperature < Config.RestartTemperatureBound && numRestarts < Config.NumRestarts) //&& iteration - lastChangeExceptedOnIt > 1000

@@ -1,9 +1,10 @@
 import math
 from socket import inet_aton
-from turtle import color
+from turtle import color, distance
 from xml.etree.ElementTree import PI
+from matplotlib.style import available
 
-from numpy import Infinity, block
+from numpy import Infinity, append, block
 import parse_vrpltt_instance as pvi
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -88,6 +89,80 @@ def plot(solution, instance):
     nx.draw(G,pos,edge_color=col)
     #plt.set_aspect('equal', adjustable='box')
     
+def levenshteinDistance(str1, str2):
+    m = len(str1)
+    n = len(str2)
+    d = [[i] for i in range(1, m + 1)]   # d matrix rows
+    d.insert(0, list(range(0, n + 1)))   # d matrix columns
+    for j in range(1, n + 1):
+        for i in range(1, m + 1):
+            if str1[i - 1] == str2[j - 1]:   # Python (string) is 0-based
+                substitutionCost = 0
+            else:
+                substitutionCost = 1
+            d[i].insert(j, min(d[i - 1][j] + 1,
+                               d[i][j - 1] + 1,
+                               d[i - 1][j - 1] + substitutionCost))
+    return d[-1][-1]
+
+
+def CompareSolutions(sol1,sol2,instance):
+    (s1,s2) = OrderSolution(sol1,sol2)
+
+    #If routes are exactly equeal. Dont plot them
+    toRemove = []
+    for i in range(len(s1)):
+        if(levenshteinDistance(s1[i],s2[i]) == 0):
+            toRemove.append(i)
+    for index in sorted(toRemove, reverse=True):
+        del s1[index]
+        del s2[index]
+
+    plot(s1,instance)
+    plot(s2,instance)
+
+    plt.show()
+
+def OrderSolution(sol1,sol2):
+
+    alldist = []
+    for r1 in sol1:
+        distances = []
+        for r2 in sol2:
+            distances.append(levenshteinDistance(r1,r2))
+        alldist.append(distances)
+
+
+    #Greedily select most similar routes
+    selectedIndices = []
+    availableIndices = [i for i in range(len(sol2))]
+    for dist in alldist:
+        #dist.index(min(dist))
+        #choices = [dist[i] for i ]
+        minval = Infinity
+        minIndex = -1
+        for i in availableIndices:
+            if(dist[i] < minval):
+                minval = dist[i]
+                minIndex = i
+        availableIndices.remove(minIndex)
+        selectedIndices.append(minIndex)
+
+    newSol2 = []
+    for i in selectedIndices:
+        newSol2.append(sol2[i])
+    for index in sorted(selectedIndices, reverse=True):
+        del sol2[index]
+    newSol2 += sol2
+    for i in range(len(sol1)):
+        print(sol1[i])
+        print(newSol2[i])
+        print()
+
+    
+    
+
+    return (sol1,newSol2)
 
     
 #solution with wind power 3 with directeion (1,2) fukuoka 50
@@ -211,7 +286,7 @@ solution12 = [
 (0,2,82,93,72,14,30,55,79,8,92,91,53,84,0),
 (0,65,5,6,67,63,89,12,81,97,35,69,36,0),
 (0,37,23,20,87,59,26,49,15,34,0),
-#(0,80,68,54,25,86,13,17,43,38,88,85,74,46,42,18,52,0),
+(0,80,68,54,25,86,13,17,43,38,88,85,74,46,42,18,52,0),
 (0,40,47,48,83,90,4,66,3,45,50,57,58,73,0)
 ]
 
@@ -258,11 +333,15 @@ solution16 = [(0,25,53,24,84,59,18,71,0),
 
 # plot(solution14,instance_madrid_full)
 # plot(solution13,instance_madrid_full)
-plot(solution15,instance_utrecht_full)
-plot(solution16,instance_utrecht_full)
+# plot(solution15,instance_utrecht_full)
+# plot(solution16,instance_utrecht_full)
 
-plt.show()
-
-
+# plt.show()
 
 
+
+# print(levenshteinDistance("test","stet"))
+
+# print(levenshteinDistance([0,1,2,3,4],[0,4,1,2,3]))
+# print(levenshteinDistance([0,1,2,3,4],[0,4,3,2,1]))
+CompareSolutions(solution12,solution13,instance_madrid_full)
