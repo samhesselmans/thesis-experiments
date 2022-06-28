@@ -374,14 +374,15 @@ namespace SA_ILP
             AllowEarlyArrivalDuringSearch = true,
             AllowLateArrivalDuringSearch = true,
             AllowDeterministicEarlyArrival = true,
+            AllowEarlyArrivalInSimulation = true,
             AllowLateArrival = false,
             BaseEarlyArrivalPenalty = 10,
             BaseLateArrivalPenalty = 10,
 
-            BaseRemovedCustomerPenalty = 1,
+            BaseRemovedCustomerPenalty = 100,
 
             BaseRemovedCustomerPenaltyPow = 2,
-            Alpha = 0.98,
+            Alpha = 0.99,
             SaveColumnsAfterAllImprovements = false,
             PenalizeDeterministicEarlyArrival = false,
             PenalizeLateArrival = true,
@@ -398,10 +399,24 @@ namespace SA_ILP
             ScaleLatenessPenaltyWithTemperature = true,
             IgnoreWaitingDuringDistributionAddition = true,
             IterationsPerAlphaChange = 10000,
-            NumIterationsOfNoChangeBeforeRestarting = 200000,
+            NumIterationsOfNoChangeBeforeRestarting = 600000,
             RestartTemperatureBound = 0.02,
             NumRestarts = 7,
-            WindSpeed = 0
+            WindSpeed = 0,
+
+            Operators = new List<(Operator, double, string, int)>()
+            {
+                //((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v), 1, "add", 1), //repeated 1 time
+                //((x, y, z, w, v) =>Operators.RemoveRandomCustomer(x, y, z, w, v), 1, "remove", 1), //repeated 1 time
+                ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 1),//repeated 1 time
+               ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble",1), //Repeated 1 time
+                ((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails",1), //Repeated 1 time
+            }
 
         };
 
