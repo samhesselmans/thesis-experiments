@@ -154,8 +154,6 @@ namespace SA_ILP
                     double windComponentAlongTravelDirection = (wd * -td) / td.L2Norm();
                          partOfWindTaken[i, j] = windComponentAlongTravelDirection;
 
-                         if (i == 0 && j == 82 || i == 82 && j == 0)
-                             Console.WriteLine("test");
 
                          for (int l = 0; l < numLoadLevels; l++)
                          {
@@ -258,7 +256,7 @@ namespace SA_ILP
             double g = 9.81;
 
 
-            double dragWindSpeed = v;
+            double dragWindSpeed = Math.Pow(v,2);
 
             if (wind.L1Norm() != 0)
             {
