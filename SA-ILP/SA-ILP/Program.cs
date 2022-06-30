@@ -136,7 +136,10 @@ if (args.Length >= 1)
 
 //await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
 
-//solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 500 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350,config: LocalSearchConfigs.VRPSLTTWithoutWaiting);
+var config = LocalSearchConfigs.VRPLTTWithWind;
+config.WindSpeed = 0;// 6.75;
+
+solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 500 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350,config: config);
 //await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "pittsburgh_50.csv"), numLoadLevels: 10, numIterations: 500000000, timelimit: 480 * 1000, numThreads: 6, numStarts: 16, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350,config:LocalSearchConfigs.VRPLTT);
 
 //const LocalSearchConfiguration config = LocalSearchConfigs.VRPLTT;
