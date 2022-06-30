@@ -2,6 +2,8 @@
 using MathNet.Numerics.Distributions;
 using System.Diagnostics;
 using System;
+using SA_ILP;
+using MathNet.Numerics.LinearAlgebra;
 
 namespace MyApp // Note: actual namespace depends on the project name.
 {
@@ -26,9 +28,29 @@ namespace MyApp // Note: actual namespace depends on the project name.
             var toBenchRandomNumber = () => { random.Next(100); };
 
 
-            uint test = 0;
-            test--;
-            Console.WriteLine(test);
+            var V = Vector<double>.Build;
+            //if (windVec == null)
+            var windVec = new double[] { 1, 0 };
+            var wd = V.DenseOfArray(windVec);
+
+
+
+            //if (windVec == null)
+            var t = new double[] { 1, 0 };
+            var td = V.DenseOfArray(windVec);
+
+
+            for(int i = 0; i < 201; i++)
+            {
+                var wind = V.DenseOfArray(new double[] { Math.Cos((double)i / 100 * Math.PI), Math.Sin((double)i / 100 * Math.PI) });
+                Console.WriteLine(VRPLTT.CalcRequiredForce(6.9444,340,0,wind,td));
+
+            }
+
+
+            //uint test = 0;
+            //test--;
+            //Console.WriteLine(test);
             //for (int i = 0; i < testList.Capacity; i++)
             //    testList.Add(random.Next());
 

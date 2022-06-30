@@ -9,14 +9,14 @@ using System.Threading.Tasks;
 
 namespace SA_ILP
 {
-    internal static class VRPLTT
+    public static class VRPLTT
     {
-        private static double CalculateSpeed(double heightDiff, double length, double vehicleMass, double powerInput, Vector<double> wind,Vector<double> td)
+        private static double CalculateSpeed(double heightDiff, double length, double vehicleMass, double powerInput, Vector<double> wind, Vector<double> td)
         {
             double speed = 25;
             //double slope = Math.Atan(heightDiff / length);// * Math.PI / 180;
             double slope = Math.Asin(heightDiff / length);// * Math.PI / 180;
-            double requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope, wind,td);
+            double requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope, wind, td);
             double orignalPow = requiredPow;
 
             if (slope <= 0 && wind.L2Norm() == 0)
@@ -30,7 +30,7 @@ namespace SA_ILP
             while (speed > 0)
             {
                 speed -= 0.01;
-                requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope, wind,td);
+                requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope, wind, td);
                 if (powerInput > requiredPow)
                 {
                     if (orignalPow + requiredPow - 2 * powerInput < 0)
@@ -42,8 +42,8 @@ namespace SA_ILP
                     orignalPow = requiredPow;
                 }
 
-                
-                
+
+
             }
             return 0;
         }
@@ -54,7 +54,7 @@ namespace SA_ILP
                 return 0;
             length *= 1000;
             //Speed in m/s
-            double speed = CalculateSpeed(heightDiff, length, vehicleMass, powerInput, wind,td) / 3.6;
+            double speed = CalculateSpeed(heightDiff, length, vehicleMass, powerInput, wind, td) / 3.6;
 
             //Return travel time in minutes
             return length / speed / 60;
@@ -121,30 +121,30 @@ namespace SA_ILP
 
 
             //Calculate the various matrices.
-            Parallel.For(0, customers.Count,new ParallelOptions {MaxDegreeOfParallelism=16}, i =>
-            {
-                for (int j = 0; j < customers.Count; j++)
-                {
-                    double dist;
-                    if (i < j)
-                        dist = distanceMatrix[i, j];
-                    else
-                        dist = distanceMatrix[j, i];
-                    double heightDiff = customers[j].Elevation - customers[i].Elevation;
+            Parallel.For(0, customers.Count, new ParallelOptions { MaxDegreeOfParallelism = 16 }, i =>
+                 {
+                     for (int j = 0; j < customers.Count; j++)
+                     {
+                         double dist;
+                         if (i < j)
+                             dist = distanceMatrix[i, j];
+                         else
+                             dist = distanceMatrix[j, i];
+                         double heightDiff = customers[j].Elevation - customers[i].Elevation;
 
 
                     //Convert the latitute and longitude coordinates of the customers to carthesian coordinates using equirectangular projection
                     (double X1, double Y1) = EquirectangularProjection(customers[j].X, customers[j].Y, centralLatitude, centralLongitude);
-                    (double X2, double Y2) = EquirectangularProjection(customers[i].X, customers[i].Y, centralLatitude, centralLongitude);
+                         (double X2, double Y2) = EquirectangularProjection(customers[i].X, customers[i].Y, centralLatitude, centralLongitude);
 
-                    double xDirection = X1 - X2;
-                    double yDirection = Y1 - Y2;
+                         double xDirection = X1 - X2;
+                         double yDirection = Y1 - Y2;
 
 
                     //Create and normalize vector from the indivial values
                     double[] custVec = { xDirection, yDirection };
-                    var td = V.DenseOfArray(custVec);
-                    td = td.Divide(td.L2Norm());
+                         var td = V.DenseOfArray(custVec);
+                         td = td.Divide(td.L2Norm());
 
 
 
@@ -152,29 +152,29 @@ namespace SA_ILP
 
                     //https://math.stackexchange.com/questions/286391/find-the-component-of-veca-along-vecb
                     double windComponentAlongTravelDirection = (wd * -td) / td.L2Norm();
-                    partOfWindTaken[i,j] = windComponentAlongTravelDirection;
+                         partOfWindTaken[i, j] = windComponentAlongTravelDirection;
 
-                    if (i == 0 && j == 82 || i == 82 && j == 0)
-                        Console.WriteLine("test");
+                         if (i == 0 && j == 82 || i == 82 && j == 0)
+                             Console.WriteLine("test");
 
-                    for (int l = 0; l < numLoadLevels; l++)
-                    {
-                        double loadLevelWeight = minWeight + ((maxWeight - minWeight) / numLoadLevels) * l + ((maxWeight - minWeight) / numLoadLevels) / 2;
+                         for (int l = 0; l < numLoadLevels; l++)
+                         {
+                             double loadLevelWeight = minWeight + ((maxWeight - minWeight) / numLoadLevels) * l + ((maxWeight - minWeight) / numLoadLevels) / 2;
 
 
 
-                        matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput, wind,td);
-                        distributionMatrix[i, j, l] = CreateTravelTimeDistribution(loadLevelWeight, matrix[i, j, l]);
+                             matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput, wind, td);
+                             distributionMatrix[i, j, l] = CreateTravelTimeDistribution(loadLevelWeight, matrix[i, j, l]);
 
                         //Set the approximate distribution. 
-                        if(UseNormalApproximation)
-                            approximationMatrix[i, j, l] = new Normal(distributionMatrix[i, j, l].Mean, distributionMatrix[i, j, l].StdDev); // //
+                        if (UseNormalApproximation)
+                                 approximationMatrix[i, j, l] = new Normal(distributionMatrix[i, j, l].Mean, distributionMatrix[i, j, l].StdDev); // //
                         else
-                            approximationMatrix[i, j, l] = distributionMatrix[i, j, l];
-                    }
-                }
+                                 approximationMatrix[i, j, l] = distributionMatrix[i, j, l];
+                         }
+                     }
 
-            }); 
+                 });
 
             Gamma gam = null;
 
@@ -194,7 +194,7 @@ namespace SA_ILP
                             w.WriteLine($"{matrix[i, j, l]};{distributionMatrix[i, j, l].Mean};{distributionMatrix[i, j, l].Mode}");
                         }
             Console.WriteLine($"{gam.Shape};{gam.Rate}");
-            return (matrix, distributionMatrix, approximationMatrix,partOfWindTaken);
+            return (matrix, distributionMatrix, approximationMatrix, partOfWindTaken);
         }
 
         public static (double[,] distances, List<Customer> customers) ParseVRPLTTInstance(string file)
@@ -257,37 +257,43 @@ namespace SA_ILP
             double Cr = 0.01;
             double g = 9.81;
 
-            //Actual wind is the wind generated by cycling added to the constant wind
-            var actualWind = -td * v + wind;
+
+            double dragWindSpeed = v;
+
+            if (wind.L1Norm() != 0)
+            {
+                //Actual wind is the wind generated by cycling added to the constant wind
+                var actualWind = -td * v + wind;
 
 
-            double TotalFd = (Cd * A * Ro * Math.Pow(actualWind.L2Norm(), 2) / 2);
+                //double TotalFd = (Cd * A * Ro * Math.Pow(actualWind.L2Norm(), 2) / 2);
 
-            var actualAiResistance = actualWind.Divide(actualWind.L2Norm()) * TotalFd;
-
+                var actualWindSquared = actualWind.Divide(actualWind.L2Norm()) * Math.Pow(actualWind.L2Norm(), 2); //TotalFd;
+                dragWindSpeed = (-td * actualWindSquared);
+            }
             //Calculate the part of the air resistance in the direction of cycling
-            double Fd = -td * actualAiResistance; 
-            
-            
+            double Fd = (Cd * A * Ro * dragWindSpeed / 2);
+
+
             double Fr = Cr * mass * g * Math.Cos(Math.Atan(slope));
             double Fg = mass * g * Math.Sin(Math.Atan(slope));
 
             return (Fd + Fr + Fg) * v / 0.95;
         }
 
-        public static double CalculateWindCyclingTime(string file, double bikeMinWeight, double bikeMaxWeight,int numLoadlevels, double bikePower, double[] windDirection,List<Route> solution)
+        internal static double CalculateWindCyclingTime(string file, double bikeMinWeight, double bikeMaxWeight, int numLoadlevels, double bikePower, double[] windDirection, List<Route> solution)
         {
             //Calculate the load dependent time matrix with no wind to analyze the mount of time is spend cycling against the wind.
             var parsed = VRPLTT.ParseVRPLTTInstance(file);
-            (double[,,] matrix, _, _, double[,] windpart) = VRPLTT.CalculateLoadDependentTimeMatrix(parsed.customers, parsed.distances, bikeMinWeight ,bikeMaxWeight,numLoadlevels, bikePower, 0, windDirection);
+            (double[,,] matrix, _, _, double[,] windpart) = VRPLTT.CalculateLoadDependentTimeMatrix(parsed.customers, parsed.distances, bikeMinWeight, bikeMaxWeight, numLoadlevels, bikePower, 0, windDirection);
 
 
             double timeCyclingAgainstWind = 0;
-            foreach(var route in solution)
-                if(route.route.Count >2)
+            foreach (var route in solution)
+                if (route.route.Count > 2)
                 {
                     double weight = route.used_capacity;
-                    for(int i = 0; i < route.route.Count-1; i++)
+                    for (int i = 0; i < route.route.Count - 1; i++)
                     {
                         double ll = (weight / route.max_capacity) * numLoadlevels;
                         int loadLevel = (int)ll;
@@ -295,7 +301,7 @@ namespace SA_ILP
                         //The upperbound is inclusive
                         if (ll == loadLevel && weight != 0)
                             loadLevel--;
-                        timeCyclingAgainstWind += matrix[route.route[i].Id,route.route[i+1].Id,loadLevel] * windpart[route.route[i].Id,route.route[i+1].Id];
+                        timeCyclingAgainstWind += matrix[route.route[i].Id, route.route[i + 1].Id, loadLevel] * windpart[route.route[i].Id, route.route[i + 1].Id];
                     }
                 }
 
