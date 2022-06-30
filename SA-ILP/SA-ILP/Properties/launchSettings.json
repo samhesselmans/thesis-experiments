@@ -8,7 +8,10 @@
       }
     },
     "SA-ILP no launch parameters": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_gcServer": "1"
+      }
     },
     "SA-ILP solomon test": {
       "commandName": "Project",
