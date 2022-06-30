@@ -133,16 +133,16 @@ namespace SA_ILP
                          double heightDiff = customers[j].Elevation - customers[i].Elevation;
 
 
-                    //Convert the latitute and longitude coordinates of the customers to carthesian coordinates using equirectangular projection
-                    (double X1, double Y1) = EquirectangularProjection(customers[j].X, customers[j].Y, centralLatitude, centralLongitude);
+                         //Convert the latitute and longitude coordinates of the customers to carthesian coordinates using equirectangular projection
+                         (double X1, double Y1) = EquirectangularProjection(customers[j].X, customers[j].Y, centralLatitude, centralLongitude);
                          (double X2, double Y2) = EquirectangularProjection(customers[i].X, customers[i].Y, centralLatitude, centralLongitude);
 
                          double xDirection = X1 - X2;
                          double yDirection = Y1 - Y2;
 
 
-                    //Create and normalize vector from the indivial values
-                    double[] custVec = { xDirection, yDirection };
+                         //Create and normalize vector from the indivial values
+                         double[] custVec = { xDirection, yDirection };
                          var td = V.DenseOfArray(custVec);
                          td = td.Divide(td.L2Norm());
 
@@ -150,8 +150,8 @@ namespace SA_ILP
 
 
 
-                    //https://math.stackexchange.com/questions/286391/find-the-component-of-veca-along-vecb
-                    double windComponentAlongTravelDirection = (wd * -td) / td.L2Norm();
+                         //https://math.stackexchange.com/questions/286391/find-the-component-of-veca-along-vecb
+                         double windComponentAlongTravelDirection = (wd * -td) / td.L2Norm();
                          partOfWindTaken[i, j] = windComponentAlongTravelDirection;
 
 
@@ -164,10 +164,10 @@ namespace SA_ILP
                              matrix[i, j, l] = VRPLTT.CalculateTravelTime(heightDiff, dist, loadLevelWeight, powerInput, wind, td);
                              distributionMatrix[i, j, l] = CreateTravelTimeDistribution(loadLevelWeight, matrix[i, j, l]);
 
-                        //Set the approximate distribution. 
-                        if (UseNormalApproximation)
+                             //Set the approximate distribution. 
+                             if (UseNormalApproximation)
                                  approximationMatrix[i, j, l] = new Normal(distributionMatrix[i, j, l].Mean, distributionMatrix[i, j, l].StdDev); // //
-                        else
+                             else
                                  approximationMatrix[i, j, l] = distributionMatrix[i, j, l];
                          }
                      }
@@ -256,7 +256,7 @@ namespace SA_ILP
             double g = 9.81;
 
 
-            double dragWindSpeed = Math.Pow(v,2);
+            double dragWindSpeed = Math.Pow(v, 2);
 
             if (wind.L1Norm() != 0)
             {
