@@ -99,7 +99,69 @@ namespace SA_ILP
 
     public static class LocalSearchConfigs
     {
-        public static LocalSearchConfiguration VRPLTT => new LocalSearchConfiguration
+        public static LocalSearchConfiguration VRPLTTFinal => new LocalSearchConfiguration
+        {
+            InitialTemperature = 1,
+
+            //THESE OPTIONS ARE NOT YET CORRECTLY IMPLEMENTED
+            AllowEarlyArrivalDuringSearch = true,
+            AllowLateArrivalDuringSearch = true,
+
+
+            AllowDeterministicEarlyArrival = true,
+            AllowEarlyArrivalInSimulation = true,
+            AllowLateArrival = false,
+            BaseEarlyArrivalPenalty = 2,
+            BaseLateArrivalPenalty = 2,
+
+            BaseRemovedCustomerPenalty = 0.1,
+            BaseRemovedCustomerPenaltyPow = 2,
+            RemovedCustomerTemperaturePow = 2,
+            Alpha = 0.99,
+
+            SaveColumnsAfterAllImprovements = true,
+            SaveColumnsAfterWorse = true,
+            SaveColumnThreshold = 0.2,
+
+
+            PenalizeDeterministicEarlyArrival = false,
+            PenalizeLateArrival = true,
+            AdjustDeterministicEarlyArrivalToTWStart = true,
+            AdjustEarlyArrivalToTWStart = true,
+            CheckOperatorScores = false,
+            SaveRoutesBeforeOperator = false,
+
+            PrintExtendedInfo = false,
+            SaveScoreDevelopment = false,
+            ExpectedEarlinessPenalty = 0,
+            ExpectedLatenessPenalty = 0,
+            UseMeanOfDistributionForTravelTime = false,
+            ScaleEarlinessPenaltyWithTemperature = true,
+            ScaleLatenessPenaltyWithTemperature = true,
+            IgnoreWaitingDuringDistributionAddition = true,
+            IterationsPerAlphaChange = 10000,
+            NumIterationsOfNoChangeBeforeRestarting = 600000,
+            RestartTemperatureBound = 0.02,
+            NumRestarts = 7,
+            WindSpeed = 0,
+
+            Operators = new List<(Operator, double, string, int)>()
+            {
+                //((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v), 1, "add", 1), //repeated 1 time
+                //((x, y, z, w, v) =>Operators.RemoveRandomCustomer(x, y, z, w, v), 1, "remove", 1), //repeated 1 time
+                ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 1),//repeated 1 time
+               ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap", 4), //repeated 4 times
+                //((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 4), //repeated 4 times
+                ((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse",1), //repeated 1 time
+                ((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble",1), //Repeated 1 time
+                ((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails",1), //Repeated 1 time
+            }
+
+        };
+
+        public static LocalSearchConfiguration VRPLTTOriginal => new LocalSearchConfiguration
         {
             InitialTemperature = 1,
 
@@ -165,7 +227,7 @@ namespace SA_ILP
         {
             get
             {
-                var config = VRPLTT;
+                var config = VRPLTTFinal;
                 config.Operators = new List<(Operator, double, string, int)>()
             {
                 ((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v), 1, "add", 1), //repeated 1 time
@@ -188,7 +250,7 @@ namespace SA_ILP
         {
             get
             {
-                var config = VRPLTT;
+                var config = VRPLTTFinal;
                 config.Operators = new List<(Operator, double, string, int)>()
             {
                 ((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v), 1, "add", 1), //repeated 1 time
@@ -211,7 +273,7 @@ namespace SA_ILP
         {
             get
             {
-                var config = LocalSearchConfigs.VRPLTT;
+                var config = LocalSearchConfigs.VRPLTTFinal;
                 config.BaseRemovedCustomerPenalty = 8;
                 config.BaseRemovedCustomerPenaltyPow = 1;
                 config.RemovedCustomerTemperaturePow = 1;
@@ -224,7 +286,7 @@ namespace SA_ILP
         {
             get
             {
-                var config = LocalSearchConfigs.VRPLTT;
+                var config = LocalSearchConfigs.VRPLTTFinal;
                 config.BaseRemovedCustomerPenalty = 4;
                 config.BaseRemovedCustomerPenaltyPow = 1;
                 return config;
@@ -235,7 +297,7 @@ namespace SA_ILP
         {
             get
             {
-                var config = VRPLTT;
+                var config = VRPLTTFinal;
 
                 //Enable the usage of the stochastic implementation
                 config.UseStochasticFunctions = true;
@@ -355,7 +417,7 @@ namespace SA_ILP
         {
             get
             {
-                var config = VRPLTT;
+                var config = VRPLTTFinal;
                 config.WindDirection = new double[] { 1, 0 };
 
                 //Set to the average windspeed of beaufort wind force 4
@@ -366,7 +428,7 @@ namespace SA_ILP
         }
 
 
-        public static LocalSearchConfiguration VRPLTTDebug { get { var config = VRPLTT; config.PrintExtendedInfo = true; return config; } }
+        public static LocalSearchConfiguration VRPLTTDebug { get { var config = VRPLTTFinal; config.PrintExtendedInfo = true; return config; } }
 
         public static LocalSearchConfiguration VRPTW => new LocalSearchConfiguration
         {

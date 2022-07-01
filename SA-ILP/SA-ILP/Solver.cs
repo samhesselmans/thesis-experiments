@@ -153,7 +153,7 @@ namespace SA_ILP
         {
             LocalSearchConfiguration actualConfig;
             if (config == null)
-                actualConfig = LocalSearchConfigs.VRPLTT;
+                actualConfig = LocalSearchConfigs.VRPLTTFinal;
             else
                 actualConfig = (LocalSearchConfiguration)config;
             // = (LocalSearchConfiguration)config;

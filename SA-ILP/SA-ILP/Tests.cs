@@ -25,7 +25,7 @@ namespace SA_ILP
                 
                 
                 if(configInput == null)
-                 config = LocalSearchConfigs.VRPLTT;
+                 config = LocalSearchConfigs.VRPLTTFinal;
                 else
                     config = (LocalSearchConfiguration)configInput;
 
@@ -88,7 +88,7 @@ namespace SA_ILP
 
         public static async Task TestAllOperatorConfigurations(string dir,string solDir, Options opts)
         {
-            var config = LocalSearchConfigs.VRPLTT;
+            var config = LocalSearchConfigs.VRPLTTOriginal;
 
             //ORIGINAL
             var newSolDir = Path.Join(solDir, "Originial");
@@ -101,7 +101,7 @@ namespace SA_ILP
             newSolDir = Path.Join(solDir, "NoRepeat");
             newOpts = opts;
             newOpts.TestName = "NoRepeat";
-            config = LocalSearchConfigs.VRPLTT;
+            config = LocalSearchConfigs.VRPLTTOriginal;
             config.Operators = new List<(Operator, double, string, int)>()
             {
                 ((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v), 1, "add", 1), //repeated 1 time
@@ -122,7 +122,7 @@ namespace SA_ILP
             newSolDir = Path.Join(solDir, "OnlySimpleRepeat");
             newOpts = opts;
             newOpts.TestName = "OnlySimpleRepeat";
-            config = LocalSearchConfigs.VRPLTT;
+            config = LocalSearchConfigs.VRPLTTOriginal;
             config.Operators = new List<(Operator, double, string, int)>()
             {
                 ((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v), 1, "add", 4), //repeated 1 time
@@ -143,7 +143,7 @@ namespace SA_ILP
             newSolDir = Path.Join(solDir, "OnlySimpleRepeatExceptAddRemove");
             newOpts = opts;
             newOpts.TestName = "OnlySimpleRepeatExceptAddRemove";
-            config = LocalSearchConfigs.VRPLTT;
+            config = LocalSearchConfigs.VRPLTTOriginal;
             config.Operators = new List<(Operator, double, string, int)>()
             {
                 ((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v), 1, "add", 1), //repeated 1 time
@@ -163,7 +163,7 @@ namespace SA_ILP
             newSolDir = Path.Join(solDir, "OriginalWithoutAddRemove");
             newOpts = opts;
             newOpts.TestName = "OriginalWithoutAddRemove";
-            config = LocalSearchConfigs.VRPLTT;
+            config = LocalSearchConfigs.VRPLTTOriginal;
             config.Operators = new List<(Operator, double, string, int)>()
             {
                 ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random), 1, "move", 1),//repeated 1 time
@@ -181,7 +181,7 @@ namespace SA_ILP
             newSolDir = Path.Join(solDir, "OriginalGreedyRoute2");
             newOpts = opts;
             newOpts.TestName = "OriginalGreedyRoute2";
-            config = LocalSearchConfigs.VRPLTT;
+            config = LocalSearchConfigs.VRPLTTOriginal;
             config.Operators = new List<(Operator, double, string, int)>()
             {
                 ((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v), 1, "add", 1), //repeated 1 time
@@ -202,7 +202,7 @@ namespace SA_ILP
             newSolDir = Path.Join(solDir, "FasterOriginal");
             newOpts = opts;
             newOpts.TestName = "FasterOriginal";
-            config = LocalSearchConfigs.VRPLTT;
+            config = LocalSearchConfigs.VRPLTTOriginal;
             config.IterationsPerAlphaChange = 5000;
             config.NumIterationsOfNoChangeBeforeRestarting = 200000;
             await RunVRPLTTTests(dir, newSolDir, opts.NumRepeats, opts, config);
@@ -211,7 +211,7 @@ namespace SA_ILP
             newSolDir = Path.Join(solDir, "HigherAddRemovePenalty");
             newOpts = opts;
             newOpts.TestName = "HigherAddRemovePenalty";
-            config = LocalSearchConfigs.VRPLTT;
+            config = LocalSearchConfigs.VRPLTTOriginal;
             config.BaseRemovedCustomerPenalty = 2;
             await RunVRPLTTTests(dir, newSolDir, opts.NumRepeats, opts, config);
 
@@ -219,7 +219,7 @@ namespace SA_ILP
             newSolDir = Path.Join(solDir, "LinearHigherAddRemovePenalty");
             newOpts = opts;
             newOpts.TestName = "LinearHigherAddRemovePenalty";
-            config = LocalSearchConfigs.VRPLTT;
+            config = LocalSearchConfigs.VRPLTTOriginal;
             config.BaseRemovedCustomerPenalty = 4;
             config.BaseRemovedCustomerPenaltyPow = 1;
             await RunVRPLTTTests(dir, newSolDir, opts.NumRepeats, opts, config);
@@ -229,7 +229,7 @@ namespace SA_ILP
             newSolDir = Path.Join(solDir, "LinearHigherAddRemovePenaltyLinearTempPow");
             newOpts = opts;
             newOpts.TestName = "LinearHigherAddRemovePenaltyLinearTempPow";
-            config = LocalSearchConfigs.VRPLTT;
+            config = LocalSearchConfigs.VRPLTTOriginal;
             config.BaseRemovedCustomerPenalty = 8;
             config.BaseRemovedCustomerPenaltyPow = 1;
             config.RemovedCustomerTemperaturePow = 1;
@@ -348,7 +348,7 @@ namespace SA_ILP
             Console.WriteLine("Benchmarking localsearch");
             if (!Directory.Exists(solDir))
                 Directory.CreateDirectory(solDir);
-            var config = LocalSearchConfigs.VRPLTT;
+            var config = LocalSearchConfigs.VRPLTTFinal;
             var solver = new Solver();
             using (var totalWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.txt")))
             {
@@ -508,7 +508,7 @@ namespace SA_ILP
                             for (int r = 0; r < numRepeats; r++)
                             {
 
-                                (bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal, string solutionJSON) = await solver.SolveVRPLTTInstanceAsync(file, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads, config: config);//solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations, timeLimit: 30 * 1000);
+                                (bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal, string solutionJSON) = await solver.SolveVRPLTTInstanceAsync(file, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads, config: config,ilpTimelimit:opts.TimeLimitILP);//solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations, timeLimit: 30 * 1000);
 
                                 //List<Route> sol = ilpSol.ConvertAll(x=> new Route(custx))
 
@@ -621,6 +621,7 @@ namespace SA_ILP
                                     {
                                         writer.WriteLine($"{route}");
                                     }
+                                writer.WriteLine(solutionJSON);
                                 }
                                 if (failed)
                                     totalWriter.Write("FAIL did not meet check");
