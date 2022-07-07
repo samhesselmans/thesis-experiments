@@ -244,11 +244,11 @@ namespace SA_ILP
             if (!Directory.Exists(solDir))
                 Directory.CreateDirectory(solDir);
 
-            using (var totalWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.txt")))
+            using (var totalWriter = new StreamWriter(Path.Join(solDir, $"allSolutionsVRPLTTWind{opts.TestName}.txt")))
             {
                 totalWriter.WriteLine(opts.ToString());
                 totalWriter.Flush();
-                using (var csvWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.csv")))
+                using (var csvWriter = new StreamWriter(Path.Join(solDir, $"allSolutionsVRPLTTWind{opts.TestName}.csv")))
                 {
                     csvWriter.WriteLine("SEP=;");
                     csvWriter.WriteLine("Instance;Windspeed;WindDirection;Score;N;ILP time;LS time;LS score;ILP imp;TimeCycledAgainstWind;TimeWithWindIncluded;NumberOfValidRoutes");
@@ -308,8 +308,7 @@ namespace SA_ILP
                                     tempConfig.PenalizeDeterministicEarlyArrival = false;
                                     //If the windspeed is 0 we want to check what the travel time would be if we plan without it
                                     (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(file);
-                                    Stopwatch w = new Stopwatch();
-                                    w.Start();
+
                                     Console.WriteLine("Calculating travel time matrix");
                                     (double[,,] matrix, Gamma[,,] distributionMatrix, IContinuousDistribution[,,] approximationMatrix, _) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, opts.BikeMinWeight, opts.BikeMaxWeight, opts.NumLoadLevels, opts.BikePower, tempConfig.WindSpeed, tempConfig.WindDirection, tempConfig.DefaultDistribution is Normal);
                                     LocalSearch ls = new LocalSearch(tempConfig,1);
@@ -676,7 +675,7 @@ namespace SA_ILP
                             fileNameStart = Path.GetFileName(file).Substring(0, 2);
                         }
 
-                        (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveSolomonInstanceAsync(file, numThreads: opts.NumThreads,numStarts:opts.NumStarts, numIterations: opts.Iterations, timeLimit: opts.TimeLimitLS * 1000);
+                        (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal,string solutionJSON) = await solver.SolveSolomonInstanceAsync(file, numThreads: opts.NumThreads,numStarts:opts.NumStarts, numIterations: opts.Iterations, timeLimit: opts.TimeLimitLS * 1000);
 
                         csvWriter.WriteLine($"{Path.GetFileNameWithoutExtension(file)};{ilpVal};{ilpSol.Count};{ilpTime};{lsTime};{lsVal};{(ilpVal - lsVal) / lsVal * 100}");
                     
@@ -689,6 +688,7 @@ namespace SA_ILP
                             {
                                 writer.WriteLine($"{route}");
                             }
+                            writer.WriteLine(solutionJSON);
                         }
                         if (failed)
                             totalWriter.Write("FAIL did not meet check");

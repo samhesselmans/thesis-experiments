@@ -399,7 +399,7 @@ namespace SA_ILP
             await LocalSearchInstancAsync(name, numV, capV, customers, distanceMatrix, new Gamma[distanceMatrix.GetLength(0), distanceMatrix.GetLength(1), distanceMatrix.GetLength(2)], new Gamma[distanceMatrix.GetLength(0), distanceMatrix.GetLength(1), distanceMatrix.GetLength(2)], 4, 4, numIterations, timeLimit, LocalSearchConfigs.VRPTW);
         }
 
-        public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal)> SolveSolomonInstanceAsync(string fileName, int numThreads = 1, int numStarts = 4, int numIterations = 3000000, int timeLimit = 100000, LocalSearchConfiguration? config = null)
+        public async Task<(bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal,string solutionJSON)> SolveSolomonInstanceAsync(string fileName, int numThreads = 1, int numStarts = 4, int numIterations = 3000000, int timeLimit = 100000, LocalSearchConfiguration? config = null)
         {
             (string name, int numV, double capV, List<Customer> customers) = SolomonParser.ParseInstance(fileName);
             var distanceMatrix = CalculateDistanceMatrix(customers);
@@ -411,7 +411,7 @@ namespace SA_ILP
             (List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal, string solutionJSON) = await SolveInstanceAsync(name, numV, capV, customers, distanceMatrix, new Gamma[distanceMatrix.GetLength(0), distanceMatrix.GetLength(1), distanceMatrix.GetLength(2)], new Gamma[distanceMatrix.GetLength(0), distanceMatrix.GetLength(1), distanceMatrix.GetLength(2)], numThreads, numStarts, numIterations, (LocalSearchConfiguration)config, timeLimit: timeLimit);
             bool failed = SolomonParser.CheckSolomonSolution(fileName, ilpSol, ilpVal);
             ilpSol.ForEach(x => Console.WriteLine(x));
-            return (failed, ilpSol, ilpVal, ilpTime, lsTime, lsVal);
+            return (failed, ilpSol, ilpVal, ilpTime, lsTime, lsVal, solutionJSON);
         }
 
         public async Task<(HashSet<RouteStore> columns, List<Route> LSSolution, double LSTime, double LSVal)> LocalSearchInstancAsync(string name, int numV, double capV, List<Customer> customers, double[,,] distanceMatrix, Gamma[,,] distributionMatrix, IContinuousDistribution[,,] approximationMatrix, int numThreads, int numStarts, int numIterations, int timeLimit, LocalSearchConfiguration config)
