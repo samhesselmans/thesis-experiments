@@ -339,13 +339,13 @@ namespace SA_ILP
                 //Need to change the operator configuration, such that move and add do not have the ability to create new routes. This ends up creating way to many new routes
                 config.Operators = new List<(Operator, double, string, int)>()
             {
-                ((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v,false), 1, "add", 1), //repeated 1 time
-                ((x, y, z, w, v) =>Operators.RemoveRandomCustomer(x, y, z, w, v), 1, "remove", 1), //repeated 1 time
+                //((x, y, z, w, v) =>Operators.AddRandomRemovedCustomer(x, y, z, w, v,false), 1, "add", 1), //repeated 1 time
+                //((x, y, z, w, v) =>Operators.RemoveRandomCustomer(x, y, z, w, v), 1, "remove", 1), //repeated 1 time
                 ((routes, viableRoutes, random, removed, temp) => Operators.MoveRandomCustomerToRandomCustomer(routes, viableRoutes, random,false), 1, "move", 1),//repeated 1 time
                ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
                 ((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route", 4), //repeated 4 times
                 ((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap", 4), //repeated 4 times
-                ((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 4), //repeated 4 times
+                //((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 4), //repeated 4 times
                 ((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse",1), //repeated 1 time
                 ((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble",1), //Repeated 1 time
                 ((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails",1), //Repeated 1 time
@@ -474,7 +474,7 @@ namespace SA_ILP
                ((x, y, z, w, v) => Operators.GreedilyMoveRandomCustomer(x, y, z), 0.1, "move_to_best",1), //repeated 1 time
                 ((x, y, z, w, v) => Operators.MoveRandomCustomerToRandomRoute(x, y, z), 1, "move_to_random_route", 4), //repeated 4 times
                 ((x, y, z, w, v) => Operators.SwapRandomCustomers(x, y, z), 1, "swap", 4), //repeated 4 times
-                ((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 4), //repeated 4 times
+                //((x, y, z, w, v) => Operators.SwapInsideRoute(x, y, z), 1, "swap_inside_route", 4), //repeated 4 times
                 ((x, y, z, w, v) => Operators.ReverseOperator(x, y, z), 1, "reverse",1), //repeated 1 time
                 ((x, y, z, w, v) => Operators.ScrambleSubRoute(x, y, z), 1, "scramble",1), //Repeated 1 time
                 ((x, y, z, w, v) => Operators.SwapRandomTails(x, y, z), 1, "swap_tails",1), //Repeated 1 time
