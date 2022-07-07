@@ -249,6 +249,7 @@ namespace SA_ILP
 
         public static double CalcRequiredForce(double v, double mass, double slope, Vector<double> wind, Vector<double> td)
         {
+            //Constant for the equations of resistance
             double Cd = 1.18;
             double A = 0.83;
             double Ro = 1.18;
