@@ -651,8 +651,8 @@ namespace SA_ILP
             var solver = new Solver();
             Stopwatch watch = new Stopwatch();
             watch.Start();
-            using (var totalWriter = new StreamWriter(Path.Join(solDir, "allSolutions.txt")))
-            using (var csvWriter = new StreamWriter(Path.Join(solDir, "allSolutionsVRPLTT.csv")))
+            using (var totalWriter = new StreamWriter(Path.Join(solDir, $"allSolutions{opts.TestName}.txt")))
+            using (var csvWriter = new StreamWriter(Path.Join(solDir, $"allSolutions{opts.TestName}.csv")))
             {
                 csvWriter.WriteLine("SEP=;");
                 csvWriter.WriteLine("Instance;Score;N;ILP time;LS time;LS score;ILP imp(%)");
@@ -678,7 +678,7 @@ namespace SA_ILP
 
                         (bool failed, List<RouteStore> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal) = await solver.SolveSolomonInstanceAsync(file, numThreads: opts.NumThreads,numStarts:opts.NumStarts, numIterations: opts.Iterations, timeLimit: opts.TimeLimitLS * 1000);
 
-                        csvWriter.WriteLine($"{Path.GetFileNameWithoutExtension(file)}_{test};{ilpVal};{ilpSol.Count};{ilpTime};{lsTime};{lsVal};{(ilpVal - lsVal) / lsVal * 100}");
+                        csvWriter.WriteLine($"{Path.GetFileNameWithoutExtension(file)};{ilpVal};{ilpSol.Count};{ilpTime};{lsTime};{lsVal};{(ilpVal - lsVal) / lsVal * 100}");
                     
                         using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileNameWithoutExtension(file) + "_" + test  + ".txt")))
                         {

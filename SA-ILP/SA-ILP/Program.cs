@@ -132,7 +132,7 @@ if (args.Length >= 1)
 
 
 //solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\R1_10_1.TXT", numIterations: 50000000,timeLimit: 45 * 1000);
-//await solver.SolveSolomonInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\c107.txt", numThreads:4, numIterations: 500000000,timeLimit:45 * 1000);
+//await solver.SolveSolomonInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\r101.txt", numThreads:4, numIterations: 500000000,timeLimit:450 * 1000);
 
 //await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
 

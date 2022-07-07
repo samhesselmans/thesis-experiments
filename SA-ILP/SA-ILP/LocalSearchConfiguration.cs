@@ -432,7 +432,7 @@ namespace SA_ILP
 
         public static LocalSearchConfiguration VRPTW => new LocalSearchConfiguration
         {
-            InitialTemperature = 10,
+            InitialTemperature = 1,
             AllowEarlyArrivalDuringSearch = true,
             AllowLateArrivalDuringSearch = true,
             AllowDeterministicEarlyArrival = true,
@@ -445,14 +445,15 @@ namespace SA_ILP
 
             BaseRemovedCustomerPenaltyPow = 2,
             Alpha = 0.99,
-            SaveColumnsAfterAllImprovements = false,
+            SaveColumnsAfterAllImprovements = true,
             PenalizeDeterministicEarlyArrival = false,
             PenalizeLateArrival = true,
             AdjustDeterministicEarlyArrivalToTWStart = true,
-            CheckOperatorScores = true,
+            CheckOperatorScores = false,
             SaveRoutesBeforeOperator = false,
             SaveColumnsAfterWorse = true,
-            SaveColumnThreshold = 0.1,
+
+            SaveColumnThreshold = 0.2,
             SaveScoreDevelopment = false,
             ExpectedEarlinessPenalty = 0,
             ExpectedLatenessPenalty = 0,
