@@ -259,20 +259,21 @@ namespace SA_ILP
 
                     for (int test = 0; test < 5; test++)
                     {
-                        if (test == 1)
+                        if (test == 4)
                         {
 
                             config.WindDirection = new double[] { 0, -1 };
+                            config.WindSpeed = testWindSpeed;
                         }
-                        else if (test == 2)
+                        else if (test == 1)
                         {
                             config.WindDirection = new double[] { 1, 0 };
                         }
-                        else if (test == 3)
+                        else if (test == 2)
                         {
                             config.WindDirection = new double[] { -1, 0 };
                         }
-                        else if (test == 4)
+                        else if (test == 3)
                         {
                             //Testing the default vrpltt
                             config.WindSpeed = 0;
@@ -283,7 +284,7 @@ namespace SA_ILP
                             for (int repeat = 0; repeat < numRepeats; repeat++)
                             {
                                 //Running the test
-                                (bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal, string solutionJSON) = await solver.SolveVRPLTTInstanceAsync(file, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads, config: config);//solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations, timeLimit: 30 * 1000);
+                                (bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal, string solutionJSON) = await solver.SolveVRPLTTInstanceAsync(file, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads, config: config,ilpTimelimit:opts.TimeLimitILP);//solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations, timeLimit: 30 * 1000);
 
                                 var windResult = VRPLTT.CalculateWindCyclingTime(file, opts.BikeMinWeight, opts.BikeMaxWeight, opts.NumLoadLevels, opts.BikePower, config.WindDirection, ilpSol);
 
@@ -296,6 +297,8 @@ namespace SA_ILP
                                     {
                                         writer.WriteLine($"{route}");
                                     }
+                                    writer.WriteLine(solutionJSON);
+                                    writer.WriteLine($"WindDir: ({config.WindDirection[0]},{config.WindDirection[1]})");
                                 }
                                 double cycleSpeedWithWind = ilpVal;
                                 int valid = ilpSol.Count;
@@ -328,10 +331,12 @@ namespace SA_ILP
                                 Console.WriteLine("------------------------------------------------------------------" + cycleSpeedWithWind + "  " + (double)valid/ilpSol.Count);
 
                                 csvWriter.WriteLine($"{Path.GetFileNameWithoutExtension(file)};{config.WindSpeed};({config.WindDirection[0]},{config.WindDirection[1]});{ilpVal};{ilpTime};{lsTime};{lsVal};{(ilpVal - lsVal) / lsVal * 100};{windResult};{cycleSpeedWithWind};{(double)valid / ilpSol.Count}");
-
+                                csvWriter.Flush();
+                                
 
                                 if (failed)
                                     totalWriter.Write("FAIL did not meet check");
+                                totalWriter.Flush();
                             }
                         }
                     }

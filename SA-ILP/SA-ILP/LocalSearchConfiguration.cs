@@ -223,6 +223,18 @@ namespace SA_ILP
 
         };
 
+        public static LocalSearchConfiguration VRPLTTWithoutWaiting
+        {
+            get
+            {
+                var config = VRPLTTFinal;
+                config.AllowDeterministicEarlyArrival = false;
+                config.AllowEarlyArrivalInSimulation = false;
+                config.PenalizeDeterministicEarlyArrival = true;
+                return config;
+            }
+        }
+
         public static LocalSearchConfiguration VRPLTTNoGreedyOperators
         {
             get
