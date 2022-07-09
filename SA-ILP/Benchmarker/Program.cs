@@ -184,6 +184,8 @@ namespace MyApp // Note: actual namespace depends on the project name.
         //    return 12;
         //}
 
+
+
         static void Benchmark(Action toBenchmark, string label, long numTries = 10000000)
         {
             Console.WriteLine($"Starting benchmarking {label}");

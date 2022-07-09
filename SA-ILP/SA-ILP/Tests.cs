@@ -257,7 +257,7 @@ namespace SA_ILP
 
                     double testWindSpeed = config.WindSpeed;
 
-                    for (int test = 0; test < 5; test++)
+                    for (int test = 0; test < 1; test++)
                     {
                         if (test == 4)
                         {

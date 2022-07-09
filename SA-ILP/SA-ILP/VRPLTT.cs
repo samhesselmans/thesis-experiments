@@ -280,12 +280,27 @@ namespace SA_ILP
             return (Fd + Fr + Fg) * v / 0.95;
         }
 
-        internal static double CalculateWindCyclingTime(string file, double bikeMinWeight, double bikeMaxWeight, int numLoadlevels, double bikePower, double[] windDirection, List<Route> solution)
+        internal static double CalculateWindCyclingTime(string file, double bikeMinWeight, double bikeMaxWeight, int numLoadlevels, double bikePower, double[] windDirection, List<Route> solution,List<List<int>> custs =null)
         {
             //Calculate the load dependent time matrix with no wind to analyze the mount of time is spend cycling against the wind.
             var parsed = VRPLTT.ParseVRPLTTInstance(file);
-            (double[,,] matrix, _, _, double[,] windpart) = VRPLTT.CalculateLoadDependentTimeMatrix(parsed.customers, parsed.distances, bikeMinWeight, bikeMaxWeight, numLoadlevels, bikePower, 0, windDirection);
+            (double[,,] matrix, var dists, var approx, double[,] windpart) = VRPLTT.CalculateLoadDependentTimeMatrix(parsed.customers, parsed.distances, bikeMinWeight, bikeMaxWeight, numLoadlevels, bikePower, 0, windDirection);
 
+
+            if (custs != null)
+            {
+                var ls = new LocalSearch(LocalSearchConfigs.VRPLTTFinal, 0);
+                foreach (var r in custs)
+                {
+                    var newRoute = new Route(parsed.customers[0], matrix, dists, approx, bikeMaxWeight - bikeMinWeight, 1, ls);
+                    foreach (var c in r)
+                    {
+                        if(c!= 0)
+                            newRoute.InsertCust(parsed.customers[c], newRoute.route.Count - 1);
+                    }
+                    solution.Add(newRoute);
+                }
+            }
 
             double timeCyclingAgainstWind = 0;
             foreach (var route in solution)
@@ -304,7 +319,7 @@ namespace SA_ILP
                     }
                 }
 
-            Console.WriteLine($"Total cycling against wind {timeCyclingAgainstWind}");
+            //Console.WriteLine($"Total cycling against wind {timeCyclingAgainstWind}");
             return timeCyclingAgainstWind;
         }
     }

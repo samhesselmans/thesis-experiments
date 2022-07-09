@@ -430,7 +430,7 @@ namespace SA_ILP
             get
             {
                 var config = VRPLTTFinal;
-                config.WindDirection = new double[] { 1, 0 };
+                config.WindDirection = new double[] { 0, 1 };
 
                 //Set to the average windspeed of beaufort wind force 4
                 config.WindSpeed = 6.75;

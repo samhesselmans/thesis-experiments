@@ -46,7 +46,7 @@ if (args.Length >= 1)
     }
     else if (opts.Mode == "vrplttmt")
     {
-        await solver.SolveVRPLTTInstanceAsync(opts.Instance, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads,config: LocalSearchConfigs.VRPLTTFinal);
+        await solver.SolveVRPLTTInstanceAsync(opts.Instance, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads, config: LocalSearchConfigs.VRPLTTFinal);
     }
     else if (opts.Mode == "vrptwmt")
     {
@@ -61,14 +61,14 @@ if (args.Length >= 1)
 
             PropertyInfo propertyInfo = typeof(LocalSearchConfigs).GetProperty(opts.Config);
             LocalSearchConfiguration something = (LocalSearchConfiguration)propertyInfo.GetValue(null, null);
-            await Tests.RunVRPLTTTests(opts.Instance, solutionDir, opts.NumRepeats, opts,something);
+            await Tests.RunVRPLTTTests(opts.Instance, solutionDir, opts.NumRepeats, opts, something);
         }
         else
         {
             await Tests.RunVRPLTTTests(opts.Instance, solutionDir, opts.NumRepeats, opts);
         }
 
-        
+
     }
     else if (opts.Mode == "allvrpsltt")
     {
@@ -78,14 +78,14 @@ if (args.Length >= 1)
     {
         await Tests.RunVRPLTTWindtests(opts.Instance, solutionDir, opts.NumRepeats, opts);
     }
-    else if( opts.Mode == "allvrp")
+    else if (opts.Mode == "allvrp")
     {
         var skip = new List<string>();
-        await Tests.SolveAllAsync(opts.Instance,solutionDir,skip,opts);
+        await Tests.SolveAllAsync(opts.Instance, solutionDir, skip, opts);
     }
-    else if(opts.Mode == "benchmark")
+    else if (opts.Mode == "benchmark")
     {
-        await Tests.BenchmarkLocalSearchSpeed(opts.Instance, benchDir, opts.NumRepeats,opts);
+        await Tests.BenchmarkLocalSearchSpeed(opts.Instance, benchDir, opts.NumRepeats, opts);
     }
     else if (opts.Mode == "compareoperators")
     {
@@ -102,7 +102,7 @@ if (args.Length >= 1)
 
 
 
-
+Anaylzyze();
 
 //double[,,] test = new double[1000,1000,10];
 //double[] test2 = new double[1000 * 1000 * 10];
@@ -170,6 +170,93 @@ var gamma = new Gamma(2.0, 1.5);
 
 
 
+
+static void Anaylzyze()
+{
+    string baseDir = "../../../../../";
+
+    using (var csvwriter = new StreamWriter("out.csv"))
+    {
+        csvwriter.WriteLine("instance;WT(1,0);WT(0,-1);WT(0,1);WT(-1,0);V(1,0);V(0,-1);V(0,1);V(-1,0);T(1,0);T(0,-1);T(0,1);T(-1,0)");
+        foreach (var file in Directory.GetFiles(@"C:\Users\samca\Desktop\Test"))
+        {
+            var fn = Path.GetFileNameWithoutExtension(file);
+
+            var split = fn.Split('_');
+
+            var instanceName = $"{split[0]}_{split[1]}.csv";
+            var instance = Path.Join(baseDir, "vrpltt_instances/large", instanceName);
+            //var config = LocalSearchConfigs.VRPLTTWithWind;
+            var parsed = VRPLTT.ParseVRPLTTInstance(instance);
+            var sol = new List<List<int>>();
+            using (var reader = new StreamReader(file))
+            {
+                reader.ReadLine();
+                string line;
+                while ((line = reader.ReadLine()) != null && line[0] != '{')
+                {
+
+                    //var route = new Route(parsed.customers[0],null,);
+                    //lines.Add(line);
+                    var a = line.Replace("(", "").Replace(")", "");
+                    var b = a.Split(',').ToList().ConvertAll(x => int.Parse(x));
+                    sol.Add(b);
+                }
+            }
+
+
+            var winddir1 = new double[] { 1, 0 };
+            var winddir2 = new double[] { 0, -1 };
+            var winddir3 = new double[] { 0, 1 };
+            var winddir4 = new double[] { -1, 0 };
+            var route = new List<Route>();
+            var windresult1 = VRPLTT.CalculateWindCyclingTime(instance, 140, 290, 10, 350, winddir1, route, sol);
+            var windresult2 = VRPLTT.CalculateWindCyclingTime(instance, 140, 290, 10, 350, winddir2, new List<Route>(), sol);
+            var windresult3 = VRPLTT.CalculateWindCyclingTime(instance, 140, 290, 10, 350, winddir3, new List<Route>(), sol);
+            var windresult4 = VRPLTT.CalculateWindCyclingTime(instance, 140, 290, 10, 350, winddir4, new List<Route>(), sol);
+           
+
+            var dirs = new List<double[]>() { winddir1, winddir2, winddir3, winddir4 };
+            var resulst = new List<double>();
+            var results2 = new List<double>();
+            foreach (var dir in dirs)
+            {
+                var tempConfig = LocalSearchConfigs.VRPLTTWithWind;
+                tempConfig.WindDirection = dir;
+                tempConfig.WindSpeed = 6.75;
+
+                tempConfig.PenalizeLateArrival = false;
+                tempConfig.PenalizeDeterministicEarlyArrival = false;
+                //If the windspeed is 0 we want to check what the travel time would be if we plan without it
+                (double[,] distances, List<Customer> customers) = VRPLTT.ParseVRPLTTInstance(instance);
+
+                Console.WriteLine("Calculating travel time matrix");
+                (double[,,] matrix, Gamma[,,] distributionMatrix, IContinuousDistribution[,,] approximationMatrix, _) = VRPLTT.CalculateLoadDependentTimeMatrix(customers, distances, 140, 290, 10, 350, tempConfig.WindSpeed, tempConfig.WindDirection, tempConfig.DefaultDistribution is Normal);
+                LocalSearch ls = new LocalSearch(tempConfig, 1);
+                double total = 0;
+                ;
+                int valid = route.Count;
+                foreach (var r in route)
+                {
+                    var rs = new RouteStore(r.CreateIdList(), 0);
+                    var newRoute = new Route(customers, rs, customers[0], matrix, distributionMatrix, approximationMatrix, 150, ls);
+                    total += newRoute.CalcObjective();
+                    if (newRoute.CheckRouteValidity())
+                        valid--;
+                }
+                resulst.Add((double)valid / route.Count);
+                results2.Add(total);
+            }
+            //cycleSpeedWithWind = total;
+            csvwriter.WriteLine($"{Path.GetFileNameWithoutExtension(instance)};{windresult1};{windresult2};{windresult3};{windresult4};{resulst[0]};{resulst[1]};{resulst[2]};{resulst[3]};{results2[0]};{results2[1]};{results2[2]};{results2[3]}");
+
+
+        }
+    }
+
+}
+
+
 async Task RunTestAsync()
 {
     double total = 0;
@@ -200,7 +287,7 @@ async Task RunTestAsync()
 
     for (int i = 0; i < num; i++)
     {
-        (bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal,string solutionJSON) = await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000,timelimit:30000);
+        (bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal, string solutionJSON) = await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 30000);
         if (ilpVal < best)
             best = ilpVal;
         if (ilpVal > worst)
