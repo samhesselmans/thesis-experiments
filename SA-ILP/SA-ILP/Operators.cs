@@ -78,7 +78,7 @@ namespace SA_ILP
                         newRoute.Add(cust);
                     }
 
-                    (bool possible, double imp, List<double> newArrivalTimes,List<IContinuousDistribution> newDistributions,bool violatesLowerTimeWindow, bool violatesUpperTimeWindow) = routes[routeIndex].NewRoutePossible(newRoute, 0);
+                    (bool possible, double imp, List<double> newArrivalTimes, List<IContinuousDistribution> newDistributions, bool violatesLowerTimeWindow, bool violatesUpperTimeWindow) = routes[routeIndex].NewRoutePossible(newRoute, 0);
 
                     if (possible && imp > bestImp)
                     {
@@ -99,7 +99,7 @@ namespace SA_ILP
             {
                 return (bestImp, () =>
                 {
-                    routes[bestRoute].SetNewRoute(bestScramble, bestArrivalTimes,bestDistributions,bestVLTW,bestVUTW);
+                    routes[bestRoute].SetNewRoute(bestScramble, bestArrivalTimes, bestDistributions, bestVLTW, bestVUTW);
                 }
                 );
             }
@@ -139,7 +139,7 @@ namespace SA_ILP
                         index2 = index1;
                         index1 = temp;
                     }
-                    (bool possible, double imp, List<double> arrivalTimes,List<IContinuousDistribution> newDistributions, bool vltw, bool vutw) = routes[routeIndex].CanReverseSubRoute(index1, index2);
+                    (bool possible, double imp, List<double> arrivalTimes, List<IContinuousDistribution> newDistributions, bool vltw, bool vutw) = routes[routeIndex].CanReverseSubRoute(index1, index2);
 
                     if (possible && imp > bestImp)
                     {
@@ -159,7 +159,7 @@ namespace SA_ILP
             {
                 return (bestImp, () =>
                 {
-                    routes[bestRoute].ReverseSubRoute(bestIndex1, bestIndex2, bestArrivalTimes, bestDistributions, bvltw,bvutw);
+                    routes[bestRoute].ReverseSubRoute(bestIndex1, bestIndex2, bestArrivalTimes, bestDistributions, bvltw, bvutw);
                 }
                 );
             }
@@ -322,7 +322,7 @@ namespace SA_ILP
                 return (bestImp, null);
 
         }
-        
+
         public static (double, Action?) RemoveRandomCustomer(List<Route> routes, List<int> viableRoutes, Random random, List<Customer> removed, LocalSearch ls)
         {
             if (viableRoutes.Count == 0)
@@ -345,7 +345,7 @@ namespace SA_ILP
 
         }
 
-        public static (double, Action?) AddRandomRemovedCustomer(List<Route> routes, List<int> viableRoutes, Random random, List<Customer> removed, LocalSearch ls,bool allowNewRouteCreation = true)
+        public static (double, Action?) AddRandomRemovedCustomer(List<Route> routes, List<int> viableRoutes, Random random, List<Customer> removed, LocalSearch ls, bool allowNewRouteCreation = true)
         {
             if (removed.Count == 0)
                 return (double.MinValue, null);
@@ -449,7 +449,7 @@ namespace SA_ILP
                 return (bestImp, null);
         }
 
-        public static (double, Action?) MoveRandomCustomerToRandomCustomer(List<Route> routes, List<int> viableRoutes, Random random, bool allowNewRouteCreation=true)
+        public static (double, Action?) MoveRandomCustomerToRandomCustomer(List<Route> routes, List<int> viableRoutes, Random random, bool allowNewRouteCreation = true)
         {
             if (viableRoutes.Count <= 1)
                 return (double.MinValue, null);
