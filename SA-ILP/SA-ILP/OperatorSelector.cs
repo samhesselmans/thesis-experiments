@@ -10,7 +10,7 @@ namespace SA_ILP
 {
     internal class OperatorSelector
     {
-
+        //Manages the selection of operators/neighborhoods 
 
         Random random;
         List<Operator> operators;
@@ -57,7 +57,7 @@ namespace SA_ILP
             double totalWeight = weights.Sum();
 
             double cumulative = 0;
-            foreach( double w in weights)
+            foreach (double w in weights)
             {
                 cumulative += w;
                 threshHolds.Add(cumulative / totalWeight);
@@ -66,27 +66,19 @@ namespace SA_ILP
         }
 
 
-        //public string Last()
-        //{
-        //    if (last == -1)
-        //        return "none";
-        //    else
-        //        return labels[last];
-        //}
-
-        public void Add(List<Operator>operators,List<double> weights)
+        public void Add(List<Operator> operators, List<double> weights)
         {
             if (operators.Count != weights.Count)
                 throw new Exception("List counts must match");
 
-            for(int i =0; i< operators.Count; i++)
+            for (int i = 0; i < operators.Count; i++)
                 Add(operators[i], weights[i]);
         }
 
         public Operator Next()
         {
             var p = random.NextDouble();
-            for(int i=0; i< threshHolds.Count; i++)
+            for (int i = 0; i < threshHolds.Count; i++)
             {
                 if (p <= threshHolds[i])
                 {
@@ -104,7 +96,7 @@ namespace SA_ILP
         public override string ToString()
         {
             string res = "";
-            for(int i = 0; i < operators.Count; i++)
+            for (int i = 0; i < operators.Count; i++)
             {
                 res += $"OP: {labels[i]} RP: {weights[i]} Repeats: {repeats[i]}\n";
             }

@@ -53,12 +53,12 @@ namespace SA_ILP
             if (obj.GetType() != typeof(Customer))
                 return false;
 
-            return ((Customer)obj).Id.Equals( this.Id);
+            return ((Customer)obj).Id.Equals(this.Id);
         }
 
-        public static bool operator == (Customer? cust1, Customer? cust2)
+        public static bool operator ==(Customer? cust1, Customer? cust2)
         {
-            if(cust1 is null)
+            if (cust1 is null)
             {
                 if (cust2 is null)
                     return true;

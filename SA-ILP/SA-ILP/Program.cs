@@ -101,76 +101,7 @@ if (args.Length >= 1)
 }
 
 
-
-Anaylzyze();
-
-//double[,,] test = new double[1000,1000,10];
-//double[] test2 = new double[1000 * 1000 * 10];
-//Random random = new Random();
-//watch.Start();
-//double total  = 0;
-//for(int i =0; i< 10000000; i++)
-//{
-//    total += test[random.Next(1000),random.Next(1000),random.Next(10)];
-//}
-//Console.WriteLine(watch.ElapsedMilliseconds);
-//watch.Restart();
-//total = 0;
-//for (int i = 0; i < 10000000; i++)
-//{
-//    total += test2[random.Next(1000)* random.Next(1000)* random.Next(10)];
-//}
-//Console.WriteLine(watch.ElapsedMilliseconds);
-
-//var testarr = new List<int>() { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-//testarr.Reverse(3, 5);
-//Console.WriteLine(testarr);
-//for(int i = 0; i < 10; i++)
-//Console.Write(10.00683123.ToString("0.000"));
-
-//await RunTestAsync();
-
-
-//solver.SolveSolomonInstance(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_1000\R1_10_1.TXT", numIterations: 50000000,timeLimit: 45 * 1000);
-//await solver.SolveSolomonInstanceAsync(@"C:\Users\samca\Documents\GitHub\thesis-experiments\solomon_instances\r101.txt", numThreads:4, numIterations: 500000000,timeLimit:450 * 1000);
-
-//await solver.DoTest(Path.Join(baseDir, "solomon_1000", "R1_10_1.TXT"), numIterations: 500000000, timeLimit: 45000);
-
-//var config = LocalSearchConfigs.VRPLTTWithWind;
-//config.WindSpeed = 0;// 6.75;
-
-//solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 500 * 1000,bikeMinMass:140,bikeMaxMass:290,inputPower:350,config: config);
-//await solver.SolveVRPLTTInstanceAsync(Path.Join(baseDir, "vrpltt_instances/large", "pittsburgh_50.csv"), numLoadLevels: 10, numIterations: 500000000, timelimit: 480 * 1000, numThreads: 6, numStarts: 16, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350,config:LocalSearchConfigs.VRPLTT);
-
-//const LocalSearchConfiguration config = LocalSearchConfigs.VRPLTT;
-
-//var result = VRPLTT.ParseVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"));
-//Console.WriteLine(VRPLTT.CalculateTravelTime(10,10,800,350));
-//var skip = new List<String>() {"c101.txt", "c102.txt", "c103.txt", "c104.txt", "c105.txt", "c106.txt", "c107.txt", "c108.txt", "c109.txt", "c201.txt", "c202.txt", "c203.txt", "c204.txt", "c205.txt", "c206.txt", "c207.txt", "c208.txt" };
-//for( int i =1; i< 13; i++)
-//{
-//    string str = i.ToString();
-//    if (i < 10)
-//        str = "0" + str;
-//    skip.Add($"r1{str}.txt");
-//}
-
-//for (int i = 1; i < 12; i++)
-//{
-//    string str = i.ToString();
-//    if (i < 10)
-//        str = "0" + str;
-//    skip.Add($"r2{str}.txt");
-//}
-//var skip = new List<String>();
-//await SolveAllAsync(@"..\..\..\..\..\solomon_instances", Path.Join(@"..\..\..\..\..\solutions\solomon_instances",DateTime.Now.ToString("dd-MM-yy_HH-mm-ss")),skip,numThreads:4,numIterations:50000000);
-
-
-var gamma = new Gamma(2.0, 1.5);
-
-
-
-
+//Used to analyze results planned without any wind for al directionss
 static void Anaylzyze()
 {
     string baseDir = "../../../../../";
@@ -214,7 +145,7 @@ static void Anaylzyze()
             var windresult2 = VRPLTT.CalculateWindCyclingTime(instance, 140, 290, 10, 350, winddir2, new List<Route>(), sol);
             var windresult3 = VRPLTT.CalculateWindCyclingTime(instance, 140, 290, 10, 350, winddir3, new List<Route>(), sol);
             var windresult4 = VRPLTT.CalculateWindCyclingTime(instance, 140, 290, 10, 350, winddir4, new List<Route>(), sol);
-           
+
 
             var dirs = new List<double[]>() { winddir1, winddir2, winddir3, winddir4 };
             var resulst = new List<double>();

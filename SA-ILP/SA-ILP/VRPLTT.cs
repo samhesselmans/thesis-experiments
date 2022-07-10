@@ -14,8 +14,7 @@ namespace SA_ILP
         private static double CalculateSpeed(double heightDiff, double length, double vehicleMass, double powerInput, Vector<double> wind, Vector<double> td)
         {
             double speed = 25;
-            //double slope = Math.Atan(heightDiff / length);// * Math.PI / 180;
-            double slope = Math.Asin(heightDiff / length);// * Math.PI / 180;
+            double slope = Math.Asin(heightDiff / length);
             double requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope, wind, td);
             double orignalPow = requiredPow;
 
@@ -63,8 +62,7 @@ namespace SA_ILP
         public static Gamma CreateTravelTimeDistribution(double weight, double traveltime)
         {
             double shape = 1.5 + traveltime * 0.5 + weight / (290);
-            //RATE moet zelfde blijven, niet shape
-            double rate = 10;// (1 / (traveltime * 0.1 / 8))/(1 + weight/(290*3));
+            double rate = 10;
             var gamma = new Gamma(shape, rate);
 
             return gamma;
@@ -95,7 +93,6 @@ namespace SA_ILP
             var wd = V.DenseOfArray(windVec);
             wd = wd.Divide(wd.L2Norm());
             var wind = wd * windSpeed;
-            //wd = wd.Divide(wd.L2Norm());
 
 
             //Calculate the average latitude and longitude for the projection
@@ -217,8 +214,7 @@ namespace SA_ILP
                         demand = double.Parse(lineSplit[4], NumberStyles.Any, CultureInfo.InvariantCulture);
                     else
                         demand = 0;
-                    //double twstart = double.Parse(lineSplit[5]);
-                    //double twend = double.Parse(lineSplit[6]);
+
 
                     if (lineSplit[5] != "")
                         twstart = double.Parse(lineSplit[5], NumberStyles.Any, CultureInfo.InvariantCulture);
@@ -233,7 +229,6 @@ namespace SA_ILP
                     else
                         serviceTime = 0;
 
-                    //double serviceTime = double.Parse(lineSplit[7]);
                     var customer = new Customer(id, x, y, demand, twstart, twend, serviceTime, elevation);
                     for (int i = 8; i < lineSplit.Length; i++)
                     {
@@ -280,7 +275,7 @@ namespace SA_ILP
             return (Fd + Fr + Fg) * v / 0.95;
         }
 
-        internal static double CalculateWindCyclingTime(string file, double bikeMinWeight, double bikeMaxWeight, int numLoadlevels, double bikePower, double[] windDirection, List<Route> solution,List<List<int>> custs =null)
+        internal static double CalculateWindCyclingTime(string file, double bikeMinWeight, double bikeMaxWeight, int numLoadlevels, double bikePower, double[] windDirection, List<Route> solution, List<List<int>> custs = null)
         {
             //Calculate the load dependent time matrix with no wind to analyze the mount of time is spend cycling against the wind.
             var parsed = VRPLTT.ParseVRPLTTInstance(file);
@@ -295,7 +290,7 @@ namespace SA_ILP
                     var newRoute = new Route(parsed.customers[0], matrix, dists, approx, bikeMaxWeight - bikeMinWeight, 1, ls);
                     foreach (var c in r)
                     {
-                        if(c!= 0)
+                        if (c != 0)
                             newRoute.InsertCust(parsed.customers[c], newRoute.route.Count - 1);
                     }
                     solution.Add(newRoute);
@@ -319,7 +314,6 @@ namespace SA_ILP
                     }
                 }
 
-            //Console.WriteLine($"Total cycling against wind {timeCyclingAgainstWind}");
             return timeCyclingAgainstWind;
         }
     }

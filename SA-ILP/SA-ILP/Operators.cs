@@ -90,11 +90,7 @@ namespace SA_ILP
                         bestVUTW = violatesUpperTimeWindow;
                         bestDistributions = newDistributions;
                     }
-                    //return (imp, () =>
-                    //{
-                    //    routes[routeIndex].SetNewRoute(newRoute, newArrivalTimes);
-                    //}
-                    //);
+
 
 
                 }
@@ -109,10 +105,10 @@ namespace SA_ILP
             }
 
             return (double.MinValue, null);
-            //throw new NotImplementedException();
 
 
         }
+        //Reverses a random subroute
         public static (double, Action?) ReverseOperator(List<Route> routes, List<int> viableRoutes, Random random)
         {
             if (viableRoutes.Count == 0)
@@ -156,11 +152,7 @@ namespace SA_ILP
                         bvutw = vutw;
                         bestDistributions = newDistributions;
                     }
-                    //return (imp, () =>
-                    //{
-                    //    routes[routeIndex].ReverseSubRoute(index1, index2, arrivalTimes);
-                    //}
-                    //);
+
                 }
             }
             if (bestIndex1 != -1 && bestArrivalTimes != null && bestDistributions != null)
@@ -171,11 +163,11 @@ namespace SA_ILP
                 }
                 );
             }
-            //throw new Exception();
             return (double.MinValue, null);
 
         }
 
+        //Swaps customers within a route
         public static (double, Action?) SwapInsideRoute(List<Route> routes, List<int> viableRoutes, Random random)
         {
             if (viableRoutes.Count == 0)
@@ -241,6 +233,7 @@ namespace SA_ILP
 
         }
 
+        //Swaps random customers
         public static (double, Action?) SwapRandomCustomers(List<Route> routes, List<int> viableRoutes, Random random)
         {
             if (viableRoutes.Count == 0)
@@ -329,7 +322,7 @@ namespace SA_ILP
                 return (bestImp, null);
 
         }
-
+        
         public static (double, Action?) RemoveRandomCustomer(List<Route> routes, List<int> viableRoutes, Random random, List<Customer> removed, LocalSearch ls)
         {
             if (viableRoutes.Count == 0)
@@ -340,8 +333,6 @@ namespace SA_ILP
 
 
             double penalty = 0;
-            //double diff = Math.Pow(removed.Count + 1, Solver.BaseRemovedCustomerPenaltyPow) - Math.Pow(removed.Count, Solver.BaseRemovedCustomerPenaltyPow);
-            //TODO: calculate penalty
             penalty = Solver.CalcRemovedPenalty(removed.Count + 1, ls) - Solver.CalcRemovedPenalty(removed.Count, ls); //diff * Solver.BaseRemovedCustomerPenalty / temp;
             double imp = decr - penalty;
 
@@ -376,12 +367,10 @@ namespace SA_ILP
                 route = routes[viableRoutes[routeIndex]];
             int pos = random.Next(1, route.route.Count);
 
-            //Do we want to try several positions?
             (bool possible, _, double incr) = route.CustPossibleAtPos(cust, pos);
 
             double penalty = 0;
-            //double diff = Math.Pow(removed.Count, Solver.BaseRemovedCustomerPenaltyPow) - Math.Pow(removed.Count - 1, Solver.BaseRemovedCustomerPenaltyPow);
-            //TODO: calculate penalty
+
             penalty = Solver.CalcRemovedPenalty(removed.Count, ls) - Solver.CalcRemovedPenalty(removed.Count - 1, ls); // diff * Solver.BaseRemovedCustomerPenalty / temp;
             if (possible)
                 return (penalty - incr, () =>
@@ -396,6 +385,7 @@ namespace SA_ILP
 
         }
 
+        //Function used to repeat opertors multiple times and choose the best one
         public static (double, Action?) RepeatNTimes(int n, Operator op, List<Route> routes, List<int> viableRoutes, Random random, List<Customer> removed, LocalSearch ls)
         {
             double bestVale = double.MinValue;
@@ -429,7 +419,7 @@ namespace SA_ILP
 
             for (int i = 0; i < routes.Count; i++)
             {
-                //Temporary. Might be nice to swap greedily within a route
+                //Do not swap inside the current route
                 if (i == routeIndex)
                     continue;
                 (var pos, double increase) = routes[i].BestPossibleInsert(cust);
@@ -472,8 +462,7 @@ namespace SA_ILP
                 extra = 1;
 
             int destIndex = random.Next(viableRoutes.Count + extra);
-            //if (destIndex >= src_index)
-            //    destIndex++;
+
 
             int dest;
             Customer? cust1; double decr1;
@@ -492,64 +481,8 @@ namespace SA_ILP
                 pos = 1;
             }
 
-            //List<Customer> newRouteSrc; List<Customer>? newRouteDest = null;
-
-            //(cust1, int pos1) = routes[src].RandomCustIndex();
-            //newRouteSrc = new List<Customer>();
-            //if (src != dest)
-            //    newRouteDest = new List<Customer>();
-
-            //for (int i = 0; i < routes[src].route.Count; i++)
-            //{
-            //    if (i != pos1)
-            //        newRouteSrc.Add(routes[src].route[i]);
-            //}
-            //if (src != dest) routes[dest].route.ForEach(x => newRouteDest.Add(x));
-
-            //var toInsert = newRouteSrc;
-            //if (newRouteDest != null)
-            //    toInsert = newRouteDest;
-
-            //if (src == dest && pos1 < pos)
-            //    pos--;
-
-            //toInsert.Insert(pos, routes[src].route[pos1]);
-
-            //if (newRouteDest != null)
-            //{
-            //    (bool possible, double imp, var newArrTimes, bool lv, bool uv) = routes[dest].NewRoutePossible(newRouteDest, routes[src].route[pos1].Demand);
-            //    (bool possible2, double imp2, var newArrTimes2, bool lv2, bool uv2) = routes[src].NewRoutePossible(newRouteSrc, -routes[src].route[pos1].Demand);
-
-            //    if (possible && possible2)
-            //    {
-            //        return (imp + imp2, () =>
-            //        {
-            //            routes[dest].SetNewRoute(newRouteDest, newArrTimes, lv, uv);
-            //            routes[src].SetNewRoute(newRouteSrc, newArrTimes2, lv2, uv2);
-
-            //        }
-            //        );
-            //    }
-
-            //}
-            //else
-            //{
-            //    (bool possible2, double imp2, var newArrTimes2, bool lv2, bool uv2) = routes[src].NewRoutePossible(newRouteSrc, 0);
-            //    if (possible2)
-            //    {
-            //        return (imp2, () =>
-            //        {
-            //            routes[src].SetNewRoute(newRouteSrc, newArrTimes2, lv2, uv2);
-
-            //        }
-            //        );
-            //    }
-            //}
-
             (cust1, decr1, int i) = routes[src].RandomCust();
 
-            //if (src == dest && i + 1 == pos)
-            //    Console.WriteLine("Wut");
 
             if (cust1 != null && cust1 != cust2 && pos != i + 1)
             {
@@ -613,7 +546,6 @@ namespace SA_ILP
                 else
                 {
                     newDestRouteTail.Add(routes[src].route[i]);
-                    //newSrcRoute.Add(routes[dest].route[index2 + i - index1]);
                 }
 
             }
@@ -658,7 +590,6 @@ namespace SA_ILP
             Customer bestCust = null;
             double bestDecr = double.MinValue, bestIncr = double.MaxValue;
 
-            //viableRoutes = Enumerable.Range(0, routes.Count).Where(i => routes[i].route.Count > 2).ToList();
             var numRoutes = viableRoutes.Count;
 
             for (int i = 0; i < 1; i++)
@@ -667,8 +598,6 @@ namespace SA_ILP
                 int src = viableRoutes[random.Next(numRoutes)];
 
                 //Select src excluding destination from all routes
-                //var range = Enumerable.Range(0, routes.Count).Where(i => i != src).ToList();
-                //int dest = range[random.Next(routes.Count - 1)];
                 int dest = random.Next(numRoutes - 1);
                 if (dest >= src)
                     dest += 1;

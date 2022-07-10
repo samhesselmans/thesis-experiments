@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace SA_ILP
 {
+    //Configurations struct used for setting up the algorithm
     public struct LocalSearchConfiguration
     {
         public double InitialTemperature { get; set; }
@@ -71,7 +72,7 @@ namespace SA_ILP
 
         public bool AllowEarlyArrivalInSimulation { get; set; }
 
-        internal List<(Operator, Double,String,int)> Operators { get; set; }
+        internal List<(Operator, Double, String, int)> Operators { get; set; }
 
 
         public double RemovedCustomerTemperaturePow { get; set; }
@@ -382,7 +383,7 @@ namespace SA_ILP
 
         public static LocalSearchConfiguration VRPSLTTWithoutWaitingJustMean
         {
-            get { var config = VRPSLTTWithoutWaiting; config.AllowDeterministicEarlyArrival = false;config.PenalizeDeterministicEarlyArrival = true; config.ExpectedEarlinessPenalty = 0;config.ExpectedLatenessPenalty = 0;config.UseMeanOfDistributionForScore =true ;config.UseMeanOfDistributionForTravelTime = true ; return config; }
+            get { var config = VRPSLTTWithoutWaiting; config.AllowDeterministicEarlyArrival = false; config.PenalizeDeterministicEarlyArrival = true; config.ExpectedEarlinessPenalty = 0; config.ExpectedLatenessPenalty = 0; config.UseMeanOfDistributionForScore = true; config.UseMeanOfDistributionForTravelTime = true; return config; }
         }
 
         public static LocalSearchConfiguration VRPSLTTWithWaitingNormal
@@ -403,7 +404,7 @@ namespace SA_ILP
 
 
                 //Use distributions to estimate maximization of distribution and deterministic value
-                config.IgnoreWaitingDuringDistributionAddition = false; 
+                config.IgnoreWaitingDuringDistributionAddition = false;
 
                 return config;
             }
@@ -411,7 +412,7 @@ namespace SA_ILP
 
         public static LocalSearchConfiguration VRPSLTTWithWaitingCutNormal
         {
-            get { var config = VRPSLTTWithWaitingNormal; config.CutProbabilityDistributionAt0 = true;return config; }
+            get { var config = VRPSLTTWithWaitingNormal; config.CutProbabilityDistributionAt0 = true; return config; }
         }
 
         public static LocalSearchConfiguration VRPSLTTWithWaitingStupidGamma

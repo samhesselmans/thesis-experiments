@@ -47,17 +47,9 @@ namespace SA_ILP
                         if (Path.GetExtension(file) != ".csv")
                             continue;
 
-                        //string append = "Waiting allowed";
                         for (int i = 0; i < numRepeats; i++)
                         {
-                            //if (i == numRepeats)
-                            //{
-                            //    totalWriter.WriteLine($"AVG: {totalValue / numRepeats}");
-                            //    totalValue = 0;
-                            //    config.AllowEarlyArrival = false;
-                            //    config.PenalizeEarlyArrival = true;
-                            //    //append = "Waiting not allowed";
-                            //}
+
                             (bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal, string solutionJSON) = await solver.SolveVRPLTTInstanceAsync(file, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads, config: config,ilpTimelimit:opts.TimeLimitILP);//solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations, timeLimit: 30 * 1000);
                             using (var writer = new StreamWriter(Path.Join(solDir, Path.GetFileNameWithoutExtension(file) + $"_{i}.txt")))
                             {
@@ -465,36 +457,6 @@ namespace SA_ILP
                 {
                     csvWriter.WriteLine("SEP=;");
                     csvWriter.WriteLine("Instance;Uncertanty penalty;UseMean;Score;N;ILP time;LS time;LS score;ILP imp(%);avg simulation distance;avg sim OTP; avg sim worst OTP;worst sim OTP;worst sim route;worst sim cust index;avg est OTP; avg est worst OTP;worst est OTP;worst est route;worst est cust index");
-                    //LocalSearchConfiguration config = LocalSearchConfigs.VRPSLTTWithoutWaiting;
-
-
-                    //for (int test = 0; test < 3; test++)
-                    //{
-
-                    //    if (test == 0)
-                    //    {
-
-                    //        config.ExpectedEarlinessPenalty = 0;
-                    //        config.ExpectedLatenessPenalty = 0;
-                    //        config.UseMeanOfDistributionForScore = true;
-                    //        config.UseMeanOfDistributionForTravelTime = true;
-
-
-                    //    }
-                    //    else if (test == 1)
-                    //    {
-                    //        config.ExpectedEarlinessPenalty = 0;
-                    //        config.ExpectedLatenessPenalty = 0;
-                    //        config.UseMeanOfDistributionForScore = false;
-                    //        config.UseMeanOfDistributionForTravelTime = false;
-                    //    }
-                    //    else if (test == 2)
-                    //    {
-                    //        config.ExpectedEarlinessPenalty = 10;
-                    //        config.ExpectedLatenessPenalty = 10;
-                    //        config.UseMeanOfDistributionForScore = false;
-                    //        config.UseMeanOfDistributionForTravelTime = false;
-                    //    }
                         foreach (var file in Directory.GetFiles(dir))
                         {
                             Console.WriteLine($"Testing on { Path.GetFileNameWithoutExtension(file)}");
@@ -504,17 +466,11 @@ namespace SA_ILP
                                 continue;
 
 
-
-
-
-
-                            //string append = "Waiting allowed";
                             for (int r = 0; r < numRepeats; r++)
                             {
 
                                 (bool failed, List<Route> ilpSol, double ilpVal, double ilpTime, double lsTime, double lsVal, string solutionJSON) = await solver.SolveVRPLTTInstanceAsync(file, numLoadLevels: opts.NumLoadLevels, numIterations: opts.Iterations, timelimit: opts.TimeLimitLS * 1000, bikeMinMass: opts.BikeMinWeight, bikeMaxMass: opts.BikeMaxWeight, inputPower: opts.BikePower, numStarts: opts.NumStarts, numThreads: opts.NumThreads, config: config,ilpTimelimit:opts.TimeLimitILP);//solver.SolveSolomonInstanceAsync(file, numThreads: numThreads, numIterations: numIterations, timeLimit: 30 * 1000);
 
-                                //List<Route> sol = ilpSol.ConvertAll(x=> new Route(custx))
 
                                 double totalDist = 0;
                                 double totalOntimePercentage = 0;
@@ -534,7 +490,6 @@ namespace SA_ILP
                                 {
                                     if (route.route.Count != 2)
                                     {
-                                        //Console.WriteLine($"{route}; ST {route.startTime} ; SST {route.route[1].TWStart - route.CustomerDist(route.route[0], route.route[1], route.used_capacity).Item1}");
                                         double avg = 0;
                                         int total = 0;
                                         double worst = double.MaxValue;
