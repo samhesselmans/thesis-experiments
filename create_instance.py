@@ -1,6 +1,6 @@
 from random import randrange
 from time import sleep
-import parse_vrpltt_instance as psi
+import analyze.parse_vrpltt_instance as psi
 import random
 import json
 import requests
