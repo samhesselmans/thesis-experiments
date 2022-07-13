@@ -415,8 +415,11 @@ namespace SA_ILP
             Normal dist;
             if (parent.Config.UseNormalMaximizationForAllSteps)
             {
-                double expRight = right.Mean * standardNormal.CumulativeDistribution(right.Mean / right.StdDev) + right.StdDev * standardNormal.Density(right.Mean / right.StdDev);
-                double expRightSquared = (right.Variance + Math.Pow(right.Mean,2)) * standardNormal.CumulativeDistribution(right.Variance / right.StdDev) + standardNormal.Density(right.Mean/right.StdDev);
+                double val1 = standardNormal.CumulativeDistribution(right.Mean / right.StdDev);
+                double val2 = standardNormal.Density(right.Mean / right.StdDev);
+
+                double expRight = right.Mean * val1 + right.StdDev * val2;
+                double expRightSquared = (right.Variance + Math.Pow(right.Mean,2)) * val1 + right.Mean*right.StdDev*val2;
                 
                 double newRightVar = expRightSquared - Math.Pow(expRight,2);
 
