@@ -244,7 +244,10 @@ namespace SA_ILP
         {
 
             double toLateP = 1;
-            double cutOff = dist.CumulativeDistribution(0);
+
+            double cutOff = 0;
+            if(parent.Config.CutProbabilityDistributionAt0)
+                 cutOff = dist.CumulativeDistribution(0);
             if (cust.TWEnd - minArrrivalTime >= 0)
                 if (cutOff < 1)
                     toLateP = (1 - dist.CumulativeDistribution(cust.TWEnd - minArrrivalTime)) / (1 - cutOff);
@@ -408,12 +411,30 @@ namespace SA_ILP
 
         private Normal AddNormalDistributions(Normal left, Normal right, double diffWithLowerTimeWindow)
         {
+            var standardNormal = new Normal(0, 1);
+            Normal dist;
+            if (parent.Config.UseNormalMaximizationForAllSteps)
+            {
+                double expRight = right.Mean * standardNormal.CumulativeDistribution(right.Mean / right.StdDev) + right.StdDev * standardNormal.Density(right.Mean / right.StdDev);
+                double expRightSquared = (right.Variance + Math.Pow(right.Mean,2)) * standardNormal.CumulativeDistribution(right.Variance / right.StdDev) + standardNormal.Density(right.Mean/right.StdDev);
+                
+                double newRightVar = expRightSquared - Math.Pow(expRight,2);
 
-            var dist = new Normal(left.Mean + right.Mean, Math.Sqrt(left.Variance + right.Variance));
+                if(newRightVar < 0)
+                    newRightVar = 0;
+
+                dist = new Normal(left.Mean + expRight, Math.Sqrt(left.Variance + newRightVar));
+            }
+            else
+            {
+                dist = new Normal(left.Mean + right.Mean, Math.Sqrt(left.Variance + right.Variance));
+            }
+
+             
             if (parent.Config.IgnoreWaitingDuringDistributionAddition || diffWithLowerTimeWindow < 0)
                 return dist;
 
-            var standardNormal = new Normal(0, 1);
+            
 
             double expected = dist.Mean * standardNormal.CumulativeDistribution((dist.Mean - diffWithLowerTimeWindow) / dist.StdDev)
                             + diffWithLowerTimeWindow * standardNormal.CumulativeDistribution((diffWithLowerTimeWindow - dist.Mean) / dist.StdDev)
@@ -427,8 +448,13 @@ namespace SA_ILP
 
             //TEMP
             if (newVariance < 0)
+            {
+                if(newVariance < -0.0000000001)
+                {
+                    Console.WriteLine("test");
+                }
                 newVariance = 0;
-
+            }
 
             return new Normal(expected, Math.Sqrt(newVariance));
 

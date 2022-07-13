@@ -80,6 +80,8 @@ namespace SA_ILP
         public bool CutProbabilityDistributionAt0 { get; set; }
 
         public bool UseStochasticFunctions { get; set; }
+
+        public bool UseNormalMaximizationForAllSteps { get; set; }
         public override string ToString()
         {
             LocalSearchConfiguration obj = this;
@@ -426,6 +428,15 @@ namespace SA_ILP
         }
 
 
+        public static LocalSearchConfiguration VRPSLTTWithoutWaitingNormalInBetweenMaximizaton
+        {
+            get { var config = VRPSLTTWithoutWaitingCutNormal; config.UseNormalMaximizationForAllSteps = true; return config; }
+        }
+
+        public static LocalSearchConfiguration VRPSLTTWithWaitingNormalInBetweenMaximizaton
+        {
+            get { var config = VRPSLTTWithWaitingCutNormal; config.UseNormalMaximizationForAllSteps = true; return config; }
+        }
         public static LocalSearchConfiguration VRPLTTWithWind
         {
             get
