@@ -386,6 +386,21 @@ namespace SA_ILP
             }
         }
 
+        public static async Task RunLastVRPSLTTTests(string dir, string solDir, int numRepeats,Options opts)
+        {
+            LocalSearchConfiguration config;
+            config = LocalSearchConfigs.VRPSLTTWithoutWaitingNormalInBetweenMaximizaton;
+            var newSolDir = Path.Join(solDir, "WithoutWaitingNormalInBetweenMaximizaton");
+            opts.TestName = "WithoutWaitingNormalInBetweenMaximizaton";
+            await RunVRPSLTTTest(dir, newSolDir, numRepeats, opts, config);
+
+            config = LocalSearchConfigs.VRPSLTTWithWaitingNormalInBetweenMaximizaton;
+            newSolDir = Path.Join(solDir, "WithWaitingNormalInBetweenMaximizaton");
+            opts.TestName = "WithWaitingNormalInBetweenMaximizaton";
+            await RunVRPSLTTTest(dir, newSolDir, numRepeats, opts, config);
+
+        }
+
         public static async Task RunVRPSLTTTests(string dir, string solDir, int numRepeats, Options opts)
         {
             LocalSearchConfiguration config;

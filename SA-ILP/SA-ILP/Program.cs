@@ -91,6 +91,10 @@ if (args.Length >= 1)
     {
         await Tests.TestAllOperatorConfigurations(opts.Instance, solutionDir, opts);
     }
+    else if(opts.Mode == "lastvrpsltt")
+    {
+        await Tests.RunLastVRPSLTTTests(opts.Instance, solutionDir, opts.NumRepeats, opts);
+    }
     else
     {
         Console.WriteLine("Enter correct mode");
@@ -100,7 +104,7 @@ if (args.Length >= 1)
     return;
 }
 
-solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 500 * 1000, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350, config: LocalSearchConfigs.VRPSLTTWithWaitingNormalInBetweenMaximizaton);
+solver.SolveVRPLTTInstance(Path.Join(baseDir, "vrpltt_instances/large", "madrid_full.csv"), numLoadLevels: 10, numIterations: 50000000, timelimit: 25 * 1000, bikeMinMass: 140, bikeMaxMass: 290, inputPower: 350, config: LocalSearchConfigs.VRPLTTWithWind);
 
 //Used to analyze results planned without any wind for al directionss
 static void Anaylzyze()
