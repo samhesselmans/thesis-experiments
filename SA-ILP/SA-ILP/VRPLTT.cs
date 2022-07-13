@@ -14,7 +14,7 @@ namespace SA_ILP
         private static double CalculateSpeed(double heightDiff, double length, double vehicleMass, double powerInput, Vector<double> wind, Vector<double> td)
         {
             double speed = 25;
-            double slope = Math.Asin(heightDiff / length);
+            double slope = 0;// Math.Asin(heightDiff / length);
             double requiredPow = CalcRequiredForce(speed / 3.6, vehicleMass, slope, wind, td);
             double orignalPow = requiredPow;
 
@@ -279,7 +279,18 @@ namespace SA_ILP
         {
             //Calculate the load dependent time matrix with no wind to analyze the mount of time is spend cycling against the wind.
             var parsed = VRPLTT.ParseVRPLTTInstance(file);
-            (double[,,] matrix, var dists, var approx, double[,] windpart) = VRPLTT.CalculateLoadDependentTimeMatrix(parsed.customers, parsed.distances, bikeMinWeight, bikeMaxWeight, numLoadlevels, bikePower, 0, windDirection);
+
+
+            double[,] testDistances = new double[parsed.customers.Count,parsed.customers.Count];
+
+            for(int i = 0; i < parsed.customers.Count; i++)
+                for( int j =0;j<parsed.customers.Count; j++)
+                {
+                    testDistances[i,j] = Math.Sqrt(Math.Pow(parsed.customers[j].X- parsed.customers[i].X,2) + Math.Pow(parsed.customers[j].Y - parsed.customers[i].Y, 2)) * 1000;
+                }
+
+
+            (double[,,] matrix, var dists, var approx, double[,] windpart) = VRPLTT.CalculateLoadDependentTimeMatrix(parsed.customers, testDistances, bikeMinWeight, bikeMaxWeight, numLoadlevels, bikePower, 0, windDirection);
 
 
             if (custs != null)
