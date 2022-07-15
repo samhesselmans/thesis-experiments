@@ -283,10 +283,34 @@ namespace SA_ILP
 
             double[,] testDistances = new double[parsed.customers.Count,parsed.customers.Count];
 
-            for(int i = 0; i < parsed.customers.Count; i++)
+
+            double minLatitude = double.MaxValue;
+            double maxLatitude = double.MinValue;
+            double minLongtitude = double.MaxValue;
+            double maxLongitude = double.MinValue;
+
+            foreach (var c in parsed.customers)
+            {
+                if (c.X < minLatitude)
+                    minLatitude = c.X;
+                if (c.X > maxLatitude)
+                    maxLatitude = c.X;
+                if (c.Y < minLongtitude)
+                    minLongtitude = c.Y;
+                if (c.Y > maxLongitude)
+                    maxLongitude = c.Y;
+            }
+
+            double centralLatitude = (minLatitude + maxLatitude) / 2;
+            double centralLongitude = (minLongtitude + maxLongitude) / 2;
+
+
+            for (int i = 0; i < parsed.customers.Count; i++)
                 for( int j =0;j<parsed.customers.Count; j++)
                 {
-                    testDistances[i,j] = Math.Sqrt(Math.Pow(parsed.customers[j].X- parsed.customers[i].X,2) + Math.Pow(parsed.customers[j].Y - parsed.customers[i].Y, 2)) * 1000;
+                    (var X1, var Y1) = EquirectangularProjection(parsed.customers[j].X, parsed.customers[j].Y, centralLatitude, centralLongitude);
+                    (var X2, var Y2) = EquirectangularProjection(parsed.customers[i].X, parsed.customers[i].Y, centralLatitude, centralLongitude);
+                    testDistances[i,j] = Math.Sqrt(Math.Pow(X1-X2,2) + Math.Pow(Y1-Y2, 2)) * 1000;
                 }
 
 
@@ -321,7 +345,7 @@ namespace SA_ILP
                         //The upperbound is inclusive
                         if (ll == loadLevel && weight != 0)
                             loadLevel--;
-                        timeCyclingAgainstWind += matrix[route.route[i].Id, route.route[i + 1].Id, loadLevel] * windpart[route.route[i].Id, route.route[i + 1].Id];
+                        timeCyclingAgainstWind += matrix[route.route[i].Id, route.route[i + 1].Id, 0] * windpart[route.route[i].Id, route.route[i + 1].Id];
                     }
                 }
 
